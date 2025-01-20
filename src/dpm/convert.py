@@ -134,7 +134,7 @@ def process_access_files(input_dir: Path, output_dir: Path) -> None:
 
 
 if __name__ == "__main__":
-    project_root = Path(__file__).resolve().parents[3]
+    project_root = Path(__file__).resolve().parents[2]
     input_dir = project_root / ".scratch" / "db_input"
     output_dir = project_root / ".scratch" / "db_output"
 

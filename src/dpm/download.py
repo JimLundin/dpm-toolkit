@@ -58,7 +58,7 @@ def download_databases(config_file: Path, target_dir: Path) -> None:
 
 
 if __name__ == "__main__":
-    project_root = Path(__file__).resolve().parents[3]
+    project_root = Path(__file__).resolve().parents[2]
     config_path = project_root / "config" / "sources.toml"
     input_dir = project_root / ".scratch" / "db_input"
 
