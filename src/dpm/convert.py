@@ -137,6 +137,5 @@ if __name__ == "__main__":
     project_root = Path(__file__).resolve().parents[3]
     input_dir = project_root / ".scratch" / "db_input"
     output_dir = project_root / ".scratch" / "db_output"
-    output_dir.mkdir(parents=True, exist_ok=True)
 
     process_access_files(input_dir, output_dir)
