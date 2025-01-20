@@ -53,11 +53,11 @@ jobs:
     - name: Download database files
       if: steps.cache-dbs.outputs.cache-hit != 'true'
       run: |
-        python -m dpm.download
+        python -m open_dpm.download
 
     - name: Convert databases
       run: |
-        python -m dpm.convert
+        python -m open_dpm.convert
 
     - name: Create Release
       uses: softprops/action-gh-release@v1
