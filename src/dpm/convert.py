@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-import duckdb
-import polars as pl
-import pyodbc
+from sqlalchemy import MetaData, create_engine
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine import Engine
 
 logging.basicConfig(
     level=logging.INFO,
@@ -17,125 +19,64 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def read_access_database(file_path: Path) -> dict[str, pl.DataFrame]:
-    """Read all tables from an Access database file."""
-    connection_string = (
-        r"Driver={Microsoft Access Driver (*.mdb, *.accdb)};"
-        rf"DBQ={file_path};"
-    )
+def migrate_databases(source_dir: Path, target_engines: list[Engine]) -> None:
+    """Migrate databases from source directory to target databases.
 
-    with pyodbc.connect(connection_string) as connection:
-        logger.info("Connected to Access database %s", file_path)
+    Args:
+        source_dir: Directory containing Access databases
+        target_engines: List of SQLAlchemy engines to migrate data to
 
-        # Get table names
-        with connection.cursor() as cursor:
-            access_tables = cursor.tables(tableType="TABLE")
-            table_names = [table.table_name for table in access_tables]
-        logger.info("Found tables: %s", table_names)
+    """
+    if not target_engines:
+        logger.error("No target engines provided")
+        return
 
-        # Read each table
-        tables: dict[str, pl.DataFrame] = {}
-        for table_name in table_names:
-            try:
-                query = f"SELECT * FROM [{table_name}]"
-                table_df = pl.read_database(query, connection)  # type: ignore
-                if not table_df.is_empty():
-                    tables[table_name] = table_df
-                else:
-                    logger.warning("Table %s is empty", table_name)
-            except Exception:
-                logger.exception("Failed to read table %s", table_name)
-                continue
+    # Process each source database
+    for source_path in source_dir.glob("**/*.accdb"):
+        logger.info("Processing database: %s", source_path.name)
+        driver = "{Microsoft Access Driver (*.mdb, *.accdb)}"
+        conn_str = f"DRIVER={driver};DBQ={source_path}"
+        source_engine = create_engine(f"access+pyodbc:///?odbc_connect={conn_str}")
 
-        if not tables:
-            logger.warning("No tables found in %s", file_path)
+        # Get all tables
+        metadata = MetaData()
+        metadata.reflect(bind=source_engine)
 
-        return tables
+        # Copy each table to all targets
+        with source_engine.connect() as conn:
+            for table_name, table in metadata.tables.items():
+                logger.info("Copying table: %s", table_name)
 
+                try:
+                    # Read all data
+                    data = conn.execute(table.select()).fetchall()
 
-def save_to_duckdb(data: dict[str, pl.DataFrame], output_file: Path) -> None:
-    """Save all tables in a DuckDB file."""
-    with duckdb.connect(output_file) as con:  # type: ignore
-        for table_name, _df in data.items():  # noqa: PERF102
-            try:
-                con.sql(f"CREATE OR REPLACE TABLE '{table_name}' AS SELECT * FROM _df")
-                logger.info("Saved table %s to DuckDB", table_name)
-            except Exception:
-                logger.exception("Failed to create table %s in DuckDB", table_name)
+                    # Copy to each target
+                    for engine in target_engines:
+                        table.metadata = MetaData()
+                        table.create(engine, checkfirst=True)
 
-
-def save_to_sqlite(data: dict[str, pl.DataFrame], output_file: Path) -> None:
-    """Save all tables in a SQLite file."""
-    con_str = f"sqlite:///{output_file}"
-    for table_name, df in data.items():
-        try:
-            df.write_database(table_name, con_str, engine="adbc")  # type: ignore
-            logger.info("Saved table %s to SQLite", table_name)
-        except Exception:
-            logger.exception("Failed to create table %s in SQLite", table_name)
-
-
-def merge_dataframes(dfs: list[pl.DataFrame]) -> pl.DataFrame:
-    """Merge multiple dataframes with the same schema."""
-    if not dfs:
-        return pl.DataFrame()
-    return pl.concat(dfs, how="diagonal")
-
-
-def process_access_files(input_dir: Path, output_dir: Path) -> None:
-    """Process all Access files in the input directory."""
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    # Dictionary to store all tables from all files
-    all_tables: dict[str, list[pl.DataFrame]] = {}
-
-    for access_file in input_dir.glob("*.accdb"):
-        try:
-            # Read tables from Access database
-            data = read_access_database(access_file)
-
-            if data:
-                # Save individual database files
-                duckdb_file = output_dir / f"{access_file.stem}.duckdb"
-                sqlite_file = output_dir / f"{access_file.stem}.sqlite"
-
-                save_to_duckdb(data, duckdb_file)
-                save_to_sqlite(data, sqlite_file)
-                logger.info("Successfully processed %s", access_file)
-
-                # Collect tables for the total database
-                for table_name, df in data.items():
-                    if table_name not in all_tables:
-                        all_tables[table_name] = []
-                    all_tables[table_name].append(df)
-
-        except Exception:
-            logger.exception("Failed to process %s", access_file)
-
-    # Create total databases if we have collected any tables
-    if all_tables:
-        try:
-            # Merge tables with the same name
-            total_data = {
-                table_name: merge_dataframes(dfs)
-                for table_name, dfs in all_tables.items()
-            }
-
-            # Save total databases
-            total_duckdb = output_dir / "total.duckdb"
-            total_sqlite = output_dir / "total.sqlite"
-
-            save_to_duckdb(total_data, total_duckdb)
-            save_to_sqlite(total_data, total_sqlite)
-            logger.info("Successfully created total databases")
-
-        except Exception:
-            logger.exception("Failed to create total databases")
+                        if data:
+                            with engine.begin() as target_conn:
+                                target_conn.execute(table.insert().values(data))
+                        else:
+                            logger.warning("Table %s is empty", table_name)
+                except Exception:
+                    logger.exception("Failed to process table %s", table_name)
+                    continue
 
 
 if __name__ == "__main__":
     project_root = Path(__file__).resolve().parents[2]
     input_dir = project_root / ".scratch" / "db_input"
     output_dir = project_root / ".scratch" / "db_output"
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    process_access_files(input_dir, output_dir)
+    # Create target engines
+    target_engines = [
+        create_engine(f"sqlite:///{output_dir / 'output.sqlite'}"),
+        create_engine(f"duckdb:///{output_dir / 'output.duckdb'}"),
+    ]
+
+    # Run migration
+    migrate_databases(input_dir, target_engines)
