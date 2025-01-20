@@ -7,7 +7,7 @@ on:
   workflow_dispatch:  # Allow manual trigger
 
 jobs:
-  test-conversion:
+  build-artifacts:
     runs-on: windows-latest
     
     steps:
