@@ -1,4 +1,4 @@
-name: Convert and Release Databases
+name: Release Databases
 
 on:
   push:

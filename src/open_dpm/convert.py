@@ -72,11 +72,9 @@ if __name__ == "__main__":
     output_dir = project_root / ".scratch" / "db_output"
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Create target engines
     target_engines = [
-        create_engine(f"sqlite:///{output_dir / 'output.sqlite'}"),
-        create_engine(f"duckdb:///{output_dir / 'output.duckdb'}"),
+        create_engine(f"sqlite:///{output_dir / 'dpm.sqlite'}"),
+        create_engine(f"duckdb:///{output_dir / 'dpm.duckdb'}"),
     ]
 
-    # Run migration
     migrate_databases(input_dir, target_engines)
