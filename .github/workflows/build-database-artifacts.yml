@@ -1,6 +1,5 @@
 name: Upload Databases
 
-
 on:
   workflow_dispatch:  # Allow manual trigger
 
@@ -51,11 +50,11 @@ jobs:
     - name: Download database files
       if: steps.cache-dbs.outputs.cache-hit != 'true'
       run: |
-        python -m open_dpm.download
+        python -m opendpm download --config ./src/opendpm/config/sources.toml --output-dir ./.scratch/db_input
 
     - name: Convert databases
       run: |
-        python -m open_dpm.convert
+        python -m opendpm convert --input-dir ./.scratch/db_input --duckdb-path ./.scratch/db_output/dpm.duckdb --sqlite-path ./.scratch/db_output/dpm.sqlite
 
     - name: Upload converted databases as artifacts
       uses: actions/upload-artifact@v4

@@ -6,9 +6,12 @@ import io
 import logging
 import tomllib
 import zipfile
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import requests
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 logging.basicConfig(
     level=logging.INFO,
@@ -47,7 +50,13 @@ def download_and_extract(url: str, target_dir: Path) -> None:
 
 
 def download_databases(config_file: Path, target_dir: Path) -> None:
-    """Download all database files specified in the config."""
+    """Download all database files specified in the config.
+
+    Args:
+        config_file: Path to the sources.toml config file
+        target_dir: Directory to save downloaded databases
+
+    """
     sources = load_sources(config_file)
     for version, url in sources.items():
         try:
@@ -55,11 +64,3 @@ def download_databases(config_file: Path, target_dir: Path) -> None:
             logger.info("Successfully downloaded version %s", version)
         except Exception:
             logger.exception("Failed to download version %s", version)
-
-
-if __name__ == "__main__":
-    project_root = Path(__file__).resolve().parents[2]
-    config_path = Path(__file__).resolve().parent / "config" / "sources.toml"
-    input_dir = project_root / ".scratch" / "db_input"
-
-    download_databases(config_path, input_dir)
