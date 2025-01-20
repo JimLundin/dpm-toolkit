@@ -67,8 +67,7 @@ def migrate_databases(source_dir: Path, target_engines: list[Engine]) -> None:
 
 
 if __name__ == "__main__":
-    # Setup directories
-    project_root = Path(__file__).resolve().parents[3]
+    project_root = Path(__file__).resolve().parents[2]
     input_dir = project_root / ".scratch" / "db_input"
     output_dir = project_root / ".scratch" / "db_output"
     output_dir.mkdir(parents=True, exist_ok=True)
