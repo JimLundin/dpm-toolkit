@@ -1,4 +1,4 @@
-name: Test Database Conversion
+name: Convert Databases and Upload Artifacts 
 
 on:
   workflow_dispatch:  # Allow manual trigger
