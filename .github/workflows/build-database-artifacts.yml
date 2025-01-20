@@ -1,11 +1,11 @@
-name: Upload Databases 
+name: Upload Databases
 
 
 on:
   workflow_dispatch:  # Allow manual trigger
 
 jobs:
-  build-release:
+  build-artifacts:
     runs-on: windows-latest
     
     steps:
