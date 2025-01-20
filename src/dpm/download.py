@@ -30,7 +30,7 @@ def download_and_extract(url: str, target_dir: Path) -> None:
 
     try:
         logger.info("Downloading from %s", url)
-        response = requests.get(url, timeout=60)
+        response = requests.get(url, timeout=60, allow_redirects=False)
         response.raise_for_status()
 
         # Extract the file directly from memory
