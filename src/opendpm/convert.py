@@ -36,21 +36,25 @@ def migrate_database(source_dir: Path, target_dir: Path) -> None:
         metadata.reflect(bind=source_engine)
 
         # Copy each table
-        with source_engine.connect() as conn:
+        with (
+            source_engine.connect() as source_conn,
+            target_engine.connect() as target_conn,
+        ):
             for table_name, table in metadata.tables.items():
                 logger.info("Copying table: %s", table_name)
 
                 try:
                     # Read all data
-                    data = conn.execute(table.select()).fetchall()
+                    data = source_conn.execute(table.select()).fetchall()
 
                     # Create table and copy data
                     table.metadata = MetaData()
                     table.create(target_engine, checkfirst=True)
 
                     if data:
-                        with target_engine.begin() as target_conn:
-                            target_conn.execute(table.insert().values(data))
+                        target_conn.execute(table.insert().values(data))
+                    else:
+                        logger.warning("No data found for table: %s", table_name)
 
                 except Exception:
                     logger.exception("Failed to copy table: %s", table_name)
