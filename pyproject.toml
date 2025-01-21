@@ -8,6 +8,7 @@ authors = [
 dependencies = [
     "pyodbc>=5.1.0",
     "sqlalchemy>=2.0.25",
+    "sqlalchemy-access>=2.0.0",
     "requests>=2.32.3",
     "duckdb-engine>=0.15.0",
 ]
