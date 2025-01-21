@@ -18,7 +18,7 @@ def migrate_database(source_dir: Path, target_dir: Path) -> None:
 
     Args:
         source_dir: Directory containing Access databases
-        target_dir: Directory to save converted databases
+        target_dir: Directory to save converted DuckDB database
 
     """
     # Create the DuckDB engine
