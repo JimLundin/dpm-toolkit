@@ -57,7 +57,7 @@ def create_parser() -> argparse.ArgumentParser:
         "--output-dir",
         type=Path,
         required=True,
-        help="Path for output DuckDB file",
+        help="Directory to save converted databases",
     )
 
     # Config path command
@@ -77,7 +77,7 @@ def main() -> None:
     if args.command == "download":
         download.download_databases(args.config, args.output_dir)
     elif args.command == "convert":
-        convert.migrate_database(args.input_dir, args.output)
+        convert.migrate_database(args.input_dir, args.output_dir)
     elif args.command == "config-path":
         # Print just the path without any logging output
         print(get_default_config())  # noqa: T201
