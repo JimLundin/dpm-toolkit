@@ -1,7 +1,7 @@
 [project]
-name = "open-dpm"
+name = "opendpm"
 version = "0.1.0"
-description = "Add your description here"
+description = "Open-source tools and models for working with DPM databases"
 authors = [
     { name = "Jim Lundin", email = "jimeriklundin@gmail.com" }
 ]

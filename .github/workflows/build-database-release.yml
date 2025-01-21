@@ -6,6 +6,10 @@ on:
       - 'v*'  # Trigger on version tags
   workflow_dispatch:  # Allow manual trigger
 
+env:
+  INPUT_DIR: data/input
+  OUTPUT_DIR: data/output
+
 jobs:
   build-release:
     runs-on: windows-latest
@@ -43,29 +47,36 @@ jobs:
       run: |
         Start-Process -FilePath "AccessDatabaseEngine.exe" -ArgumentList "/quiet" -Wait
     
+    - name: Create directories
+      run: |
+        mkdir -p ${{ env.INPUT_DIR }} ${{ env.OUTPUT_DIR }}
+    
+    - name: Get config path
+      id: config
+      run: echo "path=$(python -m opendpm config-path)" >> $GITHUB_OUTPUT
+    
     - name: Cache downloaded databases
       id: cache-dbs
       uses: actions/cache@v3
       with:
-        path: .scratch/db_input
-        key: access-dbs-${{ hashFiles('config/sources.toml') }}
+        path: ${{ env.INPUT_DIR }}
+        key: access-dbs-${{ hashFiles(steps.config.outputs.path) }}
 
     - name: Download database files
       if: steps.cache-dbs.outputs.cache-hit != 'true'
       run: |
-        python -m opendpm download --config ./src/opendpm/config/sources.toml --output-dir ./.scratch/db_input
+        python -m opendpm download --output-dir ${{ env.INPUT_DIR }}
 
     - name: Convert databases
       run: |
-        python -m opendpm convert --input-dir ./.scratch/db_input --duckdb-path ./.scratch/db_output/dpm.duckdb --sqlite-path ./.scratch/db_output/dpm.sqlite
+        python -m opendpm convert --input-dir ${{ env.INPUT_DIR }} --output-dir ${{ env.OUTPUT_DIR }}
 
     - name: Create Release
       uses: softprops/action-gh-release@v1
       if: startsWith(github.ref, 'refs/tags/')
       with:
         files: |
-          .scratch/db_output/*.duckdb
-          .scratch/db_output/*.sqlite
+          ${{ env.OUTPUT_DIR }}
         body_path: release_notes.md
         draft: false
         prerelease: false

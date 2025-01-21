@@ -1,4 +1,4 @@
-"""Functions for converting Access databases to DuckDB and SQLite formats."""
+"""Functions for converting Access databases to DuckDB format."""
 
 import logging
 from pathlib import Path
@@ -13,19 +13,16 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def migrate_databases(source_dir: Path, target_urls: list[str]) -> None:
-    """Migrate databases from source directory to target databases.
+def migrate_database(source_dir: Path, target_dir: Path) -> None:
+    """Migrate databases from source directory to DuckDB.
 
     Args:
         source_dir: Directory containing Access databases
-        target_urls: List of SQLAlchemy database URLs to migrate data to
+        target_dir: Directory to save converted databases
 
     """
-    if not target_urls:
-        logger.error("No target URLs provided")
-        return
-
-    target_engines = [create_engine(url) for url in target_urls]
+    # Create the DuckDB engine
+    target_engine = create_engine(f"duckdb:///{target_dir}/dpm.duckdb")
 
     # Process each source database
     for source_path in source_dir.glob("**/*.accdb"):
@@ -38,7 +35,7 @@ def migrate_databases(source_dir: Path, target_urls: list[str]) -> None:
         metadata = MetaData()
         metadata.reflect(bind=source_engine)
 
-        # Copy each table to all targets
+        # Copy each table
         with source_engine.connect() as conn:
             for table_name, table in metadata.tables.items():
                 logger.info("Copying table: %s", table_name)
@@ -47,14 +44,13 @@ def migrate_databases(source_dir: Path, target_urls: list[str]) -> None:
                     # Read all data
                     data = conn.execute(table.select()).fetchall()
 
-                    # Copy to each target
-                    for engine in target_engines:
-                        table.metadata = MetaData()
-                        table.create(engine, checkfirst=True)
+                    # Create table and copy data
+                    table.metadata = MetaData()
+                    table.create(target_engine, checkfirst=True)
 
-                        if data:
-                            with engine.begin() as target_conn:
-                                target_conn.execute(table.insert().values(data))
+                    if data:
+                        with target_engine.begin() as target_conn:
+                            target_conn.execute(table.insert().values(data))
 
                 except Exception:
                     logger.exception("Failed to copy table: %s", table_name)

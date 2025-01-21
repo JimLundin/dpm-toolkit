@@ -16,6 +16,11 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def get_default_config() -> Path:
+    """Get the default config file path."""
+    return Path(__file__).parent / "config" / "sources.toml"
+
+
 def create_parser() -> argparse.ArgumentParser:
     """Create the command line argument parser."""
     parser = argparse.ArgumentParser(description="OpenDPM CLI tool")
@@ -28,8 +33,8 @@ def create_parser() -> argparse.ArgumentParser:
     download_parser.add_argument(
         "--config",
         type=Path,
-        required=True,
-        help="Path to sources.toml config file",
+        default=get_default_config(),
+        help="Path to sources.toml config file (default: %(default)s)",
     )
     download_parser.add_argument(
         "--output-dir",
@@ -40,7 +45,7 @@ def create_parser() -> argparse.ArgumentParser:
 
     # Convert command
     convert_parser = subparsers.add_parser(
-        "convert", help="Convert Access databases to other formats",
+        "convert", help="Convert Access databases to DuckDB",
     )
     convert_parser.add_argument(
         "--input-dir",
@@ -49,14 +54,16 @@ def create_parser() -> argparse.ArgumentParser:
         help="Directory containing Access databases",
     )
     convert_parser.add_argument(
-        "--duckdb-path",
+        "--output-dir",
         type=Path,
-        help="Path for DuckDB output file",
+        required=True,
+        help="Path for output DuckDB file",
     )
-    convert_parser.add_argument(
-        "--sqlite-path",
-        type=Path,
-        help="Path for SQLite output file",
+
+    # Config path command
+    subparsers.add_parser(
+        "config-path",
+        help="Print the path to the default config file",
     )
 
     return parser
@@ -70,21 +77,10 @@ def main() -> None:
     if args.command == "download":
         download.download_databases(args.config, args.output_dir)
     elif args.command == "convert":
-        engines: list[str] = []
-        if args.duckdb_path:
-            engines.append(f"duckdb:///{args.duckdb_path}")
-        if args.sqlite_path:
-            engines.append(f"sqlite:///{args.sqlite_path}")
-
-        if not engines:
-            logger.error(
-                "At least one output format "
-                "(--duckdb-path or --sqlite-path) "
-                "must be specified",
-            )
-            return
-
-        convert.migrate_databases(args.input_dir, engines)
+        convert.migrate_database(args.input_dir, args.output)
+    elif args.command == "config-path":
+        # Print just the path without any logging output
+        print(get_default_config())  # noqa: T201
     else:
         parser.print_help()
 
