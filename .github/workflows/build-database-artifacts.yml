@@ -44,10 +44,6 @@ jobs:
       run: |
         Start-Process -FilePath "AccessDatabaseEngine.exe" -ArgumentList "/quiet" -Wait
     
-    - name: Create directories
-      run: |
-        mkdir -p ${{ env.INPUT_DIR }} ${{ env.OUTPUT_DIR }}
-    
     - name: Get config path
       id: config
       run: echo "path=$(opendpm config-path)" >> $GITHUB_OUTPUT

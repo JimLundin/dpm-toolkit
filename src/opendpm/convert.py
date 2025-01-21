@@ -21,6 +21,8 @@ def migrate_database(source_dir: Path, target_dir: Path) -> None:
         target_dir: Directory to save converted DuckDB database
 
     """
+    target_dir.mkdir(parents=True, exist_ok=True)
+
     # Create the DuckDB engine
     target_engine = create_engine(f"duckdb:///{target_dir}/dpm.duckdb")
 
