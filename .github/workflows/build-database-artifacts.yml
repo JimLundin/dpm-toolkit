@@ -50,7 +50,7 @@ jobs:
     
     - name: Get config path
       id: config
-      run: echo "path=$(python -m opendpm config-path)" >> $GITHUB_OUTPUT
+      run: echo "path=$(opendpm config-path)" >> $GITHUB_OUTPUT
     
     - name: Cache downloaded databases
       id: cache-dbs
@@ -62,11 +62,11 @@ jobs:
     - name: Download database files
       if: steps.cache-dbs.outputs.cache-hit != 'true'
       run: |
-        python -m opendpm download --output-dir ${{ env.INPUT_DIR }}
+        opendpm download --output-dir ${{ env.INPUT_DIR }}
 
     - name: Convert databases
       run: |
-        python -m opendpm convert --input-dir ${{ env.INPUT_DIR }} --output-dir ${{ env.OUTPUT_DIR }}
+        opendpm convert --input-dir ${{ env.INPUT_DIR }} --output-dir ${{ env.OUTPUT_DIR }}
 
     - name: Upload converted databases as artifacts
       uses: actions/upload-artifact@v4
