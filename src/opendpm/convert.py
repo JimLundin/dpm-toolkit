@@ -25,7 +25,7 @@ def migrate_database(source_dir: Path, target_dir: Path) -> None:
     target_dir.mkdir(parents=True, exist_ok=True)
 
     # Create the DuckDB engine
-    target_engine = create_engine(f"duckdb:///{target_dir}/dpm.duckdb")
+    target_engine = create_engine(f"duckdb:///{target_dir}/dpm.duckdb", echo=True)
 
     with target_engine.connect() as target_conn:
         # Process each source database
@@ -48,7 +48,7 @@ def migrate_database(source_dir: Path, target_dir: Path) -> None:
 
             metadata.reflect(bind=source_engine)
 
-            metadata.create_all(target_engine, checkfirst=True)
+            metadata.create_all(target_engine)
 
             # Copy each table
             with source_engine.connect() as source_conn:
