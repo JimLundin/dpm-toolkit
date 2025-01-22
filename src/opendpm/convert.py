@@ -48,6 +48,8 @@ def migrate_database(source_dir: Path, target_dir: Path) -> None:
 
             metadata.reflect(bind=source_engine)
 
+            metadata.create_all(target_engine, checkfirst=True)
+
             # Copy each table
             with source_engine.connect() as source_conn:
                 for table_name, table in metadata.tables.items():
@@ -56,10 +58,6 @@ def migrate_database(source_dir: Path, target_dir: Path) -> None:
                     try:
                         # Read all data
                         data = source_conn.execute(table.select()).fetchall()
-
-                        # Create table and copy data
-                        table.metadata = MetaData()
-                        table.create(target_engine, checkfirst=True)
 
                         if data:
                             target_conn.execute(table.insert().values(data))
