@@ -3,7 +3,8 @@
 import logging
 from pathlib import Path
 
-from sqlalchemy import MetaData, create_engine
+from sqlalchemy import Inspector, MetaData, create_engine, event
+from sqlalchemy.engine.interfaces import ReflectedColumn
 
 logging.basicConfig(
     level=logging.INFO,
@@ -36,6 +37,15 @@ def migrate_database(source_dir: Path, target_dir: Path) -> None:
 
             # Get all tables
             metadata = MetaData()
+
+            @event.listens_for(metadata, "column_reflect")
+            def genericize_datatypes( # type: ignore
+                _inspector: Inspector,
+                _tablename: str,
+                column_dict: ReflectedColumn,
+            ) -> None:
+                column_dict["type"] = column_dict["type"].as_generic()
+
             metadata.reflect(bind=source_engine)
 
             # Copy each table
