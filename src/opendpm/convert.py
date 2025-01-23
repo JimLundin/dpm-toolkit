@@ -1,6 +1,7 @@
 """Functions for converting Access databases to SQLite format."""
 
 import logging
+import time
 from pathlib import Path
 
 from sqlalchemy import Index, Inspector, MetaData, Text, create_engine, event
@@ -22,6 +23,7 @@ def migrate_database(source_dir: Path, target_dir: Path) -> None:
         target_dir: Directory to save converted SQLite database
 
     """
+    total_start_time = time.time()
     target_dir.mkdir(parents=True, exist_ok=True)
 
     # Create the SQLite engine
@@ -30,7 +32,8 @@ def migrate_database(source_dir: Path, target_dir: Path) -> None:
     with target_engine.connect() as target_conn:
         # Process each source database
         for source_path in source_dir.glob("**/*.accdb"):
-            logger.info("Processing database: %s", source_path.name)
+            db_start_time = time.time()
+            logger.info("%s - Processing database", source_path.name)
             driver = "{Microsoft Access Driver (*.mdb, *.accdb)}"
             conn_str = f"DRIVER={driver};DBQ={source_path}"
             source_engine = create_engine(f"access+pyodbc:///?odbc_connect={conn_str}")
@@ -39,7 +42,7 @@ def migrate_database(source_dir: Path, target_dir: Path) -> None:
             metadata = MetaData()
 
             @event.listens_for(metadata, "column_reflect")
-            def genericize_datatypes( # type: ignore
+            def genericize_datatypes(  # type: ignore
                 _inspector: Inspector,
                 _tablename: str,
                 column_dict: ReflectedColumn,
@@ -55,26 +58,43 @@ def migrate_database(source_dir: Path, target_dir: Path) -> None:
                 for index in table.indexes:
                     if index.name == "PrimaryKey":
                         table.indexes.remove(index)
-                        new_index = Index(f"{table.name}PrimaryKey", *index.columns)
-                        table.indexes.add(new_index)
+                        table.indexes.add(
+                            Index(f"{table.name}PrimaryKey", *index.columns),
+                        )
 
+            schema_start_time = time.time()
             metadata.create_all(target_engine)
+            logger.info("Schema recreation time: %s", time.time() - schema_start_time)
 
             # Copy each table
             with source_engine.connect() as source_conn:
                 for table_name, table in metadata.tables.items():
-                    logger.info("Copying table: %s", table_name)
+                    table_start_time = time.time()
 
                     try:
                         # Read all data
                         data = source_conn.execute(table.select()).fetchall()
 
-                        if data:
-                            target_conn.execute(
-                                table.insert(), [row._asdict() for row in data], # type: ignore
-                            )
-                        else:
-                            logger.warning("No data found for table: %s", table_name)
+                        insert_start_time = time.time()
+                        target_conn.execute(
+                            table.insert(),
+                            [row._asdict() for row in data],  # type: ignore
+                        )
+                        logger.info(
+                            "Table: %s, rows: %s, fetch time: %s, insert time: %s",
+                            table_name,
+                            len(data),
+                            insert_start_time - table_start_time,
+                            time.time() - insert_start_time,
+                        )
 
                     except Exception:
-                        logger.exception("Failed to copy table: %s", table_name)
+                        logger.exception("%s - Failed to copy table", table_name)
+
+            logger.info(
+                "Database: %s, total time: %s",
+                source_path.name,
+                time.time() - db_start_time,
+            )
+
+    logger.info("Conversion time: %s", time.time() - total_start_time)
