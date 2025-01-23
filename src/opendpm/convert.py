@@ -80,6 +80,7 @@ def migrate_database(source_dir: Path, target_dir: Path) -> None:
                             table.insert(),
                             [row._asdict() for row in data],  # type: ignore
                         )
+                        target_conn.commit()
                         logger.info(
                             "Table: %s, rows: %d, fetch time: %.2f, insert time: %.2f",
                             table_name,
