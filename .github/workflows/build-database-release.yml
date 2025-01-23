@@ -11,70 +11,29 @@ env:
   OUTPUT_DIR: data/output
 
 jobs:
-  build-release:
-    runs-on: windows-latest
+  build:
+    uses: ./.github/workflows/build-database.yml
+  
+  create-release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
     
     steps:
     - uses: actions/checkout@v4
     
-    - name: Set up Python
-      uses: actions/setup-python@v5
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
       with:
-        python-version: '3.12'
-        cache: 'pip'
+        name: databases
+        path: ${{ env.OUTPUT_DIR }}
     
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e .
-
-    - name: Cache Access Database Engine
-      id: cache-access-engine
-      uses: actions/cache@v3
-      with:
-        path: AccessDatabaseEngine.exe
-        key: access-db-engine-2016-x64
-
-    - name: Download Microsoft Access Database Engine
-      if: steps.cache-access-engine.outputs.cache-hit != 'true'
-      shell: powershell
-      run: |
-        $url = "https://download.microsoft.com/download/3/5/C/35C84C36-661A-44E6-9324-8786B8DBE231/accessdatabaseengine_X64.exe"
-        Invoke-WebRequest -Uri $url -OutFile "AccessDatabaseEngine.exe"
-
-    - name: Install Microsoft Access Database Engine
-      shell: powershell
-      run: |
-        Start-Process -FilePath "AccessDatabaseEngine.exe" -ArgumentList "/quiet" -Wait
-    
-    - name: Get config path
-      id: config
-      run: echo "path=$(opendpm config-path)" >> $GITHUB_OUTPUT
-    
-    - name: Cache downloaded databases
-      id: cache-dbs
-      uses: actions/cache@v3
-      with:
-        path: ${{ env.INPUT_DIR }}
-        key: access-dbs-${{ hashFiles(steps.config.outputs.path) }}
-
-    - name: Download database files
-      if: steps.cache-dbs.outputs.cache-hit != 'true'
-      run: |
-        opendpm download --output-dir ${{ env.INPUT_DIR }}
-
-    - name: Convert databases
-      run: |
-        opendpm convert --input-dir ${{ env.INPUT_DIR }} --output-dir ${{ env.OUTPUT_DIR }}
-
     - name: Create Release
-      uses: softprops/action-gh-release@v1
-      if: startsWith(github.ref, 'refs/tags/')
-      with:
-        files: |
-          ${{ env.OUTPUT_DIR }}
-        body_path: release_notes.md
-        draft: false
-        prerelease: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        gh release create ${{ github.ref_name }} \
+          --title "Release ${{ github.ref_name }}" \
+          --generate-notes \
+          ${{ env.OUTPUT_DIR }}/*

@@ -1,0 +1,70 @@
+name: Build Database
+
+on:
+  workflow_call:
+    outputs:
+      config-path:
+        description: "Path to the config file"
+        value: ${{ jobs.build.outputs.config-path }}
+
+env:
+  INPUT_DIR: data/input
+  OUTPUT_DIR: data/output
+
+jobs:
+  build:
+    runs-on: windows-latest
+    outputs:
+      config-path: ${{ steps.config.outputs.path }}
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .
+
+    - name: Cache Access Database Engine
+      id: cache-access-engine
+      uses: actions/cache@v3
+      with:
+        path: AccessDatabaseEngine.exe
+        key: access-db-engine-2016-x64
+
+    - name: Download Microsoft Access Database Engine
+      if: steps.cache-access-engine.outputs.cache-hit != 'true'
+      shell: powershell
+      run: |
+        $url = "https://download.microsoft.com/download/3/5/C/35C84C36-661A-44E6-9324-8786B8DBE231/accessdatabaseengine_X64.exe"
+        Invoke-WebRequest -Uri $url -OutFile "AccessDatabaseEngine.exe"
+
+    - name: Install Microsoft Access Database Engine
+      shell: powershell
+      run: |
+        Start-Process -FilePath "AccessDatabaseEngine.exe" -ArgumentList "/quiet" -Wait
+    
+    - name: Get config path
+      id: config
+      run: echo "path=$(opendpm config-path)" >> $GITHUB_OUTPUT
+    
+    - name: Cache downloaded databases
+      uses: actions/cache@v3
+      with:
+        path: ${{ env.INPUT_DIR }}
+        key: ${{ runner.os }}-databases-${{ hashFiles(steps.config.outputs.path) }}
+        
+    - name: Build databases
+      run: opendpm build
+      
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: databases
+        path: ${{ env.OUTPUT_DIR }}
