@@ -45,7 +45,7 @@ def create_parser() -> argparse.ArgumentParser:
 
     # Convert command
     convert_parser = subparsers.add_parser(
-        "convert", help="Convert Access databases to DuckDB",
+        "convert", help="Convert Access databases to SQLite",
     )
     convert_parser.add_argument(
         "--input-dir",

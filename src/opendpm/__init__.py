@@ -1,2 +1,1 @@
-def hello() -> str:
-    return "Hello from dpm!"
+"""Provides a command-line interface for OpenDPM."""
