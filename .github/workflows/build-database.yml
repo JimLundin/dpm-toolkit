@@ -55,13 +55,20 @@ jobs:
       run: echo "path=$(opendpm config-path)" >> $GITHUB_OUTPUT
     
     - name: Cache downloaded databases
+      id: cache-dbs
       uses: actions/cache@v3
       with:
         path: ${{ env.INPUT_DIR }}
         key: ${{ runner.os }}-databases-${{ hashFiles(steps.config.outputs.path) }}
-        
+
+    - name: Download database files
+      if: steps.cache-dbs.outputs.cache-hit != 'true'
+      run: |
+        opendpm download --output-dir ${{ env.INPUT_DIR }}        
+
     - name: Build databases
-      run: opendpm convert --input-dir ${{ env.INPUT_DIR }} --output-dir ${{ env.OUTPUT_DIR }}
+      run: |
+        opendpm convert --input-dir ${{ env.INPUT_DIR }} --output-dir ${{ env.OUTPUT_DIR }}
       
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
