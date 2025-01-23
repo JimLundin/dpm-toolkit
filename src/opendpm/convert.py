@@ -1,9 +1,9 @@
-"""Functions for converting Access databases to DuckDB format."""
+"""Functions for converting Access databases to SQLite format."""
 
 import logging
 from pathlib import Path
 
-from sqlalchemy import Inspector, MetaData, create_engine, event
+from sqlalchemy import Index, Inspector, MetaData, Text, create_engine, event
 from sqlalchemy.engine.interfaces import ReflectedColumn
 
 logging.basicConfig(
@@ -15,17 +15,17 @@ logger = logging.getLogger(__name__)
 
 
 def migrate_database(source_dir: Path, target_dir: Path) -> None:
-    """Migrate databases from source directory to DuckDB.
+    """Migrate databases from source directory to target directory in SQLite.
 
     Args:
         source_dir: Directory containing Access databases
-        target_dir: Directory to save converted DuckDB database
+        target_dir: Directory to save converted SQLite database
 
     """
     target_dir.mkdir(parents=True, exist_ok=True)
 
-    # Create the DuckDB engine
-    target_engine = create_engine(f"duckdb:///{target_dir}/dpm.duckdb", echo=True)
+    # Create the SQLite engine
+    target_engine = create_engine(f"sqlite:///{target_dir}/dpm.sqlite", echo=True)
 
     with target_engine.connect() as target_conn:
         # Process each source database
@@ -44,9 +44,19 @@ def migrate_database(source_dir: Path, target_dir: Path) -> None:
                 _tablename: str,
                 column_dict: ReflectedColumn,
             ) -> None:
-                column_dict["type"] = column_dict["type"].as_generic()
+                if column_dict["name"].endswith("GUID"):
+                    column_dict["type"] = Text()
+                else:
+                    column_dict["type"] = column_dict["type"].as_generic()
 
             metadata.reflect(bind=source_engine)
+
+            for table in metadata.tables.values():
+                for index in table.indexes:
+                    if index.name == "PrimaryKey":
+                        table.indexes.remove(index)
+                        new_index = Index(f"{table.name}PrimaryKey", *index.columns)
+                        table.indexes.add(new_index)
 
             metadata.create_all(target_engine)
 
@@ -60,7 +70,9 @@ def migrate_database(source_dir: Path, target_dir: Path) -> None:
                         data = source_conn.execute(table.select()).fetchall()
 
                         if data:
-                            target_conn.execute(table.insert().values(data))
+                            target_conn.execute(
+                                table.insert(), [row._asdict() for row in data], # type: ignore
+                            )
                         else:
                             logger.warning("No data found for table: %s", table_name)
 
