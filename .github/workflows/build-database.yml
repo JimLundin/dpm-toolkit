@@ -61,7 +61,7 @@ jobs:
         key: ${{ runner.os }}-databases-${{ hashFiles(steps.config.outputs.path) }}
         
     - name: Build databases
-      run: opendpm build
+      run: opendpm convert --input-dir ${{ env.INPUT_DIR }} --output-dir ${{ env.OUTPUT_DIR }}
       
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
