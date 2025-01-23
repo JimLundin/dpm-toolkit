@@ -64,7 +64,7 @@ def migrate_database(source_dir: Path, target_dir: Path) -> None:
 
             schema_start_time = time.time()
             metadata.create_all(target_engine)
-            logger.info("Schema recreation time: %s", time.time() - schema_start_time)
+            logger.info("Schema recreation time: %.2f", time.time() - schema_start_time)
 
             # Copy each table
             with source_engine.connect() as source_conn:
@@ -81,7 +81,7 @@ def migrate_database(source_dir: Path, target_dir: Path) -> None:
                             [row._asdict() for row in data],  # type: ignore
                         )
                         logger.info(
-                            "Table: %s, rows: %s, fetch time: %s, insert time: %s",
+                            "Table: %s, rows: %d, fetch time: %.2f, insert time: %.2f",
                             table_name,
                             len(data),
                             insert_start_time - table_start_time,
@@ -92,9 +92,9 @@ def migrate_database(source_dir: Path, target_dir: Path) -> None:
                         logger.exception("%s - Failed to copy table", table_name)
 
             logger.info(
-                "Database: %s, total time: %s",
+                "Database: %s, total time: %.2f",
                 source_path.name,
                 time.time() - db_start_time,
             )
 
-    logger.info("Conversion time: %s", time.time() - total_start_time)
+    logger.info("Conversion time: %.2f", time.time() - total_start_time)
