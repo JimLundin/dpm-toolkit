@@ -52,6 +52,7 @@ jobs:
     
     - name: Get config path
       id: config
+      shell: bash
       run: echo "path=$(opendpm config-path)" >> $GITHUB_OUTPUT
     
     - name: Cache downloaded databases
