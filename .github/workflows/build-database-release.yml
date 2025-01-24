@@ -32,7 +32,7 @@ jobs:
     - name: Zip database files
       run: |
         cd databases
-        zip -r ../dpm-databases.zip *
+        zip -r ../dpm-database.zip *
         cd ..
     
     - name: Create Release
@@ -41,4 +41,4 @@ jobs:
         name: "Release ${{ github.ref_name }}"
         prerelease: true
         generate_release_notes: true
-        files: dpm-databases.zip
+        files: dpm-database.zip
