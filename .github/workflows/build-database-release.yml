@@ -33,5 +33,6 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         name: "Release ${{ github.ref_name }}"
+        prerelease: true
         generate_release_notes: true
         files: ${{ env.OUTPUT_DIR }}/*
