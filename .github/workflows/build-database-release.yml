@@ -30,10 +30,8 @@ jobs:
         path: ${{ env.OUTPUT_DIR }}
     
     - name: Create Release
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        gh release create ${{ github.ref_name }} \
-          --title "Release ${{ github.ref_name }}" \
-          --generate-notes \
-          ${{ env.OUTPUT_DIR }}/*
+      uses: softprops/action-gh-release@v1
+      with:
+        name: "Release ${{ github.ref_name }}"
+        generate_release_notes: true
+        files: ${{ env.OUTPUT_DIR }}/*
