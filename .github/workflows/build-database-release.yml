@@ -29,10 +29,16 @@ jobs:
         name: databases
         path: databases
     
+    - name: Zip database files
+      run: |
+        cd databases
+        zip -r ../dpm-databases.zip *
+        cd ..
+    
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
         name: "Release ${{ github.ref_name }}"
         prerelease: true
         generate_release_notes: true
-        files: databases/*
+        files: dpm-databases.zip
