@@ -27,7 +27,7 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: databases
-        path: ${{ env.OUTPUT_DIR }}
+        path: databases
     
     - name: Create Release
       uses: softprops/action-gh-release@v1
@@ -35,4 +35,4 @@ jobs:
         name: "Release ${{ github.ref_name }}"
         prerelease: true
         generate_release_notes: true
-        files: ${{ env.OUTPUT_DIR }}/*
+        files: databases/*
