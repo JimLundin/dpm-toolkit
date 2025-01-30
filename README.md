@@ -51,7 +51,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is provided "as is" and without warranty of any kind, either express or implied. Use at your own risk.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Disclaimer
 
