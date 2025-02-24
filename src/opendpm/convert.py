@@ -4,7 +4,7 @@ import logging
 import time
 from pathlib import Path
 
-from sqlalchemy import Index, Inspector, MetaData, Text, create_engine, event
+from sqlalchemy import Inspector, MetaData, Text, create_engine, event
 from sqlalchemy.engine.interfaces import ReflectedColumn
 
 logging.basicConfig(
@@ -58,12 +58,11 @@ def migrate_database(source_dir: Path, target_dir: Path) -> None:
             metadata.reflect(bind=source_engine)
 
             for table in metadata.tables.values():
-                for index in table.indexes:
-                    if index.name == "PrimaryKey":
-                        table.indexes.remove(index)
-                        table.indexes.add(
-                            Index(f"{table.name}PrimaryKey", *index.columns),
-                        )
+                indexes_to_modify = [
+                    index for index in table.indexes if index.name == "PrimaryKey"
+                ]
+                for index in indexes_to_modify:
+                    table.indexes.remove(index)
 
             schema_start_time = time.time()
             metadata.create_all(target_engine)
