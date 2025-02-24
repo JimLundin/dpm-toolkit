@@ -15,6 +15,18 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def genericize_datatypes(
+    _inspector: Inspector,
+    _table_name: str,
+    column_dict: ReflectedColumn,
+) -> None:
+    """Convert GUID columns to Text and all other columns to generic types."""
+    if column_dict["name"].endswith("GUID"):
+        column_dict["type"] = Text()
+    else:
+        column_dict["type"] = column_dict["type"].as_generic()
+
+
 def migrate_database(source_dir: Path, target_dir: Path) -> None:
     """Migrate databases from source directory to target directory in SQLite.
 
@@ -41,16 +53,7 @@ def migrate_database(source_dir: Path, target_dir: Path) -> None:
             # Get all tables
             metadata = MetaData()
 
-            @event.listens_for(metadata, "column_reflect")
-            def genericize_datatypes(  # type: ignore
-                _inspector: Inspector,
-                _tablename: str,
-                column_dict: ReflectedColumn,
-            ) -> None:
-                if column_dict["name"].endswith("GUID"):
-                    column_dict["type"] = Text()
-                else:
-                    column_dict["type"] = column_dict["type"].as_generic()
+            event.listens_for(metadata, "column_reflect")(genericize_datatypes)
 
             metadata.reflect(bind=source_engine)
 
