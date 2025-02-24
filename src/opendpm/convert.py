@@ -58,10 +58,10 @@ def migrate_database(source_dir: Path, target_dir: Path) -> None:
             metadata.reflect(bind=source_engine)
 
             for table in metadata.tables.values():
-                indexes_to_modify = [
+                indexes_to_drop = [
                     index for index in table.indexes if index.name == "PrimaryKey"
                 ]
-                for index in indexes_to_modify:
+                for index in indexes_to_drop:
                     table.indexes.remove(index)
 
             schema_start_time = time.time()
