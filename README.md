@@ -1,6 +1,6 @@
 # OpenDPM
 
-Convert EBA DPM 2.0 (Data Point Model) databases from Access to SQLite format.
+Convert EBA DPM 2.0 (Data Point Model) databases from AccessDB to SQLite format.
 
 ## Overview
 
@@ -20,6 +20,9 @@ The current DPM 2.0 releases from EBA are only provided in AccessDB format, whic
 ### Option 1: Download Pre-converted Databases
 
 The easiest way to get started is to download the converted SQLite databases from our [Releases page](https://github.com/JimLundin/opendpm/releases). Each release contains the latest converted DPM database.
+
+You can also download the latest release at the following url: 
+`https://github.com/JimLundin/opendpm/releases/latest/download/dpm-database.zip`
 
 ### Option 2: Run the Conversion Yourself
 
