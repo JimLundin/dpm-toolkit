@@ -21,8 +21,12 @@ The current DPM 2.0 releases from EBA are only provided in AccessDB format, whic
 
 The easiest way to get started is to download the converted SQLite databases from our [Releases page](https://github.com/JimLundin/opendpm/releases). Each release contains the latest converted DPM database.
 
-You can also download the latest release at the following url: 
-`https://github.com/JimLundin/opendpm/releases/latest/download/dpm-database.zip`
+You can download the latest release either by:
+- Using this URL in your scripts:
+```
+https://github.com/JimLundin/opendpm/releases/latest/download/dpm-database.zip
+```
+- Or clicking here: [Download Latest DPM Database](https://github.com/JimLundin/opendpm/releases/latest/download/dpm-database.zip)
 
 ### Option 2: Run the Conversion Yourself
 
