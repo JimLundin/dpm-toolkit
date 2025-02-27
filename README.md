@@ -11,7 +11,7 @@ This project provides pre-converted SQLite versions of the EBA DPM 2.0 databases
 The current DPM 2.0 releases from EBA are only provided in AccessDB format, which has limited support outside of Windows operating systems. In addition, the DPM 2.0 releases are only provided in "incremental" format, keeping each release self-contained. This project solves these limitations by:
 - Converting the databases to SQLite format
 - Combining all releases into a single file
-- Making the data accessible on any platform
+- Making the data consistently accessible via HTTP
 - Providing automated conversion through GitHub Actions
 - Publishing new releases with converted databases
 
