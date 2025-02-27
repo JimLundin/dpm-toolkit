@@ -39,7 +39,7 @@ def migrate_database(source_dir: Path, target_dir: Path) -> None:
     target_dir.mkdir(parents=True, exist_ok=True)
 
     # Create the SQLite engine
-    target_engine = create_engine(f"sqlite:///{target_dir}/dpm.db")
+    target_engine = create_engine(f"sqlite:///{target_dir}/dpm.sqlite")
 
     with target_engine.connect() as target_conn:
         # Process each source database
