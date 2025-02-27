@@ -49,7 +49,7 @@ If you want to run the conversion locally:
 
 ## Caveats
 
-- Only the current DPM release data is extracted, not data from previous releases
+- Currently only the current DPM release data is extracted, not data from previous releases
 - Queries from the original database are not preserved
 - Local conversion requires Microsoft Access ODBC driver to be installed
 
