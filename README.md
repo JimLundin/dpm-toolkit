@@ -24,7 +24,7 @@ The easiest way to get started is to download the converted SQLite databases fro
 You can download the latest release either by:
 - Using this URL in your scripts:
 ```
-https://github.com/JimLundin/opendpm/releases/latest/download/dpm-database.zip
+https://github.com/JimLundin/opendpm/releases/latest/download/dpm-sqlite.zip
 ```
 - Or clicking here: [Download Latest DPM Database](https://github.com/JimLundin/opendpm/releases/latest/download/dpm-sqlite.zip)
 
