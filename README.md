@@ -26,7 +26,7 @@ You can download the latest release either by:
 ```
 https://github.com/JimLundin/opendpm/releases/latest/download/dpm-database.zip
 ```
-- Or clicking here: [Download Latest DPM Database](https://github.com/JimLundin/opendpm/releases/latest/download/dpm-database.zip)
+- Or clicking here: [Download Latest DPM Database](https://github.com/JimLundin/opendpm/releases/latest/download/dpm-sqlite.zip)
 
 ### Option 2: Run the Conversion Yourself
 
