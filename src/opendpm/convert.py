@@ -1,10 +1,11 @@
-"""Functions for converting Access databases to SQLite format."""
+"""Functions for converting Access databases to DuckDB or SQLite format."""
 
 import logging
 import time
 from pathlib import Path
+from typing import Any, Literal
 
-from sqlalchemy import Inspector, MetaData, Text, create_engine, event
+from sqlalchemy import Column, Inspector, MetaData, Table, Text, create_engine, event
 from sqlalchemy.engine.interfaces import ReflectedColumn
 
 logging.basicConfig(
@@ -27,19 +28,48 @@ def genericize_datatypes(
         column_dict["type"] = column_dict["type"].as_generic()
 
 
-def migrate_database(source_dir: Path, target_dir: Path) -> None:
-    """Migrate databases from source directory to target directory in SQLite.
+def remove_foreign_keys_and_constraints(metadata: MetaData) -> MetaData:
+    """Remove foreign keys and constraints from tables in a MetaData object."""
+    new_metadata = MetaData()
+
+    for table_name, table in metadata.tables.items():
+        columns: list[Column[Any]] = []
+        for col in table.columns:
+            new_col = col.copy()
+            new_col.foreign_keys.clear()
+            columns.append(new_col)
+
+        Table(table_name, new_metadata, *columns)
+
+    return new_metadata
+
+
+def migrate_database(
+    source_dir: Path,
+    target_dir: Path,
+    db_format: Literal["duckdb", "sqlite"] = "sqlite",
+) -> None:
+    """Migrate databases from source directory to target directory in DuckDB or SQLite.
 
     Args:
         source_dir: Directory containing Access databases
-        target_dir: Directory to save converted SQLite database
+        target_dir: Directory to save converted database
+        db_format: Target database format, either "duckdb" or "sqlite", default: sqlite
 
     """
     total_start_time = time.time()
     target_dir.mkdir(parents=True, exist_ok=True)
 
-    # Create the SQLite engine
-    target_engine = create_engine(f"sqlite:///{target_dir}/dpm.sqlite")
+    # Create the target database engine based on format
+    if db_format == "duckdb":
+        target_engine = create_engine(f"duckdb:///{target_dir}/dpm.duckdb")
+        logger.info("Using DuckDB as target format")
+    elif db_format == "sqlite":
+        target_engine = create_engine(f"sqlite:///{target_dir}/dpm.sqlite")
+        logger.info("Using SQLite as target format")
+    else:
+        msg = f"Unsupported database format: {db_format}"
+        raise ValueError(msg)
 
     with target_engine.connect() as target_conn:
         # Process each source database
@@ -53,9 +83,12 @@ def migrate_database(source_dir: Path, target_dir: Path) -> None:
             # Get all tables
             metadata = MetaData()
 
-            event.listens_for(metadata, "column_reflect")(genericize_datatypes)
+            event.listen(metadata, "column_reflect", genericize_datatypes)
 
             metadata.reflect(bind=source_engine)
+
+            if db_format == "duckdb":
+                metadata = remove_foreign_keys_and_constraints(metadata)
 
             for table in metadata.tables.values():
                 indexes_to_drop = [
@@ -66,6 +99,7 @@ def migrate_database(source_dir: Path, target_dir: Path) -> None:
 
             schema_start_time = time.time()
             metadata.create_all(target_engine)
+
             logger.info("Schema recreation time: %.2f", time.time() - schema_start_time)
 
             # Copy each table
@@ -76,6 +110,10 @@ def migrate_database(source_dir: Path, target_dir: Path) -> None:
                     try:
                         # Read all data
                         data = source_conn.execute(table.select()).fetchall()
+
+                        if not data:
+                            logger.info("Table: %s - No data to copy", table_name)
+                            continue
 
                         insert_start_time = time.time()
                         target_conn.execute(

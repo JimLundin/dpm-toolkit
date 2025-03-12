@@ -9,7 +9,8 @@ on:
 
 env:
   INPUT_DIR: data/input
-  OUTPUT_DIR: data/output
+  OUTPUT_DIR_SQLITE: data/output/sqlite
+  OUTPUT_DIR_DUCKDB: data/output/duckdb
 
 jobs:
   build:
@@ -67,12 +68,22 @@ jobs:
       run: |
         opendpm download --output-dir ${{ env.INPUT_DIR }}        
 
-    - name: Build databases
+    - name: Build SQLite database
       run: |
-        opendpm convert --input-dir ${{ env.INPUT_DIR }} --output-dir ${{ env.OUTPUT_DIR }}
+        opendpm convert --input-dir ${{ env.INPUT_DIR }} --output-dir ${{ env.OUTPUT_DIR_SQLITE }} --format sqlite
       
-    - name: Upload artifacts
+    - name: Build DuckDB database
+      run: |
+        opendpm convert --input-dir ${{ env.INPUT_DIR }} --output-dir ${{ env.OUTPUT_DIR_DUCKDB }} --format duckdb
+      
+    - name: Upload SQLite artifact
       uses: actions/upload-artifact@v4
       with:
-        name: databases
-        path: ${{ env.OUTPUT_DIR }}
+        name: databases-sqlite
+        path: ${{ env.OUTPUT_DIR_SQLITE }}
+        
+    - name: Upload DuckDB artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: databases-duckdb
+        path: ${{ env.OUTPUT_DIR_DUCKDB }}
