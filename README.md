@@ -33,6 +33,8 @@ You can download the latest releases either by:
 - Using these URLs in your scripts:
 ```
 https://github.com/JimLundin/opendpm/releases/latest/download/dpm-sqlite.zip
+```
+```
 https://github.com/JimLundin/opendpm/releases/latest/download/dpm-duckdb.zip
 ```
 - Or clicking here: 
