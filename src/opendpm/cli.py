@@ -28,7 +28,8 @@ def create_parser() -> argparse.ArgumentParser:
 
     # Download command
     download_parser = subparsers.add_parser(
-        "download", help="Download Access databases",
+        "download",
+        help="Download Access databases",
     )
     download_parser.add_argument(
         "--config",
@@ -45,7 +46,8 @@ def create_parser() -> argparse.ArgumentParser:
 
     # Convert command
     convert_parser = subparsers.add_parser(
-        "convert", help="Convert Access databases to SQLite",
+        "convert",
+        help="Convert Access databases to DuckDB or SQLite",
     )
     convert_parser.add_argument(
         "--input-dir",
@@ -58,6 +60,13 @@ def create_parser() -> argparse.ArgumentParser:
         type=Path,
         required=True,
         help="Directory to save converted databases",
+    )
+    convert_parser.add_argument(
+        "--format",
+        type=str,
+        default="sqlite",
+        choices=["duckdb", "sqlite"],
+        help="Target database format (default: sqlite)",
     )
 
     # Config path command
@@ -77,7 +86,7 @@ def main() -> None:
     if args.command == "download":
         download.download_databases(args.config, args.output_dir)
     elif args.command == "convert":
-        convert.migrate_database(args.input_dir, args.output_dir)
+        convert.migrate_database(args.input_dir, args.output_dir, args.format)
     elif args.command == "config-path":
         # Print just the path without any logging output
         print(get_default_config())  # noqa: T201
