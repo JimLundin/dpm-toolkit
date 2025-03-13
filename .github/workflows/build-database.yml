@@ -58,7 +58,7 @@ jobs:
     
     - name: Cache downloaded databases
       id: cache-dbs
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ${{ env.INPUT_DIR }}
         key: ${{ runner.os }}-databases-${{ hashFiles(steps.config.outputs.path) }}

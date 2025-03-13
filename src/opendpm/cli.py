@@ -32,7 +32,7 @@ def create_parser() -> argparse.ArgumentParser:
         help="Download Access databases",
     )
     download_parser.add_argument(
-        "output-dir",
+        "output_dir",
         type=Path,
         help="Directory to save downloaded databases",
     )
@@ -49,12 +49,12 @@ def create_parser() -> argparse.ArgumentParser:
         help="Convert Access databases to DuckDB or SQLite",
     )
     convert_parser.add_argument(
-        "input-dir",
+        "input_dir",
         type=Path,
         help="Directory containing Access databases",
     )
     convert_parser.add_argument(
-        "output-dir",
+        "output_dir",
         type=Path,
         help="Directory to save converted databases",
     )
