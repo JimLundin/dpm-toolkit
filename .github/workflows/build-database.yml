@@ -78,6 +78,12 @@ jobs:
         echo "Generating models from $DB_PATH"
         sqlacodegen "sqlite:///$DB_PATH" --outfile ${{ env.OUTPUT_DIR_SQLITE }}/dpm_models.py --noviews
 
+    - name: Format generated models with ruff
+      run: |
+        pip install ruff
+        echo "Formatting generated model file with ruff"
+        ruff format ${{ env.OUTPUT_DIR_SQLITE }}/dpm_models.py
+
     - name: Upload SQLite artifact
       uses: actions/upload-artifact@v4
       with:
