@@ -70,7 +70,14 @@ jobs:
     - name: Build SQLite database
       run: |
         opendpm convert ${{ env.INPUT_DIR }} ${{ env.OUTPUT_DIR_SQLITE }}
-      
+        
+    - name: Generate models from SQLite
+      run: |
+        pip install sqlacodegen
+        $DB_PATH = Join-Path -Path ${{ env.OUTPUT_DIR_SQLITE }} -ChildPath "dpm.sqlite"
+        echo "Generating models from $DB_PATH"
+        sqlacodegen "sqlite:///$DB_PATH" --outfile ${{ env.OUTPUT_DIR_SQLITE }}/dpm_models.py --noviews
+
     - name: Upload SQLite artifact
       uses: actions/upload-artifact@v4
       with:
