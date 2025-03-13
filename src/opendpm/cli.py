@@ -32,16 +32,15 @@ def create_parser() -> argparse.ArgumentParser:
         help="Download Access databases",
     )
     download_parser.add_argument(
+        "output-dir",
+        type=Path,
+        help="Directory to save downloaded databases",
+    )
+    download_parser.add_argument(
         "--config",
         type=Path,
         default=get_default_config(),
         help="Path to sources.toml config file (default: %(default)s)",
-    )
-    download_parser.add_argument(
-        "--output-dir",
-        type=Path,
-        required=True,
-        help="Directory to save downloaded databases",
     )
 
     # Convert command
@@ -50,15 +49,13 @@ def create_parser() -> argparse.ArgumentParser:
         help="Convert Access databases to DuckDB or SQLite",
     )
     convert_parser.add_argument(
-        "--input-dir",
+        "input-dir",
         type=Path,
-        required=True,
         help="Directory containing Access databases",
     )
     convert_parser.add_argument(
-        "--output-dir",
+        "output-dir",
         type=Path,
-        required=True,
         help="Directory to save converted databases",
     )
     convert_parser.add_argument(

@@ -66,15 +66,15 @@ jobs:
     - name: Download database files
       if: steps.cache-dbs.outputs.cache-hit != 'true'
       run: |
-        opendpm download --output-dir ${{ env.INPUT_DIR }}        
+        opendpm download ${{ env.INPUT_DIR }}        
 
     - name: Build SQLite database
       run: |
-        opendpm convert --input-dir ${{ env.INPUT_DIR }} --output-dir ${{ env.OUTPUT_DIR_SQLITE }} --format sqlite
+        opendpm convert ${{ env.INPUT_DIR }} ${{ env.OUTPUT_DIR_SQLITE }} --format sqlite
       
     - name: Build DuckDB database
       run: |
-        opendpm convert --input-dir ${{ env.INPUT_DIR }} --output-dir ${{ env.OUTPUT_DIR_DUCKDB }} --format duckdb
+        opendpm convert ${{ env.INPUT_DIR }} ${{ env.OUTPUT_DIR_DUCKDB }} --format duckdb
       
     - name: Upload SQLite artifact
       uses: actions/upload-artifact@v4
