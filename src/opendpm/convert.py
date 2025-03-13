@@ -119,7 +119,7 @@ def migrate_database(
 
     input_dir = Path(input_dir)
     output_dir = Path(output_dir)
-    output_dir.mkdir(exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     if db_format not in ["sqlite", "duckdb"]:
         msg = f"Unsupported database format: {db_format}"
