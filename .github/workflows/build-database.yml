@@ -33,7 +33,7 @@ jobs:
 
     - name: Cache Access Database Engine
       id: cache-access-engine
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: AccessDatabaseEngine.exe
         key: access-db-engine-2016-x64
