@@ -3,10 +3,9 @@
 import logging
 import time
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 from sqlalchemy import (
-    Column,
     Connection,
     Inspector,
     MetaData,
@@ -19,7 +18,7 @@ from sqlalchemy.engine.interfaces import ReflectedColumn
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    format="%(levelname)s - %(message)s",
 )
 
 logger = logging.getLogger(__name__)
@@ -50,22 +49,6 @@ def genericize_datatypes(
         column_dict["type"] = Text()
     else:
         column_dict["type"] = column_dict["type"].as_generic()
-
-
-def copy_metadata_columns(metadata: MetaData) -> MetaData:
-    """Remove foreign keys and constraints from tables in a MetaData object."""
-    new_metadata = MetaData()
-
-    for table_name, table in metadata.tables.items():
-        columns: list[Column[Any]] = []
-        for col in table.columns:
-            new_col = col.copy()
-            new_col.foreign_keys.clear()
-            columns.append(new_col)
-
-        Table(table_name, new_metadata, *columns)
-
-    return new_metadata
 
 
 def remove_table_primary_key_index(table: Table) -> None:
@@ -105,14 +88,12 @@ def insert_data(
 def migrate_database(
     input_dir: str | Path,
     output_dir: str | Path,
-    db_format: Literal["sqlite", "duckdb"],
 ) -> None:
-    """Convert Access database to SQLite or DuckDB.
+    """Convert Access database to SQLite.
 
     Args:
         input_dir: Path to directory with Access databases.
         output_dir: Path to output directory.
-        db_format: The output format, either "sqlite" or "duckdb".
 
     """
     total_start_time = time.time()
@@ -121,12 +102,7 @@ def migrate_database(
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    if db_format not in ["sqlite", "duckdb"]:
-        msg = f"Unsupported database format: {db_format}"
-        raise ValueError(msg)
-
-    target_engine = create_engine(f"{db_format}:///{output_dir}/dpm.{db_format}")
-    logger.info("Using %s as target format", db_format)
+    target_engine = create_engine(f"sqlite:///{output_dir}/dpm.sqlite")
 
     with target_engine.connect() as target_conn:
         for source_path in input_dir.glob("**/*.accdb"):
@@ -140,9 +116,6 @@ def migrate_database(
             event.listen(metadata, "column_reflect", genericize_datatypes)
             metadata.reflect(bind=source_engine)
 
-            if db_format == "duckdb":
-                metadata = copy_metadata_columns(metadata)
-
             for table in metadata.tables.values():
                 remove_table_primary_key_index(table)
 
@@ -152,24 +125,21 @@ def migrate_database(
                 target_conn.begin()
 
                 for table_name, table in metadata.tables.items():
-                    table_start_time = time.time()
-
                     try:
+                        table_start_time = time.time()
                         data = source_conn.execute(table.select()).fetchall()
-
                         if not data:
                             logger.info("Table: %s - No data to copy", table_name)
                             continue
 
-                        rows = [row._asdict() for row in data]
-                        total_rows = len(rows)
-
+                        rows = [row._asdict() for row in data]  # type: ignore
                         insert_start_time = time.time()
                         insert_data(target_conn, table, rows)
                         logger.info(
-                            "Table: %s, rows: %d, fetch time: %s, insert time: %s",
+                            "Table: %s, rows: %d, columns: %d, fetch: %s, insert: %s",
                             table_name,
-                            total_rows,
+                            len(rows),
+                            len(rows[0]),
                             format_time(insert_start_time - table_start_time),
                             format_time(time.time() - insert_start_time),
                         )

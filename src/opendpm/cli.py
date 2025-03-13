@@ -3,17 +3,9 @@
 from __future__ import annotations
 
 import argparse
-import logging
 from pathlib import Path
 
 from opendpm import convert, download
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
-
-logger = logging.getLogger(__name__)
 
 
 def get_default_config() -> Path:
@@ -46,7 +38,7 @@ def create_parser() -> argparse.ArgumentParser:
     # Convert command
     convert_parser = subparsers.add_parser(
         "convert",
-        help="Convert Access databases to DuckDB or SQLite",
+        help="Convert Access databases to SQLite",
     )
     convert_parser.add_argument(
         "input_dir",
@@ -57,13 +49,6 @@ def create_parser() -> argparse.ArgumentParser:
         "output_dir",
         type=Path,
         help="Directory to save converted databases",
-    )
-    convert_parser.add_argument(
-        "--format",
-        type=str,
-        default="sqlite",
-        choices=["duckdb", "sqlite"],
-        help="Target database format (default: sqlite)",
     )
 
     # Config path command
@@ -83,7 +68,7 @@ def main() -> None:
     if args.command == "download":
         download.download_databases(args.config, args.output_dir)
     elif args.command == "convert":
-        convert.migrate_database(args.input_dir, args.output_dir, args.format)
+        convert.migrate_database(args.input_dir, args.output_dir)
     elif args.command == "config-path":
         # Print just the path without any logging output
         print(get_default_config())  # noqa: T201
