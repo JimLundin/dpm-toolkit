@@ -76,7 +76,7 @@ jobs:
         pip install sqlacodegen
         $DB_PATH = Join-Path -Path ${{ env.OUTPUT_DIR_SQLITE }} -ChildPath "dpm.sqlite"
         echo "Generating models from $DB_PATH"
-        sqlacodegen "sqlite:///$DB_PATH" --outfile ${{ env.OUTPUT_DIR_SQLITE }}/dpm_models.py --noviews
+        sqlacodegen "sqlite:///$DB_PATH" --outfile ${{ env.OUTPUT_DIR_SQLITE }}/dpm_models.py --noviews --nojoined
 
     - name: Format generated models with ruff
       run: |
