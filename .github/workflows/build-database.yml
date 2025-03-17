@@ -83,7 +83,6 @@ jobs:
         pip install ruff
         echo "Formatting generated model file with ruff"
         ruff check --fix ${{ env.OUTPUT_DIR_SQLITE }}/dpm_models.py
-        ruff check --fix ${{ env.OUTPUT_DIR_SQLITE }}/dpm_models.py
         ruff format ${{ env.OUTPUT_DIR_SQLITE }}/dpm_models.py
 
     - name: Upload SQLite artifact
