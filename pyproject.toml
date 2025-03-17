@@ -17,7 +17,11 @@ requires-python = ">= 3.12"
 [project.scripts]
 opendpm = "opendpm.cli:main"
 
+[tool.ruff]
+unsafe-fixes = true
+
 [tool.ruff.lint]
+fixable = ["ALL"]
 select = ["ALL"]
 
 [tool.mypy]
