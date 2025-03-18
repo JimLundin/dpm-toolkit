@@ -10,7 +10,7 @@ from opendpm import convert, download
 
 def get_default_config() -> Path:
     """Get the default config file path."""
-    return Path(__file__).parent / "config" / "sources.toml"
+    return Path(__file__).parent / "sources.toml"
 
 
 def create_parser() -> argparse.ArgumentParser:
