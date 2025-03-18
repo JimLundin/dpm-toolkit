@@ -58,6 +58,18 @@ If you want to run the conversion locally:
    opendpm convert <source_dir> <target_dir>
    ```
 
+## Column Casting Conventions
+
+During the conversion from Access to SQLite, specific column casting rules are applied based on naming conventions to ensure proper data typing:
+
+| Column Name Pattern | Source Type | Target Type | Description |
+|---------------------|-------------|-------------|-------------|
+| `*guid` (suffix) | Integer | Text | Columns ending with "guid" are converted to text type |
+| `*date` (suffix) | String | Date | Columns ending with "date" are converted to date type |
+| `is*` (prefix) | Integer | Boolean | Columns starting with "is" are converted to boolean type |
+
+These casting rules help maintain data integrity while optimizing for query performance. When casting fails (e.g., a malformed date string), the value is set to `NULL` to prevent conversion errors from halting the entire process.
+
 ## Caveats
 
 - Currently only the current DPM release data is extracted, not data from previous releases
