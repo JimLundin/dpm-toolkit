@@ -1,5 +1,6 @@
 """Functions for converting Access databases to DuckDB or SQLite format."""
 
+import datetime
 import logging
 import time
 from pathlib import Path
@@ -7,6 +8,7 @@ from typing import Any
 
 from sqlalchemy import (
     Connection,
+    Date,
     Inspector,
     MetaData,
     Table,
@@ -47,8 +49,21 @@ def genericize_datatypes(
     """Convert GUID columns to Text and all other columns to generic types."""
     if column_dict["name"].endswith("GUID"):
         column_dict["type"] = Text()
+    elif column_dict["name"].endswith("Date"):
+        column_dict["type"] = Date()
     else:
         column_dict["type"] = column_dict["type"].as_generic()
+
+
+def correct_dates(rows: list[dict[str, Any]]) -> None:
+    """Correct date columns in a table."""
+    for row in rows:
+        for col_name, value in row.items():
+            if col_name.endswith("Date") and isinstance(value, str):
+                try:
+                    row[col_name] = datetime.date.fromisoformat(value)
+                except (ValueError, TypeError):
+                    row[col_name] = None
 
 
 def remove_table_primary_key_index(table: Table) -> None:
@@ -133,6 +148,7 @@ def migrate_database(
                             continue
 
                         rows = [row._asdict() for row in data]  # type: ignore
+                        correct_dates(rows)
                         insert_start_time = time.time()
                         insert_data(target_conn, table, rows)
                         logger.info(
