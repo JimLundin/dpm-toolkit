@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from sqlalchemy import (
+    Boolean,
     Connection,
     Date,
     Inspector,
@@ -47,23 +48,30 @@ def genericize_datatypes(
     column_dict: ReflectedColumn,
 ) -> None:
     """Convert GUID columns to Text and all other columns to generic types."""
-    if column_dict["name"].endswith("GUID"):
+    if column_dict["name"].lower().endswith("guid"):
+        # GUIDs are classified as Integer in the Source
         column_dict["type"] = Text()
-    elif column_dict["name"].endswith("Date"):
+    elif column_dict["name"].lower().endswith("date"):
+        # Dates are classified as String in the Source
         column_dict["type"] = Date()
+    elif column_dict["name"].lower().startswith("is"):
+        # Boolean columns are classified as Integer in the Source
+        column_dict["type"] = Boolean()
     else:
         column_dict["type"] = column_dict["type"].as_generic()
 
 
-def correct_dates(rows: list[dict[str, Any]]) -> None:
-    """Correct date columns in a table."""
+def cast_row_values(rows: list[dict[str, Any]]) -> None:
+    """Cast date and boolean columns in a table."""
     for row in rows:
         for col_name, value in row.items():
-            if col_name.endswith("Date") and isinstance(value, str):
-                try:
+            try:
+                if col_name.lower().endswith("date") and isinstance(value, str):
                     row[col_name] = datetime.date.fromisoformat(value)
-                except (ValueError, TypeError):
-                    row[col_name] = None
+                if col_name.lower().startswith("is") and isinstance(value, int):
+                    row[col_name] = bool(value)
+            except (ValueError, TypeError):
+                row[col_name] = None
 
 
 def remove_table_primary_key_index(table: Table) -> None:
@@ -148,7 +156,7 @@ def migrate_database(
                             continue
 
                         rows = [row._asdict() for row in data]  # type: ignore
-                        correct_dates(rows)
+                        cast_row_values(rows)
                         insert_start_time = time.time()
                         insert_data(target_conn, table, rows)
                         logger.info(
