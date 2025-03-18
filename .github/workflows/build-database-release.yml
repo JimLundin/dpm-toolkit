@@ -26,12 +26,12 @@ jobs:
     - name: Download SQLite artifacts
       uses: actions/download-artifact@v4
       with:
-        name: databases-sqlite
-        path: databases-sqlite
+        name: dpm-sqlite
+        path: dpm-sqlite
     
     - name: Zip SQLite database files
       run: |
-        cd databases-sqlite
+        cd dpm-sqlite
         zip -r ../dpm-sqlite.zip *
         cd ..
     
