@@ -19,6 +19,7 @@ opendpm = "opendpm.cli:main"
 
 [tool.ruff]
 unsafe-fixes = true
+output-format = "concise"
 
 [tool.ruff.lint]
 fixable = ["ALL"]
