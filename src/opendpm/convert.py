@@ -8,7 +8,6 @@ from typing import Any, TypedDict
 
 from sqlalchemy import (
     Boolean,
-    Connection,
     Date,
     Inspector,
     MetaData,
