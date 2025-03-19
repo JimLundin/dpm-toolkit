@@ -1,4 +1,4 @@
-"""Functions for converting Access databases to DuckDB or SQLite format."""
+"""Functions for converting Access databases to SQLite format."""
 
 import datetime
 import logging
@@ -47,7 +47,7 @@ def genericize_datatypes(
     _table_name: str,
     column_dict: ReflectedColumn,
 ) -> None:
-    """Convert GUID columns to Text and all other columns to generic types."""
+    """Convert columns to generic types."""
     if column_dict["name"].lower().endswith("guid"):
         # GUIDs are classified as Integer in the Source
         column_dict["type"] = Text()
@@ -62,7 +62,7 @@ def genericize_datatypes(
 
 
 def cast_row_values(rows: list[dict[str, Any]]) -> None:
-    """Cast date and boolean columns in a table."""
+    """Cast columns in a table."""
     for row in rows:
         for col_name, value in row.items():
             try:
