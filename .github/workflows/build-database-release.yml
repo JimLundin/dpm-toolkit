@@ -23,17 +23,17 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Download SQLite artifacts
+    - name: Download SQLite database artifact
       uses: actions/download-artifact@v4
       with:
-        name: dpm-sqlite
-        path: dpm-sqlite
+        name: dpm-sqlite-db
+        path: .
     
-    - name: Zip SQLite database files
-      run: |
-        cd dpm-sqlite
-        zip -r ../dpm-sqlite.zip *
-        cd ..
+    - name: Download models artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: dpm-models
+        path: .
     
     - name: Create Release
       uses: softprops/action-gh-release@v1
@@ -43,3 +43,4 @@ jobs:
         generate_release_notes: true
         files: |
           dpm-sqlite.zip
+          dpm_models.py

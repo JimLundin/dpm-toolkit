@@ -64,29 +64,45 @@ jobs:
 
     - name: Download database files
       if: steps.cache-dbs.outputs.cache-hit != 'true'
+      shell: bash
       run: |
         opendpm download ${{ env.INPUT_DIR }}        
 
     - name: Build SQLite database
+      shell: bash
       run: |
         opendpm convert ${{ env.INPUT_DIR }} ${{ env.OUTPUT_DIR_SQLITE }}
         
     - name: Generate models from SQLite
+      shell: bash
       run: |
         pip install sqlacodegen
-        $DB_PATH = Join-Path -Path ${{ env.OUTPUT_DIR_SQLITE }} -ChildPath "dpm.sqlite"
+        DB_PATH="${{ env.OUTPUT_DIR_SQLITE }}/dpm.sqlite"
         echo "Generating models from $DB_PATH"
         sqlacodegen "sqlite:///$DB_PATH" --outfile ${{ env.OUTPUT_DIR_SQLITE }}/dpm_models.py --noviews --options nojoined
 
     - name: Format generated models with ruff
+      shell: bash
       run: |
         pip install ruff
         echo "Formatting generated model file with ruff"
         ruff check --fix ${{ env.OUTPUT_DIR_SQLITE }}/dpm_models.py --output-format:concise
         ruff format ${{ env.OUTPUT_DIR_SQLITE }}/dpm_models.py
 
-    - name: Upload SQLite artifact
+    - name: Zip SQLite database
+      shell: bash
+      run: |
+          7z a -tzip dpm-sqlite.zip "${{ env.OUTPUT_DIR_SQLITE }}/dpm.sqlite"
+          echo "Created zip archive: dpm-sqlite.zip"
+
+    - name: Upload SQLite database artifact
       uses: actions/upload-artifact@v4
       with:
-        name: dpm-sqlite
-        path: ${{ env.OUTPUT_DIR_SQLITE }}
+        name: dpm-sqlite-db
+        path: dpm-sqlite.zip
+
+    - name: Upload models artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: dpm-models
+        path: ${{ env.OUTPUT_DIR_SQLITE }}/dpm_models.py
