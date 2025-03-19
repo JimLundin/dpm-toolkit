@@ -4,7 +4,7 @@ import datetime
 import logging
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 
 from sqlalchemy import (
     Boolean,
@@ -18,6 +18,7 @@ from sqlalchemy import (
     event,
 )
 from sqlalchemy.engine.interfaces import ReflectedColumn
+from sqlalchemy.types import TypeEngine
 
 logging.basicConfig(
     level=logging.INFO,
@@ -42,6 +43,19 @@ def format_time(seconds: float) -> str:
     return f"{seconds / DAY:.2f} days"
 
 
+class ColumnType(TypedDict):
+    """Column type mapping."""
+
+    sql_type: TypeEngine[Any]
+    python_type: type
+
+
+COLUMNS_CAST: dict[str, ColumnType] = {
+    "ParentFirst": {"sql_type": Boolean(), "python_type": bool},
+    "UseIntervalArithmetics": {"sql_type": Boolean(), "python_type": bool},
+}
+
+
 def genericize_datatypes(
     _inspector: Inspector,
     _table_name: str,
@@ -54,9 +68,12 @@ def genericize_datatypes(
     elif column_dict["name"].lower().endswith("date"):
         # Dates are classified as String in the Source
         column_dict["type"] = Date()
-    elif column_dict["name"].lower().startswith("is"):
+    elif column_dict["name"].lower().startswith(("is", "has")):
         # Boolean columns are classified as Integer in the Source
         column_dict["type"] = Boolean()
+    elif column_dict["name"] in COLUMNS_CAST:
+        # Cast specific columns to their correct types
+        column_dict["type"] = COLUMNS_CAST[column_dict["name"]]["sql_type"]
     else:
         column_dict["type"] = column_dict["type"].as_generic()
 
@@ -68,8 +85,13 @@ def cast_row_values(rows: list[dict[str, Any]]) -> None:
             try:
                 if col_name.lower().endswith("date") and isinstance(value, str):
                     row[col_name] = datetime.date.fromisoformat(value)
-                if col_name.lower().startswith("is") and isinstance(value, int):
+                if col_name.lower().startswith(("is", "has")) and isinstance(
+                    value,
+                    int,
+                ):
                     row[col_name] = bool(value)
+                if col_name in COLUMNS_CAST:
+                    row[col_name] = COLUMNS_CAST[col_name]["python_type"](value)
             except (ValueError, TypeError):
                 row[col_name] = None
 
