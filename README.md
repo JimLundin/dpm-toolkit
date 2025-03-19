@@ -64,7 +64,8 @@ During the conversion from Access to SQLite, specific column casting rules are a
 
  - GUID columns are classified as Integer in the Source but due to their representation as String, as such all columns ending in "GUID" are casted to Text.
  - Dates are classified as String in the Source, to account for this we cast any columns ending in "Date" to Date.
- - Boolean columns are classified as Integer in the Source, most likely due to legacy support for older versions of Access, where boolean columns are stored as integer with 0 being false and -1 being true due to it being the twos complement of 0.
+ - Boolean columns are classified as Integer in the Source, most likely due to legacy support for older versions of Access, where boolean columns are stored as integer with 0 being false and -1 being true due to it being the twos complement of 0. We classify all columns starting with "is" or "has" as Boolean.
+ - Some columns do not follow the above rules and are manually casted to the correct type.
  - All other columns are classified as generic types
 
 These casting rules are not in direct correspondence with the original Access database schema, but they are chosen to ensure proper data typing in the target database.
