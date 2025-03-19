@@ -89,20 +89,8 @@ jobs:
         ruff check --fix-only ${{ env.OUTPUT_DIR_SQLITE }}/dpm_models.py
         ruff format ${{ env.OUTPUT_DIR_SQLITE }}/dpm_models.py
 
-    - name: Zip SQLite database
-      shell: bash
-      run: |
-          7z a -tzip dpm-sqlite.zip "${{ env.OUTPUT_DIR_SQLITE }}/dpm.sqlite"
-          echo "Created zip archive: dpm-sqlite.zip"
-
     - name: Upload SQLite database artifact
       uses: actions/upload-artifact@v4
       with:
-        name: dpm-sqlite-db
-        path: dpm-sqlite.zip
-
-    - name: Upload models artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: dpm-models
-        path: ${{ env.OUTPUT_DIR_SQLITE }}/dpm_models.py
+        name: dpm-sqlite
+        path: ${{ env.OUTPUT_DIR_SQLITE }}

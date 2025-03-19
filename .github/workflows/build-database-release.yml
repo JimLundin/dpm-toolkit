@@ -26,14 +26,12 @@ jobs:
     - name: Download SQLite database artifact
       uses: actions/download-artifact@v4
       with:
-        name: dpm-sqlite-db
+        name: dpm-sqlite
         path: .
-    
-    - name: Download models artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: dpm-models
-        path: .
+
+    - name: Zip SQLite database
+      run: |
+        zip dpm-sqlite.zip dpm.sqlite
     
     - name: Create Release
       uses: softprops/action-gh-release@v1
