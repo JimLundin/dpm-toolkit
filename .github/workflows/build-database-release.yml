@@ -23,7 +23,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Download SQLite database artifact
+    - name: Download SQLite artifacts
       uses: actions/download-artifact@v4
       with:
         name: dpm-sqlite
