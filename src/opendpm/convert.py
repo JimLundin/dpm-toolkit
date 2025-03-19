@@ -103,33 +103,6 @@ def remove_table_primary_key_index(table: Table) -> None:
         table.indexes.remove(index)
 
 
-BATCH_SIZE = 50_000
-
-
-def insert_data(
-    target_conn: Connection,
-    table: Table,
-    rows: list[dict[str, Any]],
-    batch_size: int = BATCH_SIZE,
-) -> None:
-    """Insert data into a table."""
-    total_rows = len(rows)
-
-    if total_rows > batch_size:
-        for i, batch_start in enumerate(range(0, total_rows, batch_size)):
-            batch = rows[batch_start : batch_start + batch_size]
-            target_conn.execute(table.insert(), batch)
-            logger.debug(
-                "Table: %s, batch %d/%d with %d rows processed",
-                table.name,
-                i + 1,
-                (total_rows + batch_size - 1) // batch_size,
-                len(batch),
-            )
-    else:
-        target_conn.execute(table.insert(), rows)
-
-
 def migrate_database(
     input_dir: str | Path,
     output_dir: str | Path,
@@ -180,7 +153,7 @@ def migrate_database(
                         rows = [row._asdict() for row in data]  # type: ignore
                         cast_row_values(rows)
                         insert_start_time = time.time()
-                        insert_data(target_conn, table, rows)
+                        target_conn.execute(table.insert(), rows)
                         logger.info(
                             "Table: %s, rows: %d, columns: %d, fetch: %s, insert: %s",
                             table_name,
