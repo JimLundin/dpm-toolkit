@@ -102,6 +102,12 @@ def remove_table_primary_key_index(table: Table) -> None:
         table.indexes.remove(index)
 
 
+def ensure_primary_keys_not_null(table: Table) -> None:
+    """Ensure all primary key columns are set as NOT NULL."""
+    for column in table.primary_key.columns:
+        column.nullable = False
+
+
 def migrate_database(
     input_dir: str | Path,
     output_dir: str | Path,
@@ -110,7 +116,8 @@ def migrate_database(
 
     Args:
         input_dir: Path to directory with Access databases.
-        output_dir: Path to output directory.
+        output_dir: Path to directory where SQLite database will be created.
+
 
     """
     total_start_time = time.time()
@@ -135,6 +142,7 @@ def migrate_database(
 
             for table in metadata.tables.values():
                 remove_table_primary_key_index(table)
+                ensure_primary_keys_not_null(table)
 
             metadata.create_all(target_engine)
 
@@ -149,7 +157,7 @@ def migrate_database(
                             logger.info("Table: %s - No data to copy", table_name)
                             continue
 
-                        rows = [row._asdict() for row in data]  # type: ignore
+                        rows = [row._asdict() for row in data]  # type: ignore[attr-defined]
                         cast_row_values(rows)
                         insert_start_time = time.time()
                         target_conn.execute(table.insert(), rows)
