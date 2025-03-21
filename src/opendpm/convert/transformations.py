@@ -61,7 +61,7 @@ def genericize_datatypes(
         column_dict["type"] = column_dict["type"].as_generic()
 
 
-def transform_row_values(rows: list[dict[str, Any]]) -> None:
+def cast_row_values(rows: list[dict[str, Any]]) -> None:
     """Transform row values to appropriate Python types."""
     for row in rows:
         for name, value in row.items():
@@ -77,13 +77,7 @@ def transform_row_values(rows: list[dict[str, Any]]) -> None:
                 row[name] = None
 
 
-def ensure_primary_keys_not_null(table: Table) -> None:
-    """Ensure all primary key columns are set as NOT NULL."""
-    for column in table.primary_key.columns:
-        column.nullable = False
-
-
-def remove_table_primary_key_index(table: Table) -> None:
+def remove_pk_index(table: Table) -> None:
     """Remove the primary key index from a table.
 
     This is due to SQLite maintaining a separate, hidden index for primary keys.
@@ -93,24 +87,21 @@ def remove_table_primary_key_index(table: Table) -> None:
         table.indexes.remove(index)
 
 
-def identify_non_nullable_columns(
-    conn: Connection,
-    table: Table,
-) -> set[str]:
+def get_required_columns(conn: Connection, table: Table) -> set[str]:
     """Analyze which columns are nullable using SQL COUNT queries."""
-    not_nullable_columns: set[str] = set()
+    required_columns: set[str] = set()
 
     for column in table.columns:
         query = select(func.count()).where(column.is_(None))
         result = conn.execute(query).scalar()
         if not result:
-            not_nullable_columns.add(column.name)
+            required_columns.add(column.name)
 
-    return not_nullable_columns
+    return required_columns
 
 
-def set_columns_not_null(table: Table, not_nullable_columns: set[str]) -> None:
+def set_required_columns(table: Table, required_columns: set[str]) -> None:
     """Set nullable status for columns based on data analysis."""
     for column in table.columns:
-        if column.name in not_nullable_columns:
+        if column.name in required_columns:
             column.nullable = False

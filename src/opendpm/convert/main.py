@@ -1,6 +1,7 @@
 """Main module for database conversion."""
 
 import logging
+import time
 from pathlib import Path
 
 from sqlalchemy import create_engine
@@ -32,18 +33,10 @@ def migrate_database(input_dir: str | Path, output_dir: str | Path) -> None:
 
     logger.info("Found %d Access database files", len(access_files))
 
-    total_elapsed = 0.0
+    start_time = time.time()
 
     for access_file in access_files:
-        relative_path = access_file.relative_to(input_dir)
-        output_file = output_dir / relative_path.with_suffix(".sqlite")
-        output_file.parent.mkdir(parents=True, exist_ok=True)
-
         with target_engine.connect() as target_conn:
-            total_elapsed += process_database(access_file, target_conn)
+            process_database(access_file, target_conn)
 
-    logger.info(
-        "Total migration time: %s for %d databases",
-        format_time(total_elapsed),
-        len(access_files),
-    )
+    logger.info("Migrated databases in %s", format_time(time.time() - start_time))
