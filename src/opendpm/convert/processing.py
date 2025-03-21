@@ -4,7 +4,7 @@ import logging
 import time
 from pathlib import Path
 
-from sqlalchemy import Engine, MetaData, create_engine, event
+from sqlalchemy import Connection, Engine, MetaData, create_engine, event, text
 
 from opendpm.convert.transformations import (
     cast_row_values,
@@ -23,6 +23,13 @@ def get_access_engine(db_path: str | Path) -> Engine:
     driver = "{Microsoft Access Driver (*.mdb, *.accdb)}"
     conn_str = f"DRIVER={driver};DBQ={db_path}"
     return create_engine(f"access+pyodbc:///?odbc_connect={conn_str}")
+
+
+def execute_queries(connection: Connection, queries: list[str]) -> None:
+    """Execute a list of SQL queries."""
+    for query in queries:
+        connection.execute(text(query))
+    connection.commit()
 
 
 def process_database(source_path: Path, target_engine: Engine) -> None:
@@ -75,6 +82,15 @@ def process_database(source_path: Path, target_engine: Engine) -> None:
             )
 
         target_conn.commit()
+
+        # Optimize the database
+        execute_queries(
+            target_conn,
+            [
+                "VACUUM",
+                "PRAGMA optimize",
+            ],
+        )
 
     logger.info(
         "Database: %s, total time: %s",
