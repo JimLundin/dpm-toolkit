@@ -4,7 +4,7 @@ import logging
 import time
 from pathlib import Path
 
-from sqlalchemy import Connection, Engine, MetaData, create_engine, event
+from sqlalchemy import Engine, MetaData, create_engine, event
 
 from opendpm.convert.transformations import (
     cast_row_values,
@@ -25,12 +25,12 @@ def get_access_engine(db_path: str | Path) -> Engine:
     return create_engine(f"access+pyodbc:///?odbc_connect={conn_str}")
 
 
-def process_database(source_path: Path, target_conn: Connection) -> None:
+def process_database(source_path: Path, target_engine: Engine) -> None:
     """Process a single Access database.
 
     Args:
         source_path: Path to the Access database file
-        target_conn: Connection to the target SQLite database
+        target_engine: Engine to the target SQLite database
 
     """
     start = time.time()
@@ -42,13 +42,13 @@ def process_database(source_path: Path, target_conn: Connection) -> None:
     event.listen(metadata, "column_reflect", genericize_datatypes)
     metadata.reflect(bind=source_engine)
 
-    with source_engine.connect() as source_conn:
+    with source_engine.connect() as source_conn, target_engine.connect() as target_conn:
         for table in metadata.tables.values():
             required_columns = get_required_columns(source_conn, table)
             set_required_columns(table, required_columns)
             remove_pk_index(table)
 
-        metadata.create_all(target_conn.engine)
+        metadata.create_all(target_engine)
 
         target_conn.begin()
 

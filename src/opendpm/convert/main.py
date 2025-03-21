@@ -36,7 +36,6 @@ def migrate_database(input_dir: str | Path, output_dir: str | Path) -> None:
     start_time = time.time()
 
     for access_file in access_files:
-        with target_engine.connect() as target_conn:
-            process_database(access_file, target_conn)
+        process_database(access_file, target_engine)
 
     logger.info("Migrated databases in %s", format_time(time.time() - start_time))
