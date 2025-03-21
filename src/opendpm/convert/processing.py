@@ -57,6 +57,7 @@ def process_database(
 
         for table_name, table in metadata.tables.items():
             fetch_start = time.time()
+
             data = source_conn.execute(table.select()).fetchall()
             if not data:
                 logger.info("Table: %s - No data to copy", table_name)
@@ -65,6 +66,7 @@ def process_database(
             rows = [row._asdict() for row in data]  # type: ignore private attribute
             cast_row_values(rows)
             insert_start = time.time()
+
             target_conn.execute(table.insert(), rows)
             logger.info(
                 "Table: %s, rows: %d, columns: %d, fetch: %s, insert: %s",
