@@ -3,14 +3,18 @@
 import logging
 import time
 from pathlib import Path
+from typing import Any
 
+from sqlacodegen.generators import DeclarativeGenerator
 from sqlalchemy import Connection, Engine, MetaData, create_engine, event, text
 
 from opendpm.convert.transformations import (
     cast_row_values,
     genericize_datatypes,
+    get_enum_columns,
     get_required_columns,
     remove_pk_index,
+    set_enum_columns,
     set_required_columns,
 )
 from opendpm.convert.utils import format_time
@@ -32,7 +36,7 @@ def execute_queries(connection: Connection, queries: list[str]) -> None:
     connection.commit()
 
 
-def process_database(source_path: Path, target_engine: Engine) -> None:
+def process_database(source_path: Path, target_engine: Engine) -> str:
     """Process a single Access database.
 
     Args:
@@ -50,7 +54,16 @@ def process_database(source_path: Path, target_engine: Engine) -> None:
     metadata.reflect(bind=source_engine)
 
     with source_engine.connect() as source_conn, target_engine.connect() as target_conn:
-        for table in metadata.tables.values():
+        table_rows: dict[str, list[dict[str, Any]]] = {}
+        for name, table in metadata.tables.items():
+            data = source_conn.execute(table.select()).fetchall()
+            rows = [row._asdict() for row in data]  # type: ignore private attribute
+            cast_row_values(rows)
+            table_rows[name] = rows
+
+            enum_columns = get_enum_columns(rows)
+            set_enum_columns(table, enum_columns)
+
             required_columns = get_required_columns(source_conn, table)
             set_required_columns(table, required_columns)
             remove_pk_index(table)
@@ -59,27 +72,11 @@ def process_database(source_path: Path, target_engine: Engine) -> None:
 
         target_conn.begin()
 
-        for table_name, table in metadata.tables.items():
-            fetch_start = time.time()
-
-            data = source_conn.execute(table.select()).fetchall()
-            if not data:
-                logger.info("Table: %s - No data to copy", table_name)
+        for name, rows in table_rows.items():
+            if not rows:
                 continue
 
-            rows = [row._asdict() for row in data]  # type: ignore private attribute
-            cast_row_values(rows)
-            insert_start = time.time()
-
-            target_conn.execute(table.insert(), rows)
-            logger.info(
-                "Table: %s, rows: %d, columns: %d, fetch: %s, insert: %s",
-                table_name,
-                len(rows),
-                len(rows[0]) if rows else 0,
-                format_time(insert_start - fetch_start),
-                format_time(time.time() - insert_start),
-            )
+            target_conn.execute(metadata.tables[name].insert(), rows)
 
         target_conn.commit()
 
@@ -97,3 +94,13 @@ def process_database(source_path: Path, target_engine: Engine) -> None:
         source_path.name,
         format_time(time.time() - start),
     )
+
+    generator = DeclarativeGenerator(
+        metadata,
+        target_engine,
+        ["use_inflect", "nojoined", "nobidi"],
+        indentation="    ",
+        base_class_name="Base",
+    )
+
+    return generator.generate()

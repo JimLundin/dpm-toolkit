@@ -1,6 +1,7 @@
 """Schema transformation utilities for database conversion."""
 
 import datetime
+from collections import defaultdict
 from collections.abc import Callable
 from typing import Any, NotRequired, TypedDict
 
@@ -9,6 +10,7 @@ from sqlalchemy import (
     Connection,
     Date,
     DateTime,
+    Enum,
     Inspector,
     Table,
     Text,
@@ -64,17 +66,40 @@ def genericize_datatypes(
 def cast_row_values(rows: list[dict[str, Any]]) -> None:
     """Transform row values to appropriate Python types."""
     for row in rows:
-        for name, value in row.items():
+        for column, value in row.items():
             try:
-                if name in COLUMNS_CAST:
-                    if caster := COLUMNS_CAST[name].get("python"):
-                        row[name] = caster(value)
-                elif name.lower().endswith("date"):
-                    row[name] = datetime.date.fromisoformat(value)
-                elif name.lower().startswith(("is", "has")):
-                    row[name] = bool(value)
+                if column in COLUMNS_CAST:
+                    if caster := COLUMNS_CAST[column].get("python"):
+                        row[column] = caster(value)
+                elif column.lower().endswith("date"):
+                    row[column] = datetime.date.fromisoformat(value)
+                elif column.lower().startswith(("is", "has")):
+                    row[column] = bool(value)
             except (ValueError, TypeError):
-                row[name] = None
+                row[column] = None
+
+
+def get_enum_columns(
+    rows: list[dict[str, Any]],
+) -> dict[str, set[str]]:
+    """Get columns with enum values."""
+    enum_columns: dict[str, set[str]] = defaultdict(set)
+
+    for row in rows:
+        for column, value in row.items():
+            if not isinstance(value, str) or not column.endswith("Type"):
+                continue
+
+            enum_columns[column].add(value)
+
+    return enum_columns
+
+
+def set_enum_columns(table: Table, enum_columns: dict[str, set[str]]) -> None:
+    """Set enum columns for a table."""
+    for column in table.columns:
+        if column.name in enum_columns:
+            column.type = Enum(*enum_columns[column.name])
 
 
 def remove_pk_index(table: Table) -> None:
@@ -87,13 +112,13 @@ def remove_pk_index(table: Table) -> None:
         table.indexes.remove(index)
 
 
-def get_required_columns(conn: Connection, table: Table) -> set[str]:
+def get_required_columns(connection: Connection, table: Table) -> set[str]:
     """Analyze which columns are nullable using SQL COUNT queries."""
     required_columns: set[str] = set()
 
     for column in table.columns:
         query = select(func.count()).where(column.is_(None))
-        result = conn.execute(query).scalar()
+        result = connection.execute(query).scalar()
         if not result:
             required_columns.add(column.name)
 

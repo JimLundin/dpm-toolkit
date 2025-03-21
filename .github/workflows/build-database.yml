@@ -73,21 +73,13 @@ jobs:
       run: |
         opendpm convert ${{ env.INPUT_DIR }} ${{ env.OUTPUT_DIR_SQLITE }}
         
-    - name: Generate models from SQLite
-      shell: bash
-      run: |
-        pip install sqlacodegen
-        DB_PATH="${{ env.OUTPUT_DIR_SQLITE }}/dpm.sqlite"
-        echo "Generating models from $DB_PATH"
-        sqlacodegen "sqlite:///$DB_PATH" --outfile ${{ env.OUTPUT_DIR_SQLITE }}/dpm_models.py --options nojoined
-
     - name: Format generated models with ruff
       shell: bash
       run: |
         pip install ruff
         echo "Formatting generated model file with ruff"
-        ruff check --fix-only ${{ env.OUTPUT_DIR_SQLITE }}/dpm_models.py
-        ruff format ${{ env.OUTPUT_DIR_SQLITE }}/dpm_models.py
+        ruff check --fix-only ${{ env.OUTPUT_DIR_SQLITE }}/*.py
+        ruff format ${{ env.OUTPUT_DIR_SQLITE }}/*.py
 
     - name: Upload SQLite database artifact
       uses: actions/upload-artifact@v4

@@ -35,7 +35,13 @@ def migrate_database(input_dir: str | Path, output_dir: str | Path) -> None:
 
     start_time = time.time()
 
-    for access_file in access_files:
-        process_database(access_file, target_engine)
+    models = {
+        i: process_database(access_file, target_engine)
+        for i, access_file in enumerate(access_files)
+    }
+
+    for i, model in models.items():
+        with (output_dir / f"{i}_dpm_model.py").open("w") as f:
+            f.write(model)
 
     logger.info("Migrated databases in %s", format_time(time.time() - start_time))
