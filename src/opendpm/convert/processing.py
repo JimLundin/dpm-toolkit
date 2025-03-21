@@ -7,11 +7,11 @@ from pathlib import Path
 from sqlalchemy import Connection, Engine, MetaData, create_engine, event
 
 from opendpm.convert.transformations import (
+    cast_row_values,
     genericize_datatypes,
     get_required_columns,
     remove_pk_index,
     set_required_columns,
-    cast_row_values,
 )
 from opendpm.convert.utils import format_time
 
@@ -25,10 +25,7 @@ def get_access_engine(db_path: str | Path) -> Engine:
     return create_engine(f"access+pyodbc:///?odbc_connect={conn_str}")
 
 
-def process_database(
-    source_path: Path,
-    target_conn: Connection,
-) -> None:
+def process_database(source_path: Path, target_conn: Connection) -> None:
     """Process a single Access database.
 
     Args:
