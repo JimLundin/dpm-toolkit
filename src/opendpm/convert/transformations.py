@@ -7,18 +7,19 @@ from typing import Any, NotRequired, TypedDict
 
 from sqlalchemy import (
     Boolean,
-    Connection,
     Date,
     DateTime,
     Enum,
     Inspector,
     Table,
     Text,
-    func,
-    select,
 )
 from sqlalchemy.engine.interfaces import ReflectedColumn
 from sqlalchemy.types import TypeEngine
+
+type Rows = list[dict[str, Any]]
+type Columns = set[str]
+type EnumMap = dict[str, set[str]]
 
 
 class ColumnType(TypedDict):
@@ -63,43 +64,53 @@ def genericize_datatypes(
         column_dict["type"] = column_dict["type"].as_generic()
 
 
-def cast_row_values(rows: list[dict[str, Any]]) -> None:
+def cast_row_value(column: str, value: Any) -> Any:  # noqa: ANN401
     """Transform row values to appropriate Python types."""
+    if value is None:
+        return None
+    if column in COLUMNS_CAST and (caster := COLUMNS_CAST[column].get("python")):
+        return caster(value)
+    if column.lower().endswith("date") and isinstance(value, str):
+        return datetime.date.fromisoformat(value)
+    if column.lower().startswith(("is", "has")):
+        return bool(value)
+    return value
+
+
+def is_enum(column: str, value: Any) -> bool:  # noqa: ANN401
+    """Check if a column is an enum column."""
+    return isinstance(value, str) and column.endswith("Type")
+
+
+def parse_rows(rows: Rows) -> tuple[EnumMap, Columns]:
+    """Transform row values to appropriate Python types."""
+    enum_columns: EnumMap = defaultdict(set)
+    nullable_columns: Columns = set()
     for row in rows:
-        for column, value in row.items():
-            try:
-                if column in COLUMNS_CAST:
-                    if caster := COLUMNS_CAST[column].get("python"):
-                        row[column] = caster(value)
-                elif column.lower().endswith("date"):
-                    row[column] = datetime.date.fromisoformat(value)
-                elif column.lower().startswith(("is", "has")):
-                    row[column] = bool(value)
-            except (ValueError, TypeError):
-                row[column] = None
+        for column in row:
+            new_value = cast_row_value(column, row[column])
+            row[column] = new_value
+            if is_enum(column, new_value):
+                enum_columns[column].add(new_value)
+
+            if new_value is None:
+                nullable_columns.add(column)
+
+    return enum_columns, nullable_columns
 
 
-def get_enum_columns(
-    rows: list[dict[str, Any]],
-) -> dict[str, set[str]]:
-    """Get columns with enum values."""
-    enum_columns: dict[str, set[str]] = defaultdict(set)
-
-    for row in rows:
-        for column, value in row.items():
-            if not isinstance(value, str) or not column.endswith("Type"):
-                continue
-
-            enum_columns[column].add(value)
-
-    return enum_columns
-
-
-def set_enum_columns(table: Table, enum_columns: dict[str, set[str]]) -> None:
+def set_enum_columns(table: Table, enum_columns: EnumMap) -> None:
     """Set enum columns for a table."""
     for column in table.columns:
         if column.name in enum_columns:
             column.type = Enum(*enum_columns[column.name])
+
+
+def set_nullable_columns(table: Table, nullable_columns: Columns) -> None:
+    """Set nullable status for columns based on data analysis."""
+    for column in table.columns:
+        if column.name not in nullable_columns:
+            column.nullable = False
 
 
 def remove_pk_index(table: Table) -> None:
@@ -110,23 +121,3 @@ def remove_pk_index(table: Table) -> None:
     indexes_to_drop = [index for index in table.indexes if index.name == "PrimaryKey"]
     for index in indexes_to_drop:
         table.indexes.remove(index)
-
-
-def get_required_columns(connection: Connection, table: Table) -> set[str]:
-    """Analyze which columns are nullable using SQL COUNT queries."""
-    required_columns: set[str] = set()
-
-    for column in table.columns:
-        query = select(func.count()).where(column.is_(None))
-        result = connection.execute(query).scalar()
-        if not result:
-            required_columns.add(column.name)
-
-    return required_columns
-
-
-def set_required_columns(table: Table, required_columns: set[str]) -> None:
-    """Set nullable status for columns based on data analysis."""
-    for column in table.columns:
-        if column.name in required_columns:
-            column.nullable = False

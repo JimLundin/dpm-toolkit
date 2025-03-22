@@ -1,28 +1,34 @@
 """Database processing utilities for handling multiple Access databases."""
 
 import logging
-import time
 from pathlib import Path
-from typing import Any
 
-from sqlacodegen.generators import DeclarativeGenerator
-from sqlalchemy import Connection, Engine, MetaData, create_engine, event, text
+from sqlalchemy import (
+    Connection,
+    Engine,
+    MetaData,
+    create_engine,
+    event,
+    insert,
+    select,
+    text,
+)
+from sqlalchemy.orm import Session
 
+from opendpm.convert.generation import generate_models
 from opendpm.convert.transformations import (
-    cast_row_values,
+    Rows,
     genericize_datatypes,
-    get_enum_columns,
-    get_required_columns,
+    parse_rows,
     remove_pk_index,
     set_enum_columns,
-    set_required_columns,
+    set_nullable_columns,
 )
-from opendpm.convert.utils import format_time
 
 logger = logging.getLogger(__name__)
 
 
-def get_access_engine(db_path: str | Path) -> Engine:
+def create_access_engine(db_path: str | Path) -> Engine:
     """Get an engine to an Access database."""
     driver = "{Microsoft Access Driver (*.mdb, *.accdb)}"
     conn_str = f"DRIVER={driver};DBQ={db_path}"
@@ -36,71 +42,46 @@ def execute_queries(connection: Connection, queries: list[str]) -> None:
     connection.commit()
 
 
-def process_database(source_path: Path, target_engine: Engine) -> str:
+def process_database(source_engine: Engine, target_engine: Engine) -> str:
     """Process a single Access database.
 
     Args:
-        source_path: Path to the Access database file
+        source_engine: Engine to the source Access database
         target_engine: Engine to the target SQLite database
 
+    Returns:
+        str: Generated SQLAlchemy model code
+
     """
-    start = time.time()
-    logger.info("%s - Processing database", source_path.name)
-
-    source_engine = get_access_engine(source_path)
-
     metadata = MetaData()
     event.listen(metadata, "column_reflect", genericize_datatypes)
     metadata.reflect(bind=source_engine)
 
-    with source_engine.connect() as source_conn, target_engine.connect() as target_conn:
-        table_rows: dict[str, list[dict[str, Any]]] = {}
+    with (
+        Session(source_engine) as source,
+        Session(target_engine) as target,
+        source.begin(),
+        target.begin(),
+    ):
+        table_rows: dict[str, Rows] = {}
         for name, table in metadata.tables.items():
-            data = source_conn.execute(table.select()).fetchall()
+            data = source.execute(select(table)).all()
             rows = [row._asdict() for row in data]  # type: ignore private attribute
-            cast_row_values(rows)
-            table_rows[name] = rows
 
-            enum_columns = get_enum_columns(rows)
+            enum_columns, nullable_columns = parse_rows(rows)
             set_enum_columns(table, enum_columns)
-
-            required_columns = get_required_columns(source_conn, table)
-            set_required_columns(table, required_columns)
+            set_nullable_columns(table, nullable_columns)
             remove_pk_index(table)
 
-        metadata.create_all(target_engine)
+            table_rows[name] = rows
 
-        target_conn.begin()
+        metadata.create_all(target_engine)
 
         for name, rows in table_rows.items():
             if not rows:
                 continue
 
-            target_conn.execute(metadata.tables[name].insert(), rows)
+            table = metadata.tables[name]
+            target.execute(insert(table), rows)
 
-        target_conn.commit()
-
-        # Optimize the database
-        execute_queries(
-            target_conn,
-            [
-                "VACUUM",
-                "PRAGMA optimize",
-            ],
-        )
-
-    logger.info(
-        "Database: %s, total time: %s",
-        source_path.name,
-        format_time(time.time() - start),
-    )
-
-    generator = DeclarativeGenerator(
-        metadata,
-        target_engine,
-        ["use_inflect", "nojoined", "nobidi"],
-        indentation="    ",
-        base_class_name="Base",
-    )
-
-    return generator.generate()
+    return generate_models(metadata, target_engine)

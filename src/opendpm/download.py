@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import io
 import logging
 import tomllib
-import zipfile
+from io import BytesIO
 from typing import TYPE_CHECKING
+from zipfile import ZipFile, ZipInfo
 
 import requests
 
@@ -27,26 +27,22 @@ def load_sources(config_file: Path) -> dict[str, str]:
         return tomllib.load(f)
 
 
-def download_and_extract(url: str, target_dir: Path) -> None:
-    """Download and extract a zip file containing Access databases."""
-    target_dir.mkdir(parents=True, exist_ok=True)
+def download(url: str) -> BytesIO:
+    """Download a zip file containing Access databases."""
+    logger.info("Downloading from %s", url)
+    response = requests.get(url, timeout=60, allow_redirects=False)
+    response.raise_for_status()
 
-    try:
-        logger.info("Downloading from %s", url)
-        response = requests.get(url, timeout=60, allow_redirects=False)
-        response.raise_for_status()
+    return BytesIO(response.content)
 
-        # Extract the file directly from memory
-        logger.info("Extracting to %s", target_dir)
-        with zipfile.ZipFile(io.BytesIO(response.content)) as zip_ref:
-            for zip_info in zip_ref.filelist:
-                if zip_info.filename.lower().endswith(".accdb"):
-                    zip_ref.extract(zip_info, target_dir)
-                    logger.info("Extracted %s", zip_info.filename)
 
-    except (requests.RequestException, zipfile.BadZipFile):
-        logger.exception("Failed to process %s", url)
-        raise
+def extract_databases(zip_file: ZipFile) -> ZipInfo | None:
+    """Extract Access databases from a zip file."""
+    for zip_info in zip_file.infolist():
+        if zip_info.filename.endswith(".accdb"):
+            return zip_info
+
+    return None
 
 
 def download_databases(config_file: Path, target_dir: Path) -> None:
@@ -57,10 +53,16 @@ def download_databases(config_file: Path, target_dir: Path) -> None:
         target_dir: Directory to save downloaded databases
 
     """
+    target_dir.mkdir(parents=True, exist_ok=True)
     sources = load_sources(config_file)
     for version, url in sources.items():
         try:
-            download_and_extract(url, target_dir)
-            logger.info("Successfully downloaded version %s", version)
+            zip_bytes = download(url)
+            with ZipFile(zip_bytes) as zip_file:
+                if zip_db := extract_databases(zip_file):
+                    zip_db.filename = f"dpm_{version}.accdb"
+                    zip_file.extract(zip_db, target_dir)
+                    logger.info("Downloaded version %s", version)
+
         except Exception:
             logger.exception("Failed to download version %s", version)

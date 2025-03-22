@@ -6,7 +6,11 @@ from pathlib import Path
 
 from sqlalchemy import create_engine
 
-from opendpm.convert.processing import process_database
+from opendpm.convert.processing import (
+    create_access_engine,
+    execute_queries,
+    process_database,
+)
 from opendpm.convert.utils import format_time
 
 logger = logging.getLogger(__name__)
@@ -20,11 +24,11 @@ def migrate_database(input_dir: str | Path, output_dir: str | Path) -> None:
         output_dir: Directory to store SQLite databases
 
     """
+    start = time.time()
+
     input_dir = Path(input_dir)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-
-    target_engine = create_engine(f"sqlite:///{output_dir}/dpm.sqlite")
 
     access_files = list(input_dir.glob("**/*.accdb"))
     if not access_files:
@@ -33,15 +37,30 @@ def migrate_database(input_dir: str | Path, output_dir: str | Path) -> None:
 
     logger.info("Found %d Access database files", len(access_files))
 
-    start_time = time.time()
+    models: dict[str, str] = {}
 
-    models = {
-        i: process_database(access_file, target_engine)
-        for i, access_file in enumerate(access_files)
-    }
+    target_engine = create_engine(f"sqlite:///{output_dir}/dpm.sqlite")
+    for access_file in access_files:
+        start_convert = time.time()
+        logger.info("Processing database: %s", access_file.name)
+        source_engine = create_access_engine(access_file)
+        models[access_file.stem] = process_database(source_engine, target_engine)
+        stop_convert = time.time()
+        logger.info(
+            "Database %s converted in %s",
+            access_file.stem,
+            format_time(stop_convert - start_convert),
+        )
 
-    for i, model in models.items():
-        with (output_dir / f"{i}_dpm_model.py").open("w") as f:
+    with target_engine.connect() as connection:
+        execute_queries(
+            connection,
+            ["VACUUM", "PRAGMA optimize"],
+        )
+
+    for name, model in models.items():
+        with (output_dir / f"{name}_model.py").open("w") as f:
             f.write(model)
 
-    logger.info("Migrated databases in %s", format_time(time.time() - start_time))
+    stop = time.time()
+    logger.info("Migrated databases in %s", format_time(stop - start))
