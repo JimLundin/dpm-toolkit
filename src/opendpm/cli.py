@@ -47,7 +47,9 @@ def create_parser() -> argparse.ArgumentParser:
     )
     convert_parser.add_argument(
         "output_dir",
+        nargs="?",
         type=Path,
+        default=Path.cwd(),
         help="Directory to save converted databases",
     )
 

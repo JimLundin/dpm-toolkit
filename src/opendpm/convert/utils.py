@@ -9,9 +9,13 @@ DAY = 24 * HOUR
 def format_time(seconds: float) -> str:
     """Format time in seconds to a human-readable string."""
     if seconds < MINUTE:
-        return f"{seconds:.2f} seconds"
+        return f"{seconds:.0f} seconds"
     if seconds < HOUR:
-        return f"{seconds / MINUTE:.2f} minutes"
+        minutes, seconds = divmod(seconds, MINUTE)
+        return f"{minutes:.0f} minutes and {seconds:.0f} seconds"
     if seconds < DAY:
-        return f"{seconds / HOUR:.2f} hours"
-    return f"{seconds / DAY:.2f} days"
+        hours, minutes = divmod(seconds, HOUR)
+        return f"{hours:.0f} hours and {minutes:.0f} minutes"
+
+    days, hours = divmod(seconds, DAY)
+    return f"{days:.0f} days and {hours:.0f} hours"

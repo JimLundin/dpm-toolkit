@@ -4,12 +4,14 @@ import logging
 import time
 from pathlib import Path
 
-from sqlalchemy import create_engine
+from sqlalchemy import MetaData, create_engine
 
+from opendpm.convert.generation import ModelGenerator
 from opendpm.convert.processing import (
     create_access_engine,
     execute_queries,
-    process_database,
+    fetch_database,
+    populate_database,
 )
 from opendpm.convert.utils import format_time
 
@@ -37,29 +39,42 @@ def migrate_database(input_dir: str | Path, output_dir: str | Path) -> None:
 
     logger.info("Found %d Access database files", len(access_files))
 
-    models: dict[str, str] = {}
+    target_engine = create_engine("sqlite:///:memory:")
 
-    target_engine = create_engine(f"sqlite:///{output_dir}/dpm.sqlite")
+    models: dict[str, MetaData] = {}
     for access_file in access_files:
-        start_convert = time.time()
-        logger.info("Processing database: %s", access_file.name)
+        start_fetch = time.time()
+        logger.info("Processing: %s", access_file.name)
         source_engine = create_access_engine(access_file)
-        models[access_file.stem] = process_database(source_engine, target_engine)
-        stop_convert = time.time()
+        metadata, table_rows = fetch_database(source_engine)
         logger.info(
-            "Database %s converted in %s",
+            "Fetched data from %s in %s",
+            access_file.name,
+            format_time(time.time() - start_fetch),
+        )
+        models[access_file.stem] = metadata
+        start_populate = time.time()
+        metadata.create_all(target_engine)
+        populate_database(target_engine, table_rows)
+        logger.info(
+            "Processed %s in %s",
             access_file.stem,
-            format_time(stop_convert - start_convert),
+            format_time(time.time() - start_populate),
         )
 
     with target_engine.connect() as connection:
+        database_path = output_dir / "dpm.sqlite"
         execute_queries(
             connection,
-            ["VACUUM", "PRAGMA optimize"],
+            ["PRAGMA optimize", f"VACUUM INTO '{database_path}'"],
         )
+        logger.info("Database saved to %s", database_path)
 
-    for name, model in models.items():
+    # Write the models to disk
+
+    for name, metadata in models.items():
         with (output_dir / f"{name}_model.py").open("w") as f:
+            model = ModelGenerator(metadata).generate()
             f.write(model)
 
     stop = time.time()

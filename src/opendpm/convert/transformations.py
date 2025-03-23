@@ -2,7 +2,7 @@
 
 import datetime
 from collections import defaultdict
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import Any, NotRequired, TypedDict
 
 from sqlalchemy import (
@@ -11,6 +11,7 @@ from sqlalchemy import (
     DateTime,
     Enum,
     Inspector,
+    Row,
     Table,
     Text,
 )
@@ -20,6 +21,7 @@ from sqlalchemy.types import TypeEngine
 type Rows = list[dict[str, Any]]
 type Columns = set[str]
 type EnumMap = dict[str, set[str]]
+type Data = Sequence[Row[Any]]
 
 
 class ColumnType(TypedDict):
@@ -43,11 +45,7 @@ def genericize_datatypes(
     _table_name: str,
     column_dict: ReflectedColumn,
 ) -> None:
-    """Convert columns to generic types.
-
-    This function is used as an event listener during metadata reflection
-    to convert Access-specific types to more generic SQLAlchemy types.
-    """
+    """Convert columns to generic types."""
     if column_dict["name"].lower().endswith("guid"):
         # GUIDs are classified as Integer in the Source
         column_dict["type"] = Text()
@@ -82,21 +80,24 @@ def is_enum(column: str, value: Any) -> bool:  # noqa: ANN401
     return isinstance(value, str) and column.endswith("Type")
 
 
-def parse_rows(rows: Rows) -> tuple[EnumMap, Columns]:
+def parse_data(data: Data) -> tuple[Rows, EnumMap, Columns]:
     """Transform row values to appropriate Python types."""
+    rows: Rows = []
     enum_columns: EnumMap = defaultdict(set)
     nullable_columns: Columns = set()
-    for row in rows:
-        for column in row:
-            new_value = cast_row_value(column, row[column])
-            row[column] = new_value
+    for row in data:
+        dict_row = row._asdict()  # type: ignore private attribute
+        rows.append(dict_row)
+        for column in dict_row:
+            new_value = cast_row_value(column, dict_row[column])
+            dict_row[column] = new_value
             if is_enum(column, new_value):
                 enum_columns[column].add(new_value)
 
             if new_value is None:
                 nullable_columns.add(column)
 
-    return enum_columns, nullable_columns
+    return rows, enum_columns, nullable_columns
 
 
 def set_enum_columns(table: Table, enum_columns: EnumMap) -> None:
@@ -106,7 +107,7 @@ def set_enum_columns(table: Table, enum_columns: EnumMap) -> None:
             column.type = Enum(*enum_columns[column.name])
 
 
-def set_nullable_columns(table: Table, nullable_columns: Columns) -> None:
+def set_null_columns(table: Table, nullable_columns: Columns) -> None:
     """Set nullable status for columns based on data analysis."""
     for column in table.columns:
         if column.name not in nullable_columns:

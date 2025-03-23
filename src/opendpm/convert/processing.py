@@ -7,6 +7,7 @@ from sqlalchemy import (
     Connection,
     Engine,
     MetaData,
+    Table,
     create_engine,
     event,
     insert,
@@ -15,17 +16,18 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Session
 
-from opendpm.convert.generation import generate_models
 from opendpm.convert.transformations import (
     Rows,
     genericize_datatypes,
-    parse_rows,
+    parse_data,
     remove_pk_index,
     set_enum_columns,
-    set_nullable_columns,
+    set_null_columns,
 )
 
 logger = logging.getLogger(__name__)
+
+type TableRows = dict[Table, Rows]
 
 
 def create_access_engine(db_path: str | Path) -> Engine:
@@ -42,46 +44,45 @@ def execute_queries(connection: Connection, queries: list[str]) -> None:
     connection.commit()
 
 
-def process_database(source_engine: Engine, target_engine: Engine) -> str:
-    """Process a single Access database.
-
-    Args:
-        source_engine: Engine to the source Access database
-        target_engine: Engine to the target SQLite database
-
-    Returns:
-        str: Generated SQLAlchemy model code
-
-    """
+def reflect_database(source_engine: Engine) -> MetaData:
+    """Reflect a database schema."""
     metadata = MetaData()
     event.listen(metadata, "column_reflect", genericize_datatypes)
     metadata.reflect(bind=source_engine)
+    return metadata
 
-    with (
-        Session(source_engine) as source,
-        Session(target_engine) as target,
-        source.begin(),
-        target.begin(),
-    ):
-        table_rows: dict[str, Rows] = {}
-        for name, table in metadata.tables.items():
+
+def fetch_database(source_engine: Engine) -> tuple[MetaData, TableRows]:
+    """Fetch data from a single Access database.
+
+    Args:
+        source_engine: Engine to the source Access database
+
+    Returns:
+        MetaData: Database metadata
+        TableRows: Table rows
+
+    """
+    metadata = reflect_database(source_engine)
+
+    table_rows: dict[Table, Rows] = {}
+    with Session(source_engine) as source:
+        for table in metadata.tables.values():
             data = source.execute(select(table)).all()
-            rows = [row._asdict() for row in data]  # type: ignore private attribute
 
-            enum_columns, nullable_columns = parse_rows(rows)
+            rows, enum_columns, nullable_columns = parse_data(data)
             set_enum_columns(table, enum_columns)
-            set_nullable_columns(table, nullable_columns)
+            set_null_columns(table, nullable_columns)
             remove_pk_index(table)
 
-            table_rows[name] = rows
+            if rows:
+                table_rows[table] = rows
 
-        metadata.create_all(target_engine)
+    return metadata, table_rows
 
-        for name, rows in table_rows.items():
-            if not rows:
-                continue
 
-            table = metadata.tables[name]
+def populate_database(target_engine: Engine, table_rows: TableRows) -> None:
+    """Populate the target database with data from the source database."""
+    with Session(target_engine) as target, target.begin():
+        for table, rows in table_rows.items():
             target.execute(insert(table), rows)
-
-    return generate_models(metadata, target_engine)
