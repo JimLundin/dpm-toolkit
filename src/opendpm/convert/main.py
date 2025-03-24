@@ -41,39 +41,32 @@ def migrate_database(input_dir: str | Path, output_dir: str | Path) -> None:
 
     target_engine = create_engine("sqlite:///:memory:")
 
-    models: dict[str, MetaData] = {}
+    models: list[tuple[str, MetaData]] = []
     for access_file in access_files:
+        file_name = access_file.name
         start_fetch = time.time()
-        logger.info("Processing: %s", access_file.name)
+        logger.info("Processing: %s", file_name)
         source_engine = create_access_engine(access_file)
         metadata, table_rows = fetch_database(source_engine)
-        logger.info(
-            "Fetched data from %s in %s",
-            access_file.name,
-            format_time(time.time() - start_fetch),
-        )
-        models[access_file.stem] = metadata
+        end_fetch = time.time()
+        logger.info("Fetched in %s", format_time(end_fetch - start_fetch))
+        models.append((file_name, metadata))
         start_populate = time.time()
         metadata.create_all(target_engine)
         populate_database(target_engine, table_rows)
-        logger.info(
-            "Processed %s in %s",
-            access_file.stem,
-            format_time(time.time() - start_populate),
-        )
+        end_populate = time.time()
+        logger.info("Processed in %s", format_time(end_populate - start_populate))
 
     with target_engine.connect() as connection:
-        database_path = output_dir / "dpm.sqlite"
-        execute_queries(
-            connection,
-            ["PRAGMA optimize", f"VACUUM INTO '{database_path}'"],
-        )
-        logger.info("Database saved to %s", database_path)
+        target_path = output_dir / "dpm.sqlite"
+        execute_queries(connection, "PRAGMA optimize", f"VACUUM INTO '{target_path}'")
+        logger.info("Database saved to %s", target_path)
 
     # Write the models to disk
 
-    for name, metadata in models.items():
-        with (output_dir / f"{name}_model.py").open("w") as f:
+    for name, metadata in models:
+        output_path = output_dir / f"{name}_model.py"
+        with output_path.open("w") as f:
             model = ModelGenerator(metadata).generate()
             f.write(model)
 

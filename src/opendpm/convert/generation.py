@@ -14,8 +14,6 @@ from sqlalchemy import (
 
 indent = "    "
 
-type Imports = dict[str, set[str]]
-
 
 class ModelGenerator:
     """Custom generator for SQLAlchemy models."""
@@ -23,7 +21,7 @@ class ModelGenerator:
     def __init__(self, metadata: MetaData) -> None:
         """Initialize the model generator."""
         self.metadata = metadata
-        self.imports: Imports = defaultdict(set)
+        self.imports: dict[str, set[str]] = defaultdict(set)
 
     def generate(self) -> str:
         """Generate SQLAlchemy models from database metadata."""
@@ -41,14 +39,8 @@ class ModelGenerator:
         """Generate a SQLAlchemy model for a table."""
         # Generate class definition
         lines = [f"class {table.name}(Base):"]
-
-        # Add __tablename__ attribute
         lines.append(f'{indent}__tablename__ = "{table.name}"')
-
-        # Add columns
         lines.extend([self._generate_column(column) for column in table.columns])
-
-        # Add relationships
         lines.extend(self._generate_relationships(table))
 
         return "\n".join(lines)
@@ -67,7 +59,7 @@ class ModelGenerator:
         self.imports["sqlalchemy.orm"].add("DeclarativeBase")
         return f'class Base(DeclarativeBase):\n{indent}"""Base class for all models."""'
 
-    def _generate_column[T](self, column: Column[T]) -> str:
+    def _generate_column(self, column: Column[Any]) -> str:
         """Generate SQLAlchemy column definition."""
         # Determine Python type for the column
         python_type = self._get_python_type(column)
@@ -105,10 +97,10 @@ class ModelGenerator:
         """Process foreign keys of a column."""
         foreign_keys: list[str] = []
         for fk in column.foreign_keys:
-            ref_table = fk.column.table.name
-            ref_column = fk.column.name
             self.imports["sqlalchemy"].add("ForeignKey")
-            foreign_keys.append(f'ForeignKey("{ref_table}.{ref_column}")')
+            foreign_keys.append(
+                f'ForeignKey("{fk.column.table.name}.{fk.column.name}")',
+            )
 
         return foreign_keys
 
@@ -117,47 +109,45 @@ class ModelGenerator:
         relationships: list[str] = []
 
         # Find foreign keys that reference this table
-        for ref_table_name, ref_table in self.metadata.tables.items():
+        for ref_table in self.metadata.tables.values():
             for column in ref_table.columns:
                 for fk in column.foreign_keys:
                     if fk.column.table == table:
-                        rel_def = self._create_relationship_definition(
+                        rel_def = self._create_relationship(
                             table,
-                            ref_table_name,
+                            ref_table.name,
                             column,
                         )
                         relationships.append(rel_def)
 
         return relationships
 
-    def _create_relationship_definition(
+    def _create_relationship(
         self,
         table: Table,
         ref_table_name: str,
         column: Column[Any],
     ) -> str:
         """Create a relationship definition."""
-        ref_name = self._to_relationship_name(ref_table_name)
-        backref_name = self._to_relationship_name(table.name)
-
-        # Determine if it's a one-to-many or many-to-one relationship
+        # Determine relationship type based on column properties
         if column.primary_key:
             # One-to-one relationship
-            rel_type = f"{ref_table_name} | None"
+            rel_type = ref_table_name
+            if column.nullable:
+                rel_type = f"{rel_type} | None"
         else:
             # One-to-many relationship
             rel_type = f"list[{ref_table_name}]"
 
         self.imports["sqlalchemy.orm"].update(("Mapped", "relationship"))
         return (
-            f"{indent}{ref_name}: Mapped[{rel_type}]"
-            f'= relationship("{ref_table_name}", back_populates="{backref_name}")'
+            f"{indent}{ref_table_name}: Mapped[{rel_type}]"
+            f'= relationship("{ref_table_name}", back_populates="{table.name}")'
         )
 
     def _get_python_type(self, column: Column[Any]) -> str:
         """Get Python type for a column."""
         col_type = column.type
-
         python_type = col_type.python_type
         python_type_name = python_type.__name__
 
@@ -167,35 +157,22 @@ class ModelGenerator:
             self.imports["datetime"].add("datetime")
         elif python_type == Decimal:
             self.imports["decimal"].add("Decimal")
-        elif isinstance(col_type, Enum):
-            # Handle Enum types
-            self.imports["typing"].add("Literal")
-            enums = [f'"{enum}"' for enum in col_type.enums]  # type: ignore unknown
-            python_type_name = f"Literal[{', '.join(enums)}]"
 
-        # Handle nullable columns
+        # Handle Enum types
+        if isinstance(col_type, Enum):
+            self.imports["typing"].add("Literal")
+            enum_values = [f'"{enum}"' for enum in col_type.enums]  # type: ignore unknown
+            python_type_name = f"Literal[{', '.join(enum_values)}]"
+
         if column.nullable:
             python_type_name = f"{python_type_name} | None"
 
         return python_type_name
 
-    def _to_relationship_name(self, table_name: str) -> str:
-        """Convert table name to relationship name."""
-        if table_name.endswith("VID"):
-            table_name = table_name.removesuffix("VID")
-            table_name += "Version"
-
-        if table_name.endswith("ID"):
-            table_name = table_name.removesuffix("ID")
-
-        return table_name
-
     def _render_file(self, models: list[str]) -> str:
         """Render the complete model file."""
-        # Generate file header
         base_class = self._generate_base_class()
         imports = self._generate_imports()
         header = ['"""SQLAlchemy models generated from DPM."""', imports, base_class]
 
-        # Combine header and models
         return "\n".join(header + models)

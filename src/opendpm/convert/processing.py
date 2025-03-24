@@ -27,7 +27,7 @@ from opendpm.convert.transformations import (
 
 logger = logging.getLogger(__name__)
 
-type TableRows = dict[Table, Rows]
+type TableRows = list[tuple[Table, Rows]]
 
 
 def create_access_engine(db_path: str | Path) -> Engine:
@@ -37,7 +37,7 @@ def create_access_engine(db_path: str | Path) -> Engine:
     return create_engine(f"access+pyodbc:///?odbc_connect={conn_str}")
 
 
-def execute_queries(connection: Connection, queries: list[str]) -> None:
+def execute_queries(connection: Connection, *queries: str) -> None:
     """Execute a list of SQL queries."""
     for query in queries:
         connection.execute(text(query))
@@ -65,7 +65,7 @@ def fetch_database(source_engine: Engine) -> tuple[MetaData, TableRows]:
     """
     metadata = reflect_database(source_engine)
 
-    table_rows: dict[Table, Rows] = {}
+    table_rows: list[tuple[Table, Rows]] = []
     with Session(source_engine) as source:
         for table in metadata.tables.values():
             data = source.execute(select(table)).all()
@@ -76,7 +76,7 @@ def fetch_database(source_engine: Engine) -> tuple[MetaData, TableRows]:
             remove_pk_index(table)
 
             if rows:
-                table_rows[table] = rows
+                table_rows.append((table, rows))
 
     return metadata, table_rows
 
@@ -84,5 +84,5 @@ def fetch_database(source_engine: Engine) -> tuple[MetaData, TableRows]:
 def populate_database(target_engine: Engine, table_rows: TableRows) -> None:
     """Populate the target database with data from the source database."""
     with Session(target_engine) as target, target.begin():
-        for table, rows in table_rows.items():
+        for table, rows in table_rows:
             target.execute(insert(table), rows)
