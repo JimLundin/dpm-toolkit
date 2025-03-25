@@ -2,20 +2,10 @@ name: Build Database
 
 on:
   workflow_call:
-    outputs:
-      config-path:
-        description: "Path to the config file"
-        value: ${{ jobs.build.outputs.config-path }}
-
-env:
-  INPUT_DIR: data/input
-  OUTPUT_DIR_SQLITE: data/output/sqlite
 
 jobs:
   build:
     runs-on: windows-latest
-    outputs:
-      config-path: ${{ steps.config.outputs.path }}
     
     steps:
     - uses: actions/checkout@v4
@@ -23,7 +13,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.12'
+        python-version: '3.13'
         cache: 'pip'
     
     - name: Install dependencies
@@ -59,30 +49,32 @@ jobs:
       id: cache-dbs
       uses: actions/cache@v4
       with:
-        path: ${{ env.INPUT_DIR }}
-        key: ${{ runner.os }}-databases-${{ hashFiles(steps.config.outputs.path) }}
+        path: |
+          *.accdb
+        key: ${{ hashFiles(steps.config.outputs.path) }}
 
     - name: Download database files
       if: steps.cache-dbs.outputs.cache-hit != 'true'
       shell: bash
       run: |
-        opendpm download ${{ env.INPUT_DIR }}        
+        opendpm download
 
     - name: Build SQLite database
       shell: bash
       run: |
-        opendpm convert ${{ env.INPUT_DIR }} ${{ env.OUTPUT_DIR_SQLITE }}
+        opendpm convert
         
     - name: Format generated models with ruff
       shell: bash
       run: |
         pip install ruff
-        echo "Formatting generated model file with ruff"
-        ruff check --fix-only ${{ env.OUTPUT_DIR_SQLITE }}/*.py
-        ruff format ${{ env.OUTPUT_DIR_SQLITE }}/*.py
+        ruff check --fix-only *.py
+        ruff format *.py
 
     - name: Upload SQLite database artifact
       uses: actions/upload-artifact@v4
       with:
         name: dpm-sqlite
-        path: ${{ env.OUTPUT_DIR_SQLITE }}
+        path: |
+          *.sqlite
+          *model.py

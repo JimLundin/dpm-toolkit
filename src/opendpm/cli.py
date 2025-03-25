@@ -25,7 +25,9 @@ def create_parser() -> argparse.ArgumentParser:
     )
     download_parser.add_argument(
         "output_dir",
+        nargs="?",
         type=Path,
+        default=Path.cwd(),
         help="Directory to save downloaded databases",
     )
     download_parser.add_argument(
@@ -41,16 +43,18 @@ def create_parser() -> argparse.ArgumentParser:
         help="Convert Access databases to SQLite",
     )
     convert_parser.add_argument(
-        "input_dir",
-        type=Path,
-        help="Directory containing Access databases",
-    )
-    convert_parser.add_argument(
         "output_dir",
         nargs="?",
         type=Path,
         default=Path.cwd(),
         help="Directory to save converted databases",
+    )
+    convert_parser.add_argument(
+        "input_dir",
+        nargs="?",
+        type=Path,
+        default=Path.cwd(),
+        help="Directory containing Access databases",
     )
 
     # Config path command

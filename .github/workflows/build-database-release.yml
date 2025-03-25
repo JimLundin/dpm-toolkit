@@ -6,10 +6,6 @@ on:
       - 'v*'  # Trigger on version tags
   workflow_dispatch:  # Allow manual trigger
 
-env:
-  INPUT_DIR: data/input
-  OUTPUT_DIR: data/output
-
 jobs:
   build:
     uses: ./.github/workflows/build-database.yml
