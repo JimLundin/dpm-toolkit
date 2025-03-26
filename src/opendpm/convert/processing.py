@@ -3,17 +3,7 @@
 import logging
 from pathlib import Path
 
-from sqlalchemy import (
-    Connection,
-    Engine,
-    MetaData,
-    Table,
-    create_engine,
-    event,
-    insert,
-    select,
-    text,
-)
+from sqlalchemy import Engine, MetaData, Table, create_engine, event, insert, select
 from sqlalchemy.orm import Session
 
 from opendpm.convert.transformations import (
@@ -35,13 +25,6 @@ def create_access_engine(db_path: str | Path) -> Engine:
     driver = "{Microsoft Access Driver (*.mdb, *.accdb)}"
     conn_str = f"DRIVER={driver};DBQ={db_path}"
     return create_engine(f"access+pyodbc:///?odbc_connect={conn_str}")
-
-
-def execute_queries(connection: Connection, *queries: str) -> None:
-    """Execute a list of SQL queries."""
-    for query in queries:
-        connection.execute(text(query))
-    connection.commit()
 
 
 def reflect_database(source_engine: Engine) -> MetaData:
