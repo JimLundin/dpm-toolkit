@@ -1,8 +1,8 @@
 """Schema transformation utilities for database conversion."""
 
-import datetime
 from collections import defaultdict
 from collections.abc import Callable, Sequence
+from datetime import date, datetime
 from typing import Any, NotRequired, TypedDict
 
 from sqlalchemy import (
@@ -18,7 +18,8 @@ from sqlalchemy import (
 from sqlalchemy.engine.interfaces import ReflectedColumn
 from sqlalchemy.types import TypeEngine
 
-type Rows = list[dict[str, Any]]
+type Value = str | int | bool | date | datetime | None
+type Rows = list[dict[str, Value]]
 type Columns = set[str]
 type EnumMap = dict[str, set[str]]
 type Data = Sequence[Row[Any]]
@@ -40,44 +41,66 @@ COLUMNS_CAST: dict[str, ColumnType] = {
 }
 
 
+def is_guid(column: str) -> bool:
+    """Check if a column is a GUID column."""
+    return column.lower().endswith("guid")
+
+
+def is_bool(column: str) -> bool:
+    """Check if a column is a boolean column."""
+    return column.lower().startswith(("is", "has"))
+
+
+def is_date(column: str) -> bool:
+    """Check if a column is a date column."""
+    return column.lower().endswith("date")
+
+
+def is_enum(column: str) -> bool:
+    """Check if a column is an enum column."""
+    return column.endswith("Type")
+
+
 def genericize_datatypes(
     _inspector: Inspector,
     _table_name: str,
-    column_dict: ReflectedColumn,
+    column: ReflectedColumn,
 ) -> None:
-    """Convert columns to generic types."""
-    if column_dict["name"].lower().endswith("guid"):
-        # GUIDs are classified as Integer in the Source
-        column_dict["type"] = Text()
-    elif column_dict["name"].lower().endswith("date"):
-        # Dates are classified as String in the Source
-        column_dict["type"] = Date()
-    elif column_dict["name"].lower().startswith(("is", "has")):
-        # Boolean columns are classified as Integer in the Source
-        column_dict["type"] = Boolean()
-    elif column_dict["name"] in COLUMNS_CAST:
-        # Cast specific columns to their correct types
-        column_dict["type"] = COLUMNS_CAST[column_dict["name"]]["sql"]
+    """Refine column datatypes during database reflection.
+
+    This function enhances SQLAlchemy's type reflection by analyzing column names
+    and applying more appropriate data types. The source database often uses generic
+    types (like Integer or String) for specialized data such as GUIDs, dates, and
+    booleans, which this function corrects based on naming conventions and known
+    column characteristics.
+    """
+    column_name = column["name"]
+    column_type = column["type"]
+    if is_guid(column_name):
+        column_type = Text()
+    elif is_date(column_name):
+        column_type = Date()
+    elif is_bool(column_name):
+        column_type = Boolean()
+    elif column_name in COLUMNS_CAST:
+        column_type = COLUMNS_CAST[column_name]["sql"]
     else:
-        column_dict["type"] = column_dict["type"].as_generic()
+        column_type = column_type.as_generic()
+
+    column["type"] = column_type
 
 
-def cast_row_value(column: str, value: Any) -> Any:  # noqa: ANN401
+def cast_row_value(column: str, value: Value) -> Value:
     """Transform row values to appropriate Python types."""
     if value is None:
         return None
     if column in COLUMNS_CAST and (caster := COLUMNS_CAST[column].get("python")):
         return caster(value)
-    if column.lower().endswith("date") and isinstance(value, str):
-        return datetime.date.fromisoformat(value)
-    if column.lower().startswith(("is", "has")):
+    if is_date(column) and isinstance(value, str):
+        return date.fromisoformat(value)
+    if is_bool(column):
         return bool(value)
     return value
-
-
-def is_enum(column: str, value: Any) -> bool:  # noqa: ANN401
-    """Check if a column is an enum column."""
-    return isinstance(value, str) and column.endswith("Type")
 
 
 def parse_data(data: Data) -> tuple[Rows, EnumMap, Columns]:
@@ -91,9 +114,8 @@ def parse_data(data: Data) -> tuple[Rows, EnumMap, Columns]:
         for column in dict_row:
             new_value = cast_row_value(column, dict_row[column])
             dict_row[column] = new_value
-            if is_enum(column, new_value):
+            if is_enum(column) and isinstance(new_value, str):
                 enum_columns[column].add(new_value)
-
             if new_value is None:
                 nullable_columns.add(column)
 
