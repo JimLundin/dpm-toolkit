@@ -58,7 +58,7 @@ def is_date(column: str) -> bool:
 
 def is_enum(column: str) -> bool:
     """Check if a column is an enum column."""
-    return column.endswith("Type")
+    return column.lower().endswith(("type", "status", "sign"))
 
 
 def genericize_datatypes(
@@ -76,14 +76,14 @@ def genericize_datatypes(
     """
     column_name = column["name"]
     column_type = column["type"]
-    if is_guid(column_name):
+    if column_name in COLUMNS_CAST:
+        column_type = COLUMNS_CAST[column_name]["sql"]
+    elif is_guid(column_name):
         column_type = Text()
     elif is_date(column_name):
         column_type = Date()
     elif is_bool(column_name):
         column_type = Boolean()
-    elif column_name in COLUMNS_CAST:
-        column_type = COLUMNS_CAST[column_name]["sql"]
     else:
         column_type = column_type.as_generic()
 

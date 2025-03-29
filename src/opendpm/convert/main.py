@@ -17,15 +17,30 @@ from opendpm.convert.utils import format_time
 logger = logging.getLogger(__name__)
 
 
-def migrate_database(input_dir: Path, output_dir: Path) -> None:
+def migrate_databases(
+    input_dir: Path,
+    output_dir: Path,
+    *,
+    overwrite: bool = False,
+) -> None:
     """Migrate Access databases to SQLite.
 
     Args:
         input_dir: Directory containing Access databases
         output_dir: Directory to store SQLite database
+        overwrite: Whether to overwrite existing database
 
     """
     start = time()
+
+    target_path = output_dir / "dpm.sqlite"
+    if target_path.exists():
+        if not overwrite:
+            logger.warning("Target database already exists: %s", target_path)
+            return
+
+        logger.info("Removing existing database: %s", target_path)
+        target_path.unlink(missing_ok=True)
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -64,7 +79,6 @@ def migrate_database(input_dir: Path, output_dir: Path) -> None:
 
     with target_engine.connect() as connection:
         start_save = time()
-        target_path = output_dir / "dpm.sqlite"
         connection.execute(text(f"VACUUM INTO '{target_path}'"))
         end_save = time()
         logger.info("Saved: %s in %s", target_path, format_time(end_save - start_save))

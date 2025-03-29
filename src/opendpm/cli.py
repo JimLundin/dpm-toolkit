@@ -56,6 +56,11 @@ def create_parser() -> argparse.ArgumentParser:
         default=Path.cwd(),
         help="Directory containing Access databases",
     )
+    convert_parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Overwrite existing database",
+    )
 
     # Config path command
     subparsers.add_parser(
@@ -74,7 +79,11 @@ def main() -> None:
     if args.command == "download":
         download.download_databases(args.config, args.output_dir)
     elif args.command == "convert":
-        convert.migrate_database(args.input_dir, args.output_dir)
+        convert.migrate_databases(
+            args.input_dir,
+            args.output_dir,
+            overwrite=args.overwrite,
+        )
     elif args.command == "config-path":
         # Print just the path without any logging output
         print(get_default_config())  # noqa: T201
