@@ -77,18 +77,18 @@ class Model:
 
     def _table(self, table: Table) -> str:
         """Generate a SQLAlchemy model for a table."""
-        self.imports["sqlalchemy"].add("Table as SQLATable")
-
         lines = [f'"{table.name}"', f"{self.base}.metadata"]
         lines.extend(self._column(column) for column in table.columns)
 
-        return f"{table.name} = SQLATable(\n{indent}{f',\n{indent}'.join(lines)}\n)\n"
+        self.imports["sqlalchemy"].add("Table as AlchemyTable")
+        return (
+            f"{table.name} = AlchemyTable(\n{indent}{f',\n{indent}'.join(lines)}\n)\n"
+        )
 
     def _column(self, column: Column[Any]) -> str:
         """Generate a SQLAlchemy column."""
         sql_type = column.type.__class__.__name__
-        self.imports["sqlalchemy"].add("Column")
-        self.imports["sqlalchemy"].add(sql_type)
+        self.imports["sqlalchemy"].update(("Column", sql_type))
         return f'Column("{column.name}", {sql_type})'
 
     def _object(self, table: Table) -> str:
