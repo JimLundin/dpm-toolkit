@@ -77,8 +77,11 @@ class Model:
 
     def _table(self, table: Table) -> str:
         """Generate a SQLAlchemy model for a table."""
-        lines = [f'"{table.name}"', f"{self.base}.metadata"]
-        lines.extend(self._column(column) for column in table.columns)
+        lines = (
+            f'"{table.name}"',
+            f"{self.base}.metadata",
+            *(self._column(column) for column in table.columns),
+        )
 
         self.imports["sqlalchemy"].add("Table as AlchemyTable")
         return (
@@ -93,18 +96,14 @@ class Model:
 
     def _object(self, table: Table) -> str:
         """Generate a SQLAlchemy model for a table."""
-        lines = [f"class {table.name}({self.base}):"]
-        lines.append(f'{indent}"""Auto-generated model for the {table.name} table."""')
-        lines.append("")
-        lines.append(f'{indent}__tablename__ = "{table.name}"')
-        lines.append("")
-        lines.extend(self._mapped_column(column) for column in table.columns)
-        lines.append("")
-        lines.append(
-            f"{indent}{self._mapper_args(table)}",
-        ) if not table.primary_key else None
-        lines.extend(self._table_relations(table))
-        lines.append("")
+        lines = (
+            f"class {table.name}({self.base}):",
+            f'{indent}"""Auto-generated model for the {table.name} table."""',
+            f'{indent}__tablename__ = "{table.name}"\n',
+            *(self._mapped_column(column) for column in table.columns),
+            f"\n{indent}{self._mapper_args(table)}" if not table.primary_key else "",
+            *self._table_relations(table),
+        )
 
         return "\n".join(lines)
 
