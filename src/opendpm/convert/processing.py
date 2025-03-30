@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from opendpm.convert.transformations import (
     Rows,
-    genericize_datatypes,
+    genericize,
     parse_data,
     remove_pk_index,
     set_enum_columns,
@@ -30,7 +30,7 @@ def create_access_engine(db_path: str | Path) -> Engine:
 def reflect_database(source_engine: Engine) -> MetaData:
     """Reflect a database schema."""
     metadata = MetaData()
-    event.listen(metadata, "column_reflect", genericize_datatypes)
+    event.listen(metadata, "column_reflect", genericize)
     metadata.reflect(bind=source_engine)
     return metadata
 
@@ -52,8 +52,8 @@ def fetch_database(source_engine: Engine) -> tuple[MetaData, TableRows]:
     with Session(source_engine) as source:
         for table in metadata.tables.values():
             data = source.execute(select(table)).all()
-
             rows, enum_columns, nullable_columns = parse_data(data)
+
             set_enum_columns(table, enum_columns)
             set_null_columns(table, nullable_columns)
             remove_pk_index(table)

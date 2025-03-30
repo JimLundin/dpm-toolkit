@@ -30,11 +30,11 @@ class ColumnType(TypedDict):
     """Column type mapping."""
 
     sql: TypeEngine[Any]
-    python: NotRequired[Callable[..., Any]]
+    python: NotRequired[Callable[[Value], Value]]
 
 
 # Mapping specific column names to their appropriate types
-COLUMNS_CAST: dict[str, ColumnType] = {
+COLUMN_CASTS: dict[str, ColumnType] = {
     "ParentFirst": {"sql": Boolean(), "python": bool},
     "UseIntervalArithmetics": {"sql": Boolean(), "python": bool},
     "StartDate": {"sql": DateTime()},
@@ -62,11 +62,7 @@ def is_enum(column: str) -> bool:
     return column.lower().endswith(("type", "status", "sign", "optionality"))
 
 
-def genericize_datatypes(
-    _inspector: Inspector,
-    _table_name: str,
-    column: ReflectedColumn,
-) -> None:
+def genericize(_i: Inspector, _t: str, column: ReflectedColumn) -> None:
     """Refine column datatypes during database reflection.
 
     This function enhances SQLAlchemy's type reflection by analyzing column names
@@ -77,8 +73,8 @@ def genericize_datatypes(
     """
     column_name = column["name"]
     column_type = column["type"]
-    if column_name in COLUMNS_CAST:
-        column_type = COLUMNS_CAST[column_name]["sql"]
+    if column_name in COLUMN_CASTS:
+        column_type = COLUMN_CASTS[column_name]["sql"]
     elif is_guid(column_name):
         column_type = Text()
     elif is_date(column_name):
@@ -97,7 +93,7 @@ def cast_row_value(column: str, value: Value) -> Value:
     """Transform row values to appropriate Python types."""
     if value is None:
         return None
-    if column in COLUMNS_CAST and (caster := COLUMNS_CAST[column].get("python")):
+    if column in COLUMN_CASTS and (caster := COLUMN_CASTS[column].get("python")):
         return caster(value)
     if is_date(column) and isinstance(value, str):
         return date.fromisoformat(value)
