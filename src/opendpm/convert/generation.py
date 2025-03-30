@@ -32,52 +32,6 @@ def normalise_name(name: str) -> str:
     return name
 
 
-def difference(str1: str, str2: str) -> tuple[str, str]:
-    """Find the difference between two strings."""
-    length = min(len(str1), len(str2))
-    for i in range(length, 0, -1):
-        prefix1, suffix1, comp1 = str1[:i], str1[i:], str1[:-i]
-        prefix2, suffix2, comp2 = str2[:i], str2[i:], str2[:-i]
-        if str2.endswith(prefix1):
-            return suffix1, comp2
-        if str1.endswith(prefix2):
-            return comp1, suffix2
-
-    return str1, str2
-
-
-REFLECT = {
-    "child": "parent",
-    "parent": "child",
-    "abstract": "concrete",
-    "concrete": "abstract",
-    "owner": "owned",
-    "owned": "owner",
-    "group": "grouped",
-    "grouped": "group",
-    "translator": "translating",
-    "translating": "translator",
-    "created": "",
-}
-
-
-def reflect(string: str) -> str:
-    """Reflect a string."""
-    reflection = REFLECT.get(string.lower(), None)
-    return reflection.title() if reflection else string
-
-
-def plural(string: str) -> str:
-    """Pluralize a string."""
-    if string.endswith(("s", "x")):
-        return string + "es"
-    if string.endswith("ey"):
-        return string + "s"
-    if string.endswith("y"):
-        return string[:-1] + "ies"
-    return string + "s"
-
-
 class Model:
     """Custom generator for SQLAlchemy models."""
 
@@ -232,83 +186,22 @@ class Model:
 
     def _table_relations(self, table: Table) -> list[str]:
         """Generate SQLAlchemy relationship definitions."""
-        relationships = [
-            self._relation(column, fk.column, table, fk.column.table)
+        return [
+            self._relation(column, fk.column.table)
             for column in table.columns
             for fk in column.foreign_keys
         ]
 
-        # Find foreign keys that reference this table
-        relationships.extend(
-            self._relation(fk.column, ref_column, table, ref_table)
-            for ref_table in self.metadata.tables.values()
-            for ref_column in ref_table.columns
-            for fk in ref_column.foreign_keys
-            if fk.column.table == table
-        )
-
-        return relationships
-
-    def _relation(
-        self,
-        src_col: Column[Any],
-        ref_col: Column[Any],
-        src_table: Table,
-        ref_table: Table,
-    ) -> str:
+    def _relation(self, src_col: Column[Any], ref_table: Table) -> str:
         """Generate a SQLAlchemy relationship definition."""
-        src_name, ref_name = self._relation_name(
-            src_col.name,
-            ref_col.name,
-            src_table.name,
-            ref_table.name,
-        )
+        src_name = normalise_name(src_col.name)
+        if src_name == src_col.name:
+            src_name = f"{src_name}_"
 
-        if ref_col.primary_key:
-            src_type = ref_table.name
-        else:
-            src_name = plural(src_name)
-            src_type = f"list[{ref_table.name}]"
-
-        ref_name = plural(ref_name) if not src_col.primary_key else ref_name
-
-        src_type = f"{src_type} | None" if src_col.nullable else src_type
+        src_type = f"{ref_table.name} | None" if src_col.nullable else ref_table.name
 
         self.imports["sqlalchemy.orm"].update(("Mapped", "relationship"))
         return (
             f"{indent}{src_name}: Mapped[{src_type}]"
-            f' = relationship(back_populates="{ref_name}")'
+            f" = relationship(foreign_keys=[{src_col.name}])"
         )
-
-    def _relation_name(
-        self,
-        src_col: str,
-        ref_col: str,
-        src_table: str,
-        ref_table: str,
-    ) -> tuple[str, str]:
-        src_name = normalise_name(src_col)
-        ref_name = normalise_name(ref_col)
-
-        if src_name == ref_name:
-            src_name = ref_table
-            ref_name = src_table
-        elif src_name in ref_name:
-            comp1, _ = difference(ref_name, src_name)
-            src_name = f"{reflect(comp1)}{src_name}"
-        elif ref_name in src_name:
-            comp2, _ = difference(src_name, ref_name)
-            ref_name = f"{reflect(comp2)}{ref_name}"
-        else:
-            src_name, ref_name = f"{src_name}{ref_name}", f"{ref_name}{src_name}"
-
-        if src_table in src_name:
-            src_name, _ = difference(src_name, src_table)
-            comp1, _ = difference(src_name, ref_table)
-            src_name = f"{comp1}{ref_table}"
-        if ref_table in ref_name:
-            ref_name, _ = difference(ref_name, ref_table)
-            comp2, _ = difference(ref_name, src_table)
-            ref_name = f"{comp2}{src_table}"
-
-        return src_name, ref_name

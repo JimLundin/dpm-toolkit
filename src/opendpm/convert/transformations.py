@@ -11,6 +11,7 @@ from sqlalchemy import (
     DateTime,
     Enum,
     Inspector,
+    Integer,
     Row,
     Table,
     Text,
@@ -58,7 +59,7 @@ def is_date(column: str) -> bool:
 
 def is_enum(column: str) -> bool:
     """Check if a column is an enum column."""
-    return column.lower().endswith(("type", "status", "sign"))
+    return column.lower().endswith(("type", "status", "sign", "optionality"))
 
 
 def genericize_datatypes(
@@ -84,6 +85,8 @@ def genericize_datatypes(
         column_type = Date()
     elif is_bool(column_name):
         column_type = Boolean()
+    elif isinstance(column_type, Integer):
+        column_type = Integer()
     else:
         column_type = column_type.as_generic()
 
