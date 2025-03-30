@@ -14,21 +14,15 @@ def normalise_name(name: str) -> str:
     """Normalise column names by applying heuristics."""
     # Clean up column endings
     if name.endswith("GUID"):
-        name = "Concept"
+        name = name.removesuffix("GUID")
     if name.endswith("VID"):
         name = name.replace("VID", "Version")
-    if name.startswith("DPM"):
-        name = name.removeprefix("DPM")
 
-    # Once all the "ID" endings are removed
-    # We can apply other heuristics
     name = name.removesuffix("ID")
     if name.endswith("Code"):
         name = name.removesuffix("Code")
     if name.endswith("Oper"):
         name = name.replace("Oper", "Operation")
-    if name == "Org":
-        name = "Organisation"
     return name
 
 
@@ -195,8 +189,12 @@ class Model:
     def _relation(self, src_col: Column[Any], ref_table: Table) -> str:
         """Generate a SQLAlchemy relationship definition."""
         src_name = normalise_name(src_col.name)
+        if src_col.name == "RowGUID":
+            src_name = "Record"
+        if src_name == src_col.table.name:
+            src_name = ref_table.name
         if src_name == src_col.name:
-            src_name = f"{src_name}_"
+            src_name = f"{src_name}Relation"
 
         src_type = f"{ref_table.name} | None" if src_col.nullable else ref_table.name
 
