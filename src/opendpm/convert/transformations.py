@@ -60,7 +60,19 @@ def is_date(column: str) -> bool:
 
 def is_enum(column: str) -> bool:
     """Check if a column is an enum column."""
-    return column.lower().endswith(("type", "status", "sign", "optionality"))
+    return column.lower().endswith(
+        (
+            "type",
+            "status",
+            "sign",
+            "optionality",
+            "direction",
+            "number",
+            "endorsement",
+            "source",
+            "severity",
+        ),
+    )
 
 
 def genericize(_i: Inspector, _t: str, column: ReflectedColumn) -> None:
@@ -146,9 +158,15 @@ def remove_pk_index(table: Table) -> None:
         table.indexes.remove(index)
 
 
-def set_guid_fk(table: Table) -> None:
-    """Set GUID columns as foreign keys."""
-    column = table.columns.get("RowGUID")
+def set_missing_fk(source_column: str, target_column: str, table: Table) -> None:
+    """Set missing foreign keys."""
+    column = table.columns.get(source_column)
     if column is None or column.foreign_keys:
         return
-    column.append_foreign_key(ForeignKey("Concept.ConceptGUID"))
+    column.append_foreign_key(ForeignKey(target_column))
+
+
+def set_missing_fks(table: Table) -> None:
+    """Set missing foreign keys."""
+    set_missing_fk("RowGUID", "Concept.ConceptGUID", table)
+    set_missing_fk("ParentItemID", "Item.ItemID", table)

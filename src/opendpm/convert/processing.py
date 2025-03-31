@@ -12,7 +12,7 @@ from opendpm.convert.transformations import (
     parse_data,
     remove_pk_index,
     set_enum_columns,
-    set_guid_fk,
+    set_missing_fks,
     set_null_columns,
 )
 
@@ -58,7 +58,7 @@ def fetch_database(source_engine: Engine) -> tuple[MetaData, TableRows]:
             set_enum_columns(table, enum_columns)
             set_null_columns(table, nullable_columns)
             remove_pk_index(table)
-            set_guid_fk(table)
+            set_missing_fks(table)
 
             if rows:
                 table_rows.append((table, rows))

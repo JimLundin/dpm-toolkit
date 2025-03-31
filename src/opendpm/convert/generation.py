@@ -12,18 +12,7 @@ indent = "    "
 
 def normalise_name(name: str) -> str:
     """Normalise column names by applying heuristics."""
-    # Clean up column endings
-    if name.endswith("GUID"):
-        name = name.removesuffix("GUID")
-    if name.endswith("VID"):
-        name = name.replace("VID", "Version")
-
-    name = name.removesuffix("ID")
-    if name.endswith("Code"):
-        name = name.removesuffix("Code")
-    if name.endswith("Oper"):
-        name = name.replace("Oper", "Operation")
-    return name
+    return name.removesuffix("GUID").replace("VID", "Version").removesuffix("ID")
 
 
 class Model:
@@ -41,7 +30,7 @@ class Model:
 
         models = [
             self._object(table)
-            if table.primary_key or table.foreign_keys
+            if table.primary_key or table.foreign_keys or "RowGUID" in table.columns
             else self._table(table)
             for table in self.metadata.tables.values()
         ]
@@ -91,7 +80,11 @@ class Model:
     def _column(self, column: Column[Any]) -> str:
         """Generate a SQLAlchemy column."""
         sql_type = column.type.__class__.__name__
-        self.imports["sqlalchemy"].update(("Column", sql_type))
+        self.imports["sqlalchemy"].add(sql_type)
+        if isinstance(column.type, Enum):
+            enum_values = (f'"{value}"' for value in sorted(column.type.enums))  # type: ignore enum values
+            sql_type = f"Enum({', '.join(enum_values)})"
+        self.imports["sqlalchemy"].add("Column")
         return f'Column("{column.name}", {sql_type})'
 
     def _object(self, table: Table) -> str:
@@ -102,16 +95,17 @@ class Model:
             f'{indent}__tablename__ = "{table.name}"\n',
             *(self._mapped_column(column) for column in table.columns),
             f"\n{indent}{self._mapper_args(table)}" if not table.primary_key else "",
-            *self._table_relations(table),
+            *self._relations(table),
         )
 
         return "\n".join(lines)
 
     def _mapper_args(self, table: Table) -> str:
         """Generate a SQLAlchemy mapper for a table."""
+        row_guid = table.columns.get("RowGUID")
         foreign_keys = (
             ("RowGUID",)
-            if "RowGUID" in table.columns
+            if row_guid is not None and not row_guid.nullable
             else (fk.parent.name for fk in table.foreign_keys)
         )
         self.imports["typing"].update(("ClassVar", "Any"))
@@ -157,7 +151,7 @@ class Model:
 
         if isinstance(column_type, Enum):
             self.imports["typing"].add("Literal")
-            enum_values = [f'"{enum}"' for enum in column_type.enums]  # type: ignore unknown
+            enum_values = [f'"{enum}"' for enum in sorted(column_type.enums)]  # type: ignore unknown
             python_type_name = f"Literal[{', '.join(enum_values)}]"
 
         return f"{python_type_name} | None" if column.nullable else python_type_name
@@ -181,7 +175,7 @@ class Model:
             for fk in column.foreign_keys
         ]
 
-    def _table_relations(self, table: Table) -> list[str]:
+    def _relations(self, table: Table) -> list[str]:
         """Generate SQLAlchemy relationship definitions."""
         return [
             self._relation(column, fk.column.table)
