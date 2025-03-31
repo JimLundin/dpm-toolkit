@@ -109,7 +109,11 @@ class Model:
 
     def _mapper_args(self, table: Table) -> str:
         """Generate a SQLAlchemy mapper for a table."""
-        foreign_keys = (fk.column.name for fk in table.foreign_keys)
+        foreign_keys = (
+            ("RowGUID",)
+            if "RowGUID" in table.columns
+            else (fk.parent.name for fk in table.foreign_keys)
+        )
         self.imports["typing"].update(("ClassVar", "Any"))
 
         return (

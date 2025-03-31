@@ -10,6 +10,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     Enum,
+    ForeignKey,
     Inspector,
     Integer,
     Row,
@@ -143,3 +144,11 @@ def remove_pk_index(table: Table) -> None:
     indexes_to_drop = [index for index in table.indexes if index.name == "PrimaryKey"]
     for index in indexes_to_drop:
         table.indexes.remove(index)
+
+
+def set_guid_fk(table: Table) -> None:
+    """Set GUID columns as foreign keys."""
+    column = table.columns.get("RowGUID")
+    if column is None or column.foreign_keys:
+        return
+    column.append_foreign_key(ForeignKey("Concept.ConceptGUID"))
