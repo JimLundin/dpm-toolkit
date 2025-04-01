@@ -8,77 +8,146 @@ This is an unofficial tool and is not affiliated with or endorsed by the Europea
 
 ## Overview
 
-This project provides pre-converted SQLite versions of the EBA DPM 2.0 databases, making them accessible across all platforms.
+This project provides pre-converted SQLite versions of the EBA DPM 2.0 databases accessible across all platforms. It also generates SQLAlchemy models that document the database structure.
 
 ### Why This Project?
 
-The current DPM 2.0 releases from EBA are only provided in AccessDB format, which has limited support outside of Windows operating systems. In addition, the DPM 2.0 releases are only provided in "incremental" format, keeping each release self-contained. This project solves these limitations by:
-- Converting the databases to SQLite
-- Combining all releases into a single file
-- Making the data consistently accessible via HTTP
-- Providing automated conversion through GitHub Actions
-- Publishing new releases with converted databases
+The current DPM 2.0 releases from EBA are available only in AccessDB format, with limited support outside Windows. Additionally, DPM releases are provided in "incremental" format, with each release self-contained. This project addresses these issues by:
+- Converting databases to SQLite
+- Combining releases into a single file
+- Providing HTTP access to the data
+- Automating conversion through GitHub Actions
+- Publishing converted databases as releases
+- Generating SQLAlchemy models of the database structure
 
 ### Database Compatibility
 
-The converted SQLite databases targets full compatibility with the original Access database structure, maintaining all relationships, and constraints. Although due to cyclic dependencies, referential integrity may not be preserved, and Foreign Key constraints are not enforced.
+The converted SQLite databases maintain compatibility with the original Access database structure, preserving relationships and constraints. Due to cyclic dependencies, referential integrity may not be fully preserved, and Foreign Key constraints are not enforced.
+
+### SQLAlchemy Models
+
+The project generates SQLAlchemy ORM models that document the database structure. These models offer:
+
+- **Database Documentation**: Details of tables, columns, relationships, and data types
+- **Type Safety**: Type-annotated classes compatible with IDEs and type checkers
+- **Code Completion**: Autocompletion for database operations in Python code
+- **Relationship Navigation**: Direct access to related tables through mapped relationships
+
+This provides development tooling not available when working with the original Access database.
 
 ## Getting Started
 
 ### Option 1: Download Pre-converted Databases
 
-The easiest way to get started is to download the converted databases from our [Releases page](https://github.com/JimLundin/opendpm/releases). Each release contains the latest converted databases.
+Download converted databases and models from our [Releases page](https://github.com/JimLundin/opendpm/releases).
 
-You can download the latest releases either by:
-- Using this URL in your scripts:
+You can access the latest release via:
+- URL for scripts:
 ```
 https://github.com/JimLundin/opendpm/releases/latest/download/dpm-sqlite.zip
 ```
-- Or clicking here: [Download Latest DPM SQLite Database](https://github.com/JimLundin/opendpm/releases/latest/download/dpm-sqlite.zip)
+- Or direct link: [Download Latest DPM SQLite Database](https://github.com/JimLundin/opendpm/releases/latest/download/dpm-sqlite.zip)
 
 ### Option 2: Run the Conversion Yourself
 
-If you want to run the conversion process yourself:
+- Online:
+   1. Fork this repository
+   2. Enable GitHub Actions in your fork
+   3. Run the conversion workflow
+   4. Access the converted databases and models in the workflow artifacts
 
-1. Fork this repository
-2. Enable GitHub Actions in your fork
-3. Run the conversion workflow manually
-4. Find the converted databases in the workflow artifacts
+- Offline:
+   1. Clone this repository
+   2. Install dependencies using `pip install`
+   3. Run conversion using the `opendpm` CLI tool
+   4. Find the converted databases and models in the output directory
+
+## Advanced Database Features
+
+### Database Refinement Process
+
+The conversion process refines the database to improve accessibility and consistency while preserving the original structure:
+
+1. **Type Refinement**: Enhances column data types based on:
+   - Column naming conventions (columns ending with "GUID", "Date", or starting with "is"/"has")
+   - Predefined mappings for special cases
+   - Type generalization for consistent representation
+
+2. **Constraint Enhancement**:
+   - Detects nullable columns from data analysis
+   - Identifies and applies enum types
+   - Establishes missing foreign key relationships
+   - Optimizes primary key indexes for SQLite
+
+3. **Value Casting**: Transforms data to appropriate Python types:
+   - Converts date strings to date objects
+   - Normalizes boolean values (from Access's -1/0 to True/False)
+   - Applies custom transformations as needed
+
+### SQLAlchemy Model Generation
+
+The project generates SQLAlchemy ORM models with these features:
+
+1. **Typed Data Access**: 
+   - Type-annotated models with proper Python types
+   - Support for Literal types for enums
+   - Optional types for nullable columns
+
+2. **Relationship Mapping**:
+   - Automatic detection of table relationships
+   - Foreign key relationships mapped to SQLAlchemy relationship objects
+   - Column-based naming conventions for relationships
+
+3. **Code Quality**:
+   - Auto-generated documentation for models and tables
+   - PEP-8 compliant Python code
+
+4. **Model Structure**:
+   - Tables with primary keys as SQLAlchemy ORM classes
+   - Tables without primary keys as SQLAlchemy Tables
+   - Support for composite primary keys and complex relationships
+
+Example of a generated model:
+
+```python
+class TableVersionCell(DPM):
+    """Auto-generated model for the TableVersionCell table."""
+    __tablename__ = "TableVersionCell"
+
+    CellID: Mapped[str] = mapped_column(primary_key=True)
+    TableVersionCellID: Mapped[str]
+    CellContent: Mapped[str | None]
+    # ... other columns ...
+
+    # Automatically generated relationships
+    Cell: Mapped[Cell] = relationship(foreign_keys=[CellID])
+    TableVersionHeader: Mapped[TableVersionHeader] = relationship(foreign_keys=[TableVersionHeaderID])
+```
+
+These models provide type-safe database interaction with IDE integration and code completion.
+
+## Caveats
+
+- Only current DPM release data is extracted, not data from previous releases
+- Original database queries are not preserved
+- Local conversion requires Microsoft Access ODBC driver
 
 ## Development
 
-If you want to run the conversion locally:
+To run the conversion locally:
 
 1. Clone the repository
-2. Ensure you have Python 3.12+ installed
-3. Install the Microsoft Access ODBC driver
-4. Install the package in development mode: `pip install -e .`
+2. Install Python 3.12+
+3. Install Microsoft Access ODBC driver
+4. Install package in development mode: `pip install -e .`
 5. Run the conversion:
    ```
    opendpm convert <source_dir> <target_dir>
    ```
 
-## Column Casting Conventions
-
-During the conversion from Access to SQLite, specific column casting rules are applied based on naming conventions to ensure proper data typing:
-
- - GUID columns are classified as Integer in the Source but due to their representation as String, as such all columns ending in "GUID" are casted to Text.
- - Dates are classified as String in the Source, to account for this we cast any columns ending in "Date" to Date.
- - Boolean columns are classified as Integer in the Source, most likely due to legacy support for older versions of Access, where boolean columns are stored as integer with 0 being false and -1 being true due to it being the twos complement of 0. We classify all columns starting with "is" or "has" as Boolean.
- - Some columns do not follow the above rules and are manually casted to the correct type.
- - All other columns are classified as generic types
-
-These casting rules are not in direct correspondence with the original Access database schema, but they are chosen to ensure proper data typing in the target database.
-
-## Caveats
-
-- Currently only the current DPM release data is extracted, not data from previous releases
-- Queries from the original database are not preserved
-- Local conversion requires Microsoft Access ODBC driver to be installed
-
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome. Please submit a Pull Request.
 
 ## License
 
