@@ -45,15 +45,15 @@ def find_access_database(archive: ZipFile) -> ZipInfo | None:
     return None
 
 
-def fetch_databases(config: Path, output: Path) -> None:
+def fetch_databases(config: Path, target: Path) -> None:
     """Download all database files specified in the config.
 
     Args:
         config: Path to the sources.toml config file
-        output: Directory to save downloaded databases
+        target: Directory to save downloaded databases
 
     """
-    output.mkdir(parents=True, exist_ok=True)
+    target.mkdir(parents=True, exist_ok=True)
     sources = load_config(config)
     for version, url in sources.items():
         try:
@@ -61,7 +61,7 @@ def fetch_databases(config: Path, output: Path) -> None:
             with ZipFile(archive_data) as archive:
                 if db_file := find_access_database(archive):
                     db_file.filename = f"dpm_{version}.accdb"
-                    archive.extract(db_file, output)
+                    archive.extract(db_file, target)
                     logger.info("Downloaded version %s", version)
 
         except Exception:

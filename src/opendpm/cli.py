@@ -24,7 +24,7 @@ def create_parser() -> argparse.ArgumentParser:
         help="Download Access databases",
     )
     download_parser.add_argument(
-        "output",
+        "target",
         nargs="?",
         type=Path,
         default=Path.cwd(),
@@ -43,14 +43,14 @@ def create_parser() -> argparse.ArgumentParser:
         help="Convert Access databases to SQLite",
     )
     convert_parser.add_argument(
-        "output",
+        "target",
         nargs="?",
         type=Path,
         default=Path.cwd(),
         help="Directory to save converted databases",
     )
     convert_parser.add_argument(
-        "input",
+        "source",
         nargs="?",
         type=Path,
         default=Path.cwd(),
@@ -77,11 +77,11 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.command == "download":
-        download.fetch_databases(args.config_path, args.output)
+        download.fetch_databases(args.config_path, args.target)
     elif args.command == "convert":
         convert.convert_access_to_sqlite(
-            args.input,
-            args.output,
+            args.source,
+            args.target,
             overwrite=args.overwrite,
         )
     elif args.command == "config":

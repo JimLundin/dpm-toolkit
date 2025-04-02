@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 def convert_access_to_sqlite(
     source: Path,
-    output: Path,
+    target: Path,
     *,
     overwrite: bool = False,
 ) -> None:
@@ -28,13 +28,13 @@ def convert_access_to_sqlite(
 
     Args:
         source: Directory containing Access databases
-        output: Directory to store SQLite database
+        target: Directory to store SQLite database
         overwrite: Whether to overwrite existing database
 
     """
     start_time = time()
 
-    sqlite_path = output / "dpm.sqlite"
+    sqlite_path = target / "dpm.sqlite"
     if sqlite_path.exists():
         if not overwrite:
             logger.warning("Target database already exists: %s", sqlite_path)
@@ -42,7 +42,7 @@ def convert_access_to_sqlite(
 
         sqlite_path.unlink(missing_ok=True)
 
-    output.mkdir(parents=True, exist_ok=True)
+    target.mkdir(parents=True, exist_ok=True)
 
     database = source if source.is_file() else get_database(source)
     if not database:
@@ -58,7 +58,7 @@ def convert_access_to_sqlite(
     metadata.create_all(sqlite)
     load_data(sqlite, tables)
 
-    with (output / "dpm.py").open("w") as model_file:
+    with (target / "dpm.py").open("w") as model_file:
         model_file.write(Model(metadata).render())
 
     with sqlite.connect() as connection:
