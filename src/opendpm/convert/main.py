@@ -53,7 +53,7 @@ def migrate_databases(
 
     target_engine = create_engine("sqlite:///:memory:")
 
-    model: MetaData | None = None
+    metadata: MetaData | None = None
 
     for access_file in access_files:
         logger.info("Processing: %s", access_file.stem)
@@ -61,7 +61,6 @@ def migrate_databases(
         start_fetch = time()
         source_engine = create_access_engine(access_file)
         metadata, table_rows = fetch_database(source_engine)
-        model = metadata
         end_fetch = time()
         logger.info("Fetched in %s", format_time(end_fetch - start_fetch))
 
@@ -71,10 +70,10 @@ def migrate_databases(
         end_populate = time()
         logger.info("Processed in %s", format_time(end_populate - start_populate))
 
-    if model:
+    if metadata:
         model_path = output_dir / "dpm.py"
         with model_path.open("w") as f:
-            f.write(Model(model).render())
+            f.write(Model(metadata).render())
     else:
         logger.warning("No model generated")
 
