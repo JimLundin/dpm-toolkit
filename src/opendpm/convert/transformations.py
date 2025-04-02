@@ -71,6 +71,7 @@ def is_enum(column: str) -> bool:
             "endorsement",
             "source",
             "severity",
+            "errorcode",
         ),
     )
 

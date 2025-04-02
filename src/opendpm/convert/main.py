@@ -53,15 +53,15 @@ def migrate_databases(
 
     target_engine = create_engine("sqlite:///:memory:")
 
-    models: list[tuple[str, MetaData]] = []
+    model: MetaData | None = None
+
     for access_file in access_files:
-        file_name = access_file.stem
-        logger.info("Processing: %s", file_name)
+        logger.info("Processing: %s", access_file.stem)
 
         start_fetch = time()
         source_engine = create_access_engine(access_file)
         metadata, table_rows = fetch_database(source_engine)
-        models.append((file_name, metadata))
+        model = metadata
         end_fetch = time()
         logger.info("Fetched in %s", format_time(end_fetch - start_fetch))
 
@@ -71,11 +71,12 @@ def migrate_databases(
         end_populate = time()
         logger.info("Processed in %s", format_time(end_populate - start_populate))
 
-    for name, metadata in models:
-        output_path = output_dir / f"{name}_model.py"
-        with output_path.open("w") as f:
-            model = Model(metadata)
-            f.write(model.render())
+    if model:
+        model_path = output_dir / "dpm.py"
+        with model_path.open("w") as f:
+            f.write(Model(model).render())
+    else:
+        logger.warning("No model generated")
 
     with target_engine.connect() as connection:
         start_save = time()

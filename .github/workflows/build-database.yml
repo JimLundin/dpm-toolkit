@@ -76,5 +76,5 @@ jobs:
       with:
         name: dpm-sqlite
         path: |
-          *.sqlite
-          *model.py
+          dpm.sqlite
+          dpm.py

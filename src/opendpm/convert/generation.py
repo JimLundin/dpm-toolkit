@@ -1,6 +1,7 @@
 """Model generator for generating SQLAlchemy models from database metadata."""
 
 from collections import defaultdict
+from collections.abc import Iterable
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
@@ -13,6 +14,11 @@ indent = "    "
 def normalise_name(name: str) -> str:
     """Normalise column names by applying heuristics."""
     return name.removesuffix("GUID").replace("VID", "Version").removesuffix("ID")
+
+
+def render_fk(fk: str) -> str:
+    """Render a foreign key."""
+    return f"ForeignKey({fk})"
 
 
 class Model:
@@ -32,7 +38,7 @@ class Model:
             self._object(table)
             if table.primary_key or table.foreign_keys or "RowGUID" in table.columns
             else self._table(table)
-            for table in self.metadata.tables.values()
+            for table in self.metadata.sorted_tables
         ]
 
         return self._file(models)
@@ -82,10 +88,14 @@ class Model:
         sql_type = column.type.__class__.__name__
         self.imports["sqlalchemy"].add(sql_type)
         if isinstance(column.type, Enum):
-            enum_values = (f'"{value}"' for value in sorted(column.type.enums))  # type: ignore enum values
-            sql_type = f"Enum({', '.join(enum_values)})"
+            enum_values = (f'"{value}"' for value in column.type.enums)  # type: ignore enum values
+            sql_type = f"Enum({', '.join(sorted(enum_values))})"
         self.imports["sqlalchemy"].add("Column")
-        return f'Column("{column.name}", {sql_type})'
+        return (
+            f'Column("{column.name}", {sql_type})'
+            if column.nullable
+            else f'Column("{column.name}", {sql_type}, nullable={column.nullable})'
+        )
 
     def _object(self, table: Table) -> str:
         """Generate a SQLAlchemy model for a table."""
@@ -151,8 +161,8 @@ class Model:
 
         if isinstance(column_type, Enum):
             self.imports["typing"].add("Literal")
-            enum_values = [f'"{enum}"' for enum in sorted(column_type.enums)]  # type: ignore unknown
-            python_type_name = f"Literal[{', '.join(enum_values)}]"
+            enum_values = [f'"{enum}"' for enum in column_type.enums]  # type: ignore unknown
+            python_type_name = f"Literal[{', '.join(sorted(enum_values))}]"
 
         return f"{python_type_name} | None" if column.nullable else python_type_name
 
@@ -164,16 +174,30 @@ class Model:
 
         return kwargs
 
-    def _column_foreign_keys(self, column: Column[Any]) -> list[str]:
+    def _column_foreign_keys(self, column: Column[Any]) -> Iterable[str]:
         """Process foreign keys of a column."""
         if not column.foreign_keys:
             return []
 
         self.imports["sqlalchemy"].add("ForeignKey")
-        return [
-            f'ForeignKey("{fk.column.table.name}.{fk.column.name}")'
-            for fk in column.foreign_keys
-        ]
+
+        foreign_keys: list[str] = []
+        if column.table.name == "Concept":
+            # For Concept table, use quoted references to avoid circular dependencies
+            foreign_keys.extend(
+                f'"{fk.column.table.name}.{fk.column.name}"'
+                for fk in column.foreign_keys
+            )
+        else:
+            # For other tables, use simple name for self-references
+            foreign_keys.extend(
+                f"{fk.column.name}"
+                if fk.column.table == column.table
+                else f"{fk.column.table.name}.{fk.column.name}"
+                for fk in column.foreign_keys
+            )
+
+        return (render_fk(fk) for fk in foreign_keys)
 
     def _relations(self, table: Table) -> list[str]:
         """Generate SQLAlchemy relationship definitions."""
@@ -187,16 +211,19 @@ class Model:
         """Generate a SQLAlchemy relationship definition."""
         src_name = normalise_name(src_col.name)
         if src_col.name == "RowGUID":
-            src_name = "Record"
+            src_name = "UniqueConcept"
         if src_name == src_col.table.name:
             src_name = ref_table.name
         if src_name == src_col.name:
-            src_name = f"{src_name}Relation"
+            if ref_table.name in src_name:
+                src_name = f"Related{src_name}"
+            else:
+                src_name = f"{src_name}{ref_table.name}"
 
         src_type = f"{ref_table.name} | None" if src_col.nullable else ref_table.name
 
         self.imports["sqlalchemy.orm"].update(("Mapped", "relationship"))
         return (
             f"{indent}{src_name}: Mapped[{src_type}]"
-            f" = relationship(foreign_keys=[{src_col.name}])"
+            f" = relationship(foreign_keys={src_col.name})"
         )
