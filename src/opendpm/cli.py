@@ -8,7 +8,7 @@ from pathlib import Path
 from opendpm import convert, download
 
 
-def get_default_config() -> Path:
+def get_config_path() -> Path:
     """Get the default config file path."""
     return Path(__file__).parent / "sources.toml"
 
@@ -24,16 +24,16 @@ def create_parser() -> argparse.ArgumentParser:
         help="Download Access databases",
     )
     download_parser.add_argument(
-        "output_dir",
+        "output",
         nargs="?",
         type=Path,
         default=Path.cwd(),
         help="Directory to save downloaded databases",
     )
     download_parser.add_argument(
-        "--config",
+        "--config-path",
         type=Path,
-        default=get_default_config(),
+        default=get_config_path(),
         help="Path to sources.toml config file (default: %(default)s)",
     )
 
@@ -43,14 +43,14 @@ def create_parser() -> argparse.ArgumentParser:
         help="Convert Access databases to SQLite",
     )
     convert_parser.add_argument(
-        "output_dir",
+        "output",
         nargs="?",
         type=Path,
         default=Path.cwd(),
         help="Directory to save converted databases",
     )
     convert_parser.add_argument(
-        "input_dir",
+        "input",
         nargs="?",
         type=Path,
         default=Path.cwd(),
@@ -64,7 +64,7 @@ def create_parser() -> argparse.ArgumentParser:
 
     # Config path command
     subparsers.add_parser(
-        "config-path",
+        "config",
         help="Print the path to the default config file",
     )
 
@@ -77,16 +77,16 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.command == "download":
-        download.download_databases(args.config, args.output_dir)
+        download.fetch_databases(args.config_path, args.output)
     elif args.command == "convert":
-        convert.migrate_databases(
-            args.input_dir,
-            args.output_dir,
+        convert.convert_access_to_sqlite(
+            args.input,
+            args.output,
             overwrite=args.overwrite,
         )
-    elif args.command == "config-path":
+    elif args.command == "config":
         # Print just the path without any logging output
-        print(get_default_config())  # noqa: T201
+        print(get_config_path())  # noqa: T201
     else:
         parser.print_help()
 

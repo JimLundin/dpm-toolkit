@@ -1,73 +1,89 @@
 """Database processing utilities for handling multiple Access databases."""
 
 import logging
+from collections.abc import Iterable
 from pathlib import Path
 
 from sqlalchemy import Engine, MetaData, Table, create_engine, event, insert, select
 from sqlalchemy.orm import Session
 
 from opendpm.convert.transformations import (
-    Rows,
+    TableData,
+    add_foreign_keys,
+    apply_enums,
     genericize,
-    parse_data,
+    mark_non_nullable,
+    parse,
     remove_pk_index,
-    set_enum_columns,
-    set_missing_fks,
-    set_null_columns,
 )
 
 logger = logging.getLogger(__name__)
 
-type TableRows = list[tuple[Table, Rows]]
+type TableDataMap = Iterable[tuple[Table, TableData]]
 
 
-def create_access_engine(db_path: str | Path) -> Engine:
+def get_database(source: Path) -> Path | None:
+    """Get an Access database. Prioritize DPM databases."""
+    databases = list(source.glob("**/*.accdb"))
+    dpms = [database for database in databases if "dpm" in database.name]
+    if dpms:
+        return dpms[0]
+
+    logger.warning("No DPM Access database found in %s, using first match", source)
+    if databases:
+        return databases[0]
+
+    logger.warning("No Access database found in %s", source)
+    return None
+
+
+def create_access_engine(db: str | Path) -> Engine:
     """Get an engine to an Access database."""
     driver = "{Microsoft Access Driver (*.mdb, *.accdb)}"
-    conn_str = f"DRIVER={driver};DBQ={db_path}"
+    conn_str = f"DRIVER={driver};DBQ={db}"
     return create_engine(f"access+pyodbc:///?odbc_connect={conn_str}")
 
 
-def reflect_database(source_engine: Engine) -> MetaData:
+def reflect_schema(source: Engine) -> MetaData:
     """Reflect a database schema."""
     metadata = MetaData()
     event.listen(metadata, "column_reflect", genericize)
-    metadata.reflect(bind=source_engine)
+    metadata.reflect(bind=source)
     return metadata
 
 
-def fetch_database(source_engine: Engine) -> tuple[MetaData, TableRows]:
-    """Fetch data from a single Access database.
+def extract_schema_and_data(source: Engine) -> tuple[MetaData, TableDataMap]:
+    """Extract data and schema from a single Access database.
 
     Args:
-        source_engine: Engine to the source Access database
+        source: Engine to the source Access database
 
     Returns:
         MetaData: Database metadata
-        TableRows: Table rows
+        TableData: Table rows
 
     """
-    metadata = reflect_database(source_engine)
+    metadata = reflect_schema(source)
 
-    table_rows: list[tuple[Table, Rows]] = []
-    with Session(source_engine) as source:
+    tables: TableDataMap = []
+    with Session(source) as session:
         for table in metadata.tables.values():
-            data = source.execute(select(table)).all()
-            rows, enum_columns, nullable_columns = parse_data(data)
+            data = session.execute(select(table)).all()
+            rows, enums, nullables = parse(data)
 
-            set_enum_columns(table, enum_columns)
-            set_null_columns(table, nullable_columns)
+            apply_enums(table, enums)
+            mark_non_nullable(table, nullables)
             remove_pk_index(table)
-            set_missing_fks(table)
+            add_foreign_keys(table)
 
             if rows:
-                table_rows.append((table, rows))
+                tables.append((table, rows))
 
-    return metadata, table_rows
+    return metadata, tables
 
 
-def populate_database(target_engine: Engine, table_rows: TableRows) -> None:
+def load_data(target: Engine, tables: TableDataMap) -> None:
     """Populate the target database with data from the source database."""
-    with Session(target_engine) as target, target.begin():
-        for table, rows in table_rows:
-            target.execute(insert(table), rows)
+    with Session(target) as session, session.begin():
+        for table, data in tables:
+            session.execute(insert(table), data)

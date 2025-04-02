@@ -1,5 +1,5 @@
 """Convert module for OpenDPM."""
 
-from opendpm.convert.main import migrate_databases
+from opendpm.convert.main import convert_access_to_sqlite
 
-__all__ = ["migrate_databases"]
+__all__ = ["convert_access_to_sqlite"]

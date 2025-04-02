@@ -21,13 +21,13 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def load_sources(config_file: Path) -> dict[str, str]:
+def load_config(config: Path) -> dict[str, str]:
     """Load database source URLs from the config file."""
-    with config_file.open("rb") as f:
+    with config.open("rb") as f:
         return tomllib.load(f)
 
 
-def download(url: str) -> BytesIO:
+def download_archive(url: str) -> BytesIO:
     """Download a zip file containing Access databases."""
     logger.info("Downloading from %s", url)
     response = requests.get(url, timeout=60, allow_redirects=False)
@@ -36,32 +36,32 @@ def download(url: str) -> BytesIO:
     return BytesIO(response.content)
 
 
-def extract_databases(zip_file: ZipFile) -> ZipInfo | None:
-    """Extract Access databases from a zip file."""
-    for zip_info in zip_file.infolist():
+def find_access_database(archive: ZipFile) -> ZipInfo | None:
+    """Find Access database in a zip file."""
+    for zip_info in archive.infolist():
         if zip_info.filename.endswith(".accdb"):
             return zip_info
 
     return None
 
 
-def download_databases(config_file: Path, target_dir: Path) -> None:
+def fetch_databases(config: Path, output: Path) -> None:
     """Download all database files specified in the config.
 
     Args:
-        config_file: Path to the sources.toml config file
-        target_dir: Directory to save downloaded databases
+        config: Path to the sources.toml config file
+        output: Directory to save downloaded databases
 
     """
-    target_dir.mkdir(parents=True, exist_ok=True)
-    sources = load_sources(config_file)
+    output.mkdir(parents=True, exist_ok=True)
+    sources = load_config(config)
     for version, url in sources.items():
         try:
-            zip_bytes = download(url)
-            with ZipFile(zip_bytes) as zip_file:
-                if zip_db := extract_databases(zip_file):
-                    zip_db.filename = f"dpm_{version}.accdb"
-                    zip_file.extract(zip_db, target_dir)
+            archive_data = download_archive(url)
+            with ZipFile(archive_data) as archive:
+                if db_file := find_access_database(archive):
+                    db_file.filename = f"dpm_{version}.accdb"
+                    archive.extract(db_file, output)
                     logger.info("Downloaded version %s", version)
 
         except Exception:

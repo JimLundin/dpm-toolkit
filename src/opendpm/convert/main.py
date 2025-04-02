@@ -4,84 +4,66 @@ import logging
 from pathlib import Path
 from time import time
 
-from sqlalchemy import MetaData, create_engine, text
+from sqlalchemy import create_engine, text
 
 from opendpm.convert.generation import Model
 from opendpm.convert.processing import (
     create_access_engine,
-    fetch_database,
-    populate_database,
+    extract_schema_and_data,
+    get_database,
+    load_data,
 )
-from opendpm.convert.utils import format_time
+from opendpm.convert.utils import format_duration
 
 logger = logging.getLogger(__name__)
 
 
-def migrate_databases(
-    input_dir: Path,
-    output_dir: Path,
+def convert_access_to_sqlite(
+    source: Path,
+    output: Path,
     *,
     overwrite: bool = False,
 ) -> None:
     """Migrate Access databases to SQLite.
 
     Args:
-        input_dir: Directory containing Access databases
-        output_dir: Directory to store SQLite database
+        source: Directory containing Access databases
+        output: Directory to store SQLite database
         overwrite: Whether to overwrite existing database
 
     """
-    start = time()
+    start_time = time()
 
-    target_path = output_dir / "dpm.sqlite"
-    if target_path.exists():
+    sqlite_path = output / "dpm.sqlite"
+    if sqlite_path.exists():
         if not overwrite:
-            logger.warning("Target database already exists: %s", target_path)
+            logger.warning("Target database already exists: %s", sqlite_path)
             return
 
-        logger.info("Removing existing database: %s", target_path)
-        target_path.unlink(missing_ok=True)
+        sqlite_path.unlink(missing_ok=True)
 
-    output_dir.mkdir(parents=True, exist_ok=True)
+    output.mkdir(parents=True, exist_ok=True)
 
-    access_files = list(input_dir.glob("**/*.accdb"))
-    if not access_files:
-        logger.warning("No Access database files found in %s", input_dir)
+    database = source if source.is_file() else get_database(source)
+    if not database:
+        logger.warning("No Access database files found in %s", source)
         return
 
-    logger.info("Found %d Access database files", len(access_files))
+    logger.info("Processing: %s", database.stem)
 
-    target_engine = create_engine("sqlite:///:memory:")
+    access = create_access_engine(database)
+    metadata, tables = extract_schema_and_data(access)
 
-    metadata: MetaData | None = None
+    sqlite = create_engine("sqlite:///:memory:")
+    metadata.create_all(sqlite)
+    load_data(sqlite, tables)
 
-    for access_file in access_files:
-        logger.info("Processing: %s", access_file.stem)
+    with (output / "dpm.py").open("w") as model_file:
+        model_file.write(Model(metadata).render())
 
-        start_fetch = time()
-        source_engine = create_access_engine(access_file)
-        metadata, table_rows = fetch_database(source_engine)
-        end_fetch = time()
-        logger.info("Fetched in %s", format_time(end_fetch - start_fetch))
+    with sqlite.connect() as connection:
+        connection.execute(text(f"VACUUM INTO '{sqlite_path}'"))
+        logger.info("Saved: %s", sqlite_path)
 
-        start_populate = time()
-        metadata.create_all(target_engine)
-        populate_database(target_engine, table_rows)
-        end_populate = time()
-        logger.info("Processed in %s", format_time(end_populate - start_populate))
-
-    if metadata:
-        model_path = output_dir / "dpm.py"
-        with model_path.open("w") as f:
-            f.write(Model(metadata).render())
-    else:
-        logger.warning("No model generated")
-
-    with target_engine.connect() as connection:
-        start_save = time()
-        connection.execute(text(f"VACUUM INTO '{target_path}'"))
-        end_save = time()
-        logger.info("Saved: %s in %s", target_path, format_time(end_save - start_save))
-
-    stop = time()
-    logger.info("Migrated databases in %s", format_time(stop - start))
+    stop_time = time()
+    logger.info("Migrated database in %s", format_duration(stop_time - start_time))
