@@ -214,7 +214,7 @@ class Model:
         """Generate a SQLAlchemy relationship definition."""
         src_name = normalise_column_name(src_col.name)
         if src_col.name == "RowGUID":
-            src_name = "UniqueConcept"
+            src_name = "UniqueIdentifier"
         if src_name == src_col.table.name:
             src_name = ref_table.name
         if src_name == src_col.name:
