@@ -99,8 +99,9 @@ class Model:
 
     def _generate_class(self, table: Table) -> str:
         """Generate a SQLAlchemy model for a table."""
+        noqa = "" if table.name.isalpha() else "# noqa: N801"
         lines = (
-            f"class {table.name}({self.base}):",
+            f"class {table.name}({self.base}):{noqa}",
             f'{indent}"""Auto-generated model for the {table.name} table."""',
             f'{indent}__tablename__ = "{table.name}"\n',
             *(self._generate_mapped_column(column) for column in table.columns),
