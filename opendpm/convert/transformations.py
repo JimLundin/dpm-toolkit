@@ -22,7 +22,7 @@ from sqlalchemy.types import TypeEngine
 
 type FieldValue = str | int | bool | date | datetime | None
 type TableRow = dict[str, FieldValue]
-type TableData = Sequence[TableRow]
+type TableData = list[TableRow]
 type ColumnNames = set[str]
 type ColumnEnumMap = dict[str, set[str]]
 type Rows = Sequence[Row[Any]]
@@ -125,7 +125,7 @@ def parse(table_rows: Rows) -> tuple[TableData, ColumnEnumMap, ColumnNames]:
     enums: ColumnEnumMap = defaultdict(set)
     nullables: ColumnNames = set()
     for table_row in table_rows:
-        row = table_row._asdict()  # type: ignore private attribute
+        row = table_row._asdict()  # pyright: ignore[reportPrivateUsage]
         rows.append(row)
         for column in row:
             new_value = cast_value(column, row[column])

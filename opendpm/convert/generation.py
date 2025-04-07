@@ -88,7 +88,7 @@ class Model:
         sql_type = column.type.__class__.__name__
         self.imports["sqlalchemy"].add(sql_type)
         if isinstance(column.type, Enum):
-            enum_values = (f'"{value}"' for value in column.type.enums)  # type: ignore enum values
+            enum_values = (f'"{value}"' for value in column.type.enums)  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
             sql_type = f"Enum({', '.join(sorted(enum_values))})"
         self.imports["sqlalchemy"].add("Column")
         return (
@@ -164,7 +164,7 @@ class Model:
 
         if isinstance(column_type, Enum):
             self.imports["typing"].add("Literal")
-            enum_values = [f'"{enum}"' for enum in column_type.enums]  # type: ignore unknown
+            enum_values = [f'"{enum}"' for enum in column_type.enums]  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
             python_type_name = f"Literal[{', '.join(sorted(enum_values))}]"
 
         return f"{python_type_name} | None" if column.nullable else python_type_name

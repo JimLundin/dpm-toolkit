@@ -1,7 +1,6 @@
 """Database processing utilities for handling multiple Access databases."""
 
 import logging
-from collections.abc import Iterable
 from pathlib import Path
 
 from sqlalchemy import Engine, MetaData, Table, create_engine, event, insert, select
@@ -19,7 +18,7 @@ from opendpm.convert.transformations import (
 
 logger = logging.getLogger(__name__)
 
-type TableDataMap = Iterable[tuple[Table, TableData]]
+type TableDataMap = list[tuple[Table, TableData]]
 
 
 def get_database(source: Path) -> Path | None:
