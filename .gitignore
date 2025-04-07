@@ -5,6 +5,7 @@ build/
 dist/
 wheels/
 *.egg-info
+.mypy_cache
 
 # venv
 .venv
