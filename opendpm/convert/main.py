@@ -1,8 +1,8 @@
 """Main module for database conversion."""
 
 import logging
+from datetime import UTC, datetime
 from pathlib import Path
-from time import time
 
 from sqlalchemy import create_engine, text
 
@@ -13,7 +13,6 @@ from opendpm.convert.processing import (
     get_database,
     load_data,
 )
-from opendpm.convert.utils import format_duration
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +31,7 @@ def convert_access_to_sqlite(
         overwrite: Whether to overwrite existing database
 
     """
-    start_time = time()
+    start_time = datetime.now(UTC)
 
     sqlite_path = target / "dpm.sqlite"
     if sqlite_path.exists():
@@ -65,5 +64,5 @@ def convert_access_to_sqlite(
         connection.execute(text(f"VACUUM INTO '{sqlite_path}'"))
         logger.info("Saved: %s", sqlite_path)
 
-    stop_time = time()
-    logger.info("Migrated database in %s", format_duration(stop_time - start_time))
+    stop_time = datetime.now(UTC)
+    logger.info("Migrated database in %s", stop_time - start_time)
