@@ -204,11 +204,21 @@ class Model:
 
     def _generate_relationships(self, table: Table) -> list[str]:
         """Generate SQLAlchemy relationship definitions."""
-        return [
+        relationships: list[str] = []
+
+        relationships.extend(
             self._generate_relationship(column, fk.column.table)
             for column in table.columns
             for fk in column.foreign_keys
-        ]
+            if normalise_column_name(column.name) != fk.column.table.name
+        )
+        relationships.extend(
+            self._generate_relationship(column, fk.column.table)
+            for column in table.columns
+            for fk in column.foreign_keys
+            if normalise_column_name(column.name) == fk.column.table.name
+        )
+        return relationships
 
     def _generate_relationship(self, src_col: Column[Any], ref_table: Table) -> str:
         """Generate a SQLAlchemy relationship definition."""
