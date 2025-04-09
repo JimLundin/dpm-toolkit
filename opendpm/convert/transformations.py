@@ -152,18 +152,6 @@ def mark_non_nullable(table: Table, nullables: ColumnNames) -> None:
             column.nullable = False
 
 
-def remove_pk_index(table: Table) -> None:
-    """Remove the primary key index from a table.
-
-    This is due to SQLite maintaining a separate, hidden index for primary keys.
-    """
-    primary_key_indexes = [
-        index for index in table.indexes if index.name == "PrimaryKey"
-    ]
-    for index in primary_key_indexes:
-        table.indexes.remove(index)
-
-
 def add_foreign_key(source_column: str, target_column: str, table: Table) -> None:
     """Set missing foreign keys."""
     column = table.columns.get(source_column)

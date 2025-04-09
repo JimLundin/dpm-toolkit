@@ -13,7 +13,6 @@ from opendpm.convert.transformations import (
     genericize,
     mark_non_nullable,
     parse,
-    remove_pk_index,
 )
 
 logger = logging.getLogger(__name__)
@@ -70,9 +69,11 @@ def extract_schema_and_data(source: Engine) -> tuple[MetaData, TableDataMap]:
             data = session.execute(select(table)).all()
             rows, enums, nullables = parse(data)
 
+            # Clear indexes to avoid name collisions and save space
+            table.indexes.clear()
+
             apply_enums(table, enums)
             mark_non_nullable(table, nullables)
-            remove_pk_index(table)
             add_foreign_keys(table)
 
             if rows:
