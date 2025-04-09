@@ -47,7 +47,7 @@ def convert_access_to_sqlite(source: Path, target: Path) -> None:
 
     sqlite_path = target / "dpm.sqlite"
     if sqlite_path.exists():
-        logger.warning("Target database already exists: %s. Overwriting.", sqlite_path)
+        logger.warning("Target database already exists. Overwriting.")
         sqlite_path.unlink(missing_ok=True)
 
     with sqlite.connect() as connection:
