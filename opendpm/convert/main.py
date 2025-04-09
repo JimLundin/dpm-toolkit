@@ -17,18 +17,12 @@ from opendpm.convert.processing import (
 logger = logging.getLogger(__name__)
 
 
-def convert_access_to_sqlite(
-    source: Path,
-    target: Path,
-    *,
-    overwrite: bool = False,
-) -> None:
+def convert_access_to_sqlite(source: Path, target: Path) -> None:
     """Migrate Access databases to SQLite.
 
     Args:
         source: Directory containing Access databases
         target: Directory to store SQLite database
-        overwrite: Whether to overwrite existing database
 
     """
     start_time = datetime.now(UTC)
@@ -37,14 +31,6 @@ def convert_access_to_sqlite(
     if not database:
         logger.warning("No Access database files found in %s", source)
         return
-
-    sqlite_path = target / "dpm.sqlite"
-    if sqlite_path.exists():
-        if not overwrite:
-            logger.warning("Target database already exists: %s", sqlite_path)
-            return
-
-        sqlite_path.unlink(missing_ok=True)
 
     logger.info("Processing: %s", database.stem)
 
@@ -58,6 +44,11 @@ def convert_access_to_sqlite(
     target.mkdir(parents=True, exist_ok=True)
     with (target / "dpm.py").open("w") as model_file:
         model_file.write(Model(metadata).render())
+
+    sqlite_path = target / "dpm.sqlite"
+    if sqlite_path.exists():
+        logger.warning("Target database already exists: %s. Overwriting.", sqlite_path)
+        sqlite_path.unlink(missing_ok=True)
 
     with sqlite.connect() as connection:
         connection.execute(text(f"VACUUM INTO '{sqlite_path}'"))
