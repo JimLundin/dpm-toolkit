@@ -143,8 +143,11 @@ class Model:
         kwargs = self._generate_column_key_attributes(column)
         fks = self._generate_column_foreign_keys(column)
 
+        # if the column name does not start with an uppercase letter, add a noqa
+        noqa = "# noqa: N815" if not column.name[0].isupper() else ""
+
         if not kwargs and not fks:
-            return declaration
+            return f"{declaration}{noqa}"
 
         kwargs_str = ", ".join(f"{k}={v}" for k, v in kwargs.items())
         fks_str = ", ".join(fks)
@@ -152,7 +155,7 @@ class Model:
         combined_args = ", ".join(filter(None, [fks_str, kwargs_str]))
 
         self.imports["sqlalchemy.orm"].add("mapped_column")
-        return f"{declaration} = mapped_column({combined_args})"
+        return f"{declaration} = mapped_column({combined_args}){noqa}"
 
     def _get_python_type(self, column: Column[Any]) -> str:
         """Get Python type for a column."""
