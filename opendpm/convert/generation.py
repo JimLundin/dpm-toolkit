@@ -43,7 +43,7 @@ class Model:
 
         models = [
             self._generate_class(table)
-            if table.primary_key or table.foreign_keys or "RowGUID" in table.columns
+            if table.primary_key or "RowGUID" in table.columns
             else self._generate_table(table)
             for table in sorted_tables
         ]
@@ -127,31 +127,25 @@ class Model:
 
     def _generate_mapper_args(self, table: Table) -> str:
         """Generate a SQLAlchemy mapper for a table."""
-        row_guid = table.columns.get("RowGUID")
-        foreign_keys = (
-            ("RowGUID",)
-            if row_guid is not None and not row_guid.nullable
-            else (fk.parent.name for fk in table.foreign_keys)
-        )
-        self.imports["typing"].add("ClassVar")
+        if table.columns.get("RowGUID") is None:
+            return ""
 
-        return (
-            f"__mapper_args__: ClassVar"
-            f' = {{"primary_key": ({", ".join(foreign_keys)})}}\n'
-        )
+        self.imports["typing"].add("ClassVar")
+        return '__mapper_args__: ClassVar = {"primary_key": (RowGUID,)}\n'
 
     def _generate_mapped_column(self, column: Column[Any]) -> str:
         """Generate SQLAlchemy column definition."""
+        name = column.name
         python_type = self._get_python_type(column)
 
         self.imports["sqlalchemy.orm"].add("Mapped")
-        declaration = f"{indent}{column.name}: Mapped[{python_type}]"
+        declaration = f"{indent}{name}: Mapped[{python_type}]"
 
         kwargs = self._generate_column_key_attributes(column)
         fks = self._generate_column_foreign_keys(column)
 
         # if the column name does not start with an uppercase letter, add a noqa
-        noqa = "# noqa: N815" if not column.name[0].isupper() else ""
+        noqa = "# noqa: N815" if not name[0].isupper() and len(name) > 1 else ""
 
         if not kwargs and not fks:
             return f"{declaration}{noqa}"
@@ -201,12 +195,12 @@ class Model:
 
         foreign_keys: list[str] = []
         if column.table.name == "Concept":
+            # For Concept, we quote the references to avoid circular dependencies
             foreign_keys.extend(
                 f'"{fk.column.table.name}.{fk.column.name}"'
                 for fk in column.foreign_keys
             )
         else:
-            # For other tables, use simple name for self-references
             foreign_keys.extend(
                 f"{fk.column.name}"
                 if fk.column.table == column.table
@@ -237,14 +231,14 @@ class Model:
     def _generate_relationship(self, src_col: Column[Any], ref_table: Table) -> str:
         """Generate a SQLAlchemy relationship definition."""
         src_name = normalise_column_name(src_col.name)
-        if src_col.name == "RowGUID":
-            src_name = "UniqueIdentifier"
-        if src_name == src_col.table.name:
+        if src_col.name == "RowGUID":  # for entities that reference Concept and RowGUID
+            src_name = "RowConcept"
+        if src_name == src_col.table.name:  # this covers PK to PK relationships
             src_name = ref_table.name
-        if src_name == src_col.name:
-            if ref_table.name in src_name:
-                src_name = f"Related{src_name}"
-            else:
+        if src_name == src_col.name:  # when the name is the same as its column name
+            if ref_table.name in src_name:  # for 'CreatedRelease' and 'LanguageCode'
+                src_name = ref_table.name
+            else:  # for 'SubtypeDiscriminator'
                 src_name = f"{src_name}{ref_table.name}"
 
         src_type = f"{ref_table.name} | None" if src_col.nullable else ref_table.name
