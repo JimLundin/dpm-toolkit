@@ -13,11 +13,6 @@ import requests
 if TYPE_CHECKING:
     from pathlib import Path
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
-
 logger = logging.getLogger(__name__)
 
 
@@ -53,16 +48,12 @@ def fetch_databases(config: Path, target: Path) -> None:
         target: Directory to save downloaded databases
 
     """
-    target.mkdir(parents=True, exist_ok=True)
     sources = load_config(config)
     for version, url in sources.items():
-        try:
-            archive_data = download_archive(url)
-            with ZipFile(archive_data) as archive:
-                if db_file := find_access_database(archive):
-                    db_file.filename = f"dpm_{version}.accdb"
-                    archive.extract(db_file, target)
-                    logger.info("Downloaded version %s", version)
-
-        except Exception:
-            logger.exception("Failed to download version %s", version)
+        archive_data = download_archive(url)
+        with ZipFile(archive_data) as archive:
+            if db_file := find_access_database(archive):
+                db_file.filename = f"dpm_{version}.accdb"
+                target.mkdir(parents=True, exist_ok=True)
+                archive.extract(db_file, target)
+                logger.info("Downloaded version %s", version)
