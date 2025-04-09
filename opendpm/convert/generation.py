@@ -1,5 +1,6 @@
 """Model generator for generating SQLAlchemy models from database metadata."""
 
+import warnings
 from collections import defaultdict
 from collections.abc import Iterable
 from datetime import date, datetime
@@ -7,6 +8,7 @@ from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import Column, Enum, MetaData, Table
+from sqlalchemy.exc import SAWarning
 
 indent = "    "
 
@@ -34,11 +36,16 @@ class Model:
         """Generate SQLAlchemy models from database metadata."""
         self.imports["__future__"].add("annotations")
 
+        # we need to catch the SAWarning that is emitted by the sorted_tables property
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=SAWarning)
+            sorted_tables = self.metadata.sorted_tables
+
         models = [
             self._generate_class(table)
             if table.primary_key or table.foreign_keys or "RowGUID" in table.columns
             else self._generate_table(table)
-            for table in self.metadata.sorted_tables
+            for table in sorted_tables
         ]
 
         return self._generate_file(models)
