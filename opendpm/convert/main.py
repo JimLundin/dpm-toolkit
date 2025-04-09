@@ -30,7 +30,7 @@ def convert_access_to_sqlite(source: Path, target: Path) -> None:
 
     database = source if source.is_file() else get_database(source)
     if not database:
-        logger.warning("No Access database files found in %s", source)
+        logger.warning("No Access database files found in %s", print_path(source))
         return
 
     logger.info("Processing: %s", database.stem)
