@@ -57,9 +57,11 @@ class Model:
 
     def _generate_base_class(self) -> str:
         """Generate the base class definition."""
-        self.imports["sqlalchemy.orm"].add("DeclarativeBase")
+        self.imports["sqlalchemy.orm"].add("DeclarativeMeta")
         return (
-            f"class {self.base}(DeclarativeBase):\n"
+            "# We use DeclarativeMeta instead of DeclarativeBase\n"
+            "# to be compatible with mypy and __mapper_args__\n"
+            f"class {self.base}(metaclass=DeclarativeMeta):\n"
             f'{indent}"""Base class for all DPM models."""'
         )
 
@@ -104,6 +106,9 @@ class Model:
             f"class {table.name}({self.base}):{noqa}",
             f'{indent}"""Auto-generated model for the {table.name} table."""',
             f'{indent}__tablename__ = "{table.name}"\n',
+            f"{indent}# We quote the references to avoid circular dependencies"
+            if table.name == "Concept"
+            else "",
             *(self._generate_mapped_column(column) for column in table.columns),
             f"\n{indent}{self._generate_mapper_args(table)}"
             if not table.primary_key
@@ -121,10 +126,10 @@ class Model:
             if row_guid is not None and not row_guid.nullable
             else (fk.parent.name for fk in table.foreign_keys)
         )
-        self.imports["typing"].update(("ClassVar", "Any"))
+        self.imports["typing"].add("ClassVar")
 
         return (
-            f"__mapper_args__: ClassVar[Any]"
+            f"__mapper_args__: ClassVar"
             f' = {{"primary_key": ({", ".join(foreign_keys)})}}\n'
         )
 
@@ -138,7 +143,7 @@ class Model:
         kwargs = self._generate_column_key_attributes(column)
         fks = self._generate_column_foreign_keys(column)
 
-        if not fks and not kwargs:
+        if not kwargs and not fks:
             return declaration
 
         kwargs_str = ", ".join(f"{k}={v}" for k, v in kwargs.items())
@@ -180,13 +185,12 @@ class Model:
     def _generate_column_foreign_keys(self, column: Column[Any]) -> Iterable[str]:
         """Process foreign keys of a column."""
         if not column.foreign_keys:
-            return []
+            return ()
 
         self.imports["sqlalchemy"].add("ForeignKey")
 
         foreign_keys: list[str] = []
         if column.table.name == "Concept":
-            # For Concept table, use quoted references to avoid circular dependencies
             foreign_keys.extend(
                 f'"{fk.column.table.name}.{fk.column.name}"'
                 for fk in column.foreign_keys
