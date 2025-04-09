@@ -33,6 +33,11 @@ def convert_access_to_sqlite(
     """
     start_time = datetime.now(UTC)
 
+    database = source if source.is_file() else get_database(source)
+    if not database:
+        logger.warning("No Access database files found in %s", source)
+        return
+
     sqlite_path = target / "dpm.sqlite"
     if sqlite_path.exists():
         if not overwrite:
@@ -40,13 +45,6 @@ def convert_access_to_sqlite(
             return
 
         sqlite_path.unlink(missing_ok=True)
-
-    target.mkdir(parents=True, exist_ok=True)
-
-    database = source if source.is_file() else get_database(source)
-    if not database:
-        logger.warning("No Access database files found in %s", source)
-        return
 
     logger.info("Processing: %s", database.stem)
 
@@ -57,6 +55,7 @@ def convert_access_to_sqlite(
     metadata.create_all(sqlite)
     load_data(sqlite, tables)
 
+    target.mkdir(parents=True, exist_ok=True)
     with (target / "dpm.py").open("w") as model_file:
         model_file.write(Model(metadata).render())
 
