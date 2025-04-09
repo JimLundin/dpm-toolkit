@@ -34,6 +34,13 @@ typeCheckingMode = "strict"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[dependency-groups]
+dev = [
+    "mypy>=1.15.0",
+    "ruff>=0.11.4",
+    "types-requests>=2.32.0.20250328",
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["opendpm"]
 
