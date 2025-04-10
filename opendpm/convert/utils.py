@@ -3,7 +3,7 @@
 from pathlib import Path
 
 
-def print_path(path: Path, max_length: int = 80) -> str:
+def print_path(path: Path, max_length: int = 70) -> str:
     """Print a path, truncating it if it's longer than max_length."""
     print_path = str(path)
 

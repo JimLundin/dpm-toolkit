@@ -235,7 +235,7 @@ class Model:
             src_name = "RowConcept"
         if src_name == src_col.table.name:  # this covers PK to PK relationships
             src_name = ref_table.name
-        if src_name == src_col.name:  # when the name is the same as its column name
+        if src_name == src_col.name:  # avoid name collision when the name = column name
             if ref_table.name in src_name:  # for 'CreatedRelease' and 'LanguageCode'
                 src_name = ref_table.name
             else:  # for 'SubtypeDiscriminator'
