@@ -36,7 +36,7 @@ class Model:
         """Generate SQLAlchemy models from database metadata."""
         self.imports["__future__"].add("annotations")
 
-        # we need to catch the SAWarning that is emitted by the sorted_tables property
+        # Due to circular FKs we get an SAWarning when doing a topo sort of the tables
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=SAWarning)
             sorted_tables = self.metadata.sorted_tables
