@@ -1,0 +1,27 @@
+# Configuration for DPM source databases
+# Each version is defined as a table with required properties.
+# For beta versions, the superseded_by property is required.
+
+[[versions]]
+id = "4.0.0-beta"
+url = "https://www.eba.europa.eu/sites/default/files/2024-10/9af4a241-1a4e-4ee4-9eb0-5f61648522e2/dpm_2.0_release_4.0.zip"
+type = "beta"
+hash = {type = "sha256", value = "5383693c3d19cf06439b395bb42381eea2c95eb60ae5635ee824fdc0c92071b6"}
+release_date = 2024-10-28
+superseded_by = "4.0.0"
+
+[[versions]]
+id = "4.0.0"
+url = "https://www.eba.europa.eu/sites/default/files/2024-12/11b02b99-1486-4a54-815d-289558589773/dpm_2.0_release_4.0.zip"
+type = "release"
+hash = {type = "sha256", value = "968553d3058a4851c4ad0d937fc5e6b2813e4ce2f127cf842922d7b716c99072"}
+release_date = 2024-12-19
+
+[[versions]]
+id = "4.1.0-beta"
+url = "https://www.eba.europa.eu/sites/default/files/2025-03/d931f7ac-0493-42c8-8e7a-3207c5479131/DPM%20Database%202.0%20%28release%204.1%20draft%29.zip"
+type = "beta"
+hash = {type = "sha256", value = "1ee08badae303b67a578ff6f4d6bd40469968e8391f833f6d7fbdb568c742f3a"}
+release_date = 2025-03-27
+superseded_by = "4.1.0"
+

@@ -2,33 +2,30 @@
 
 from __future__ import annotations
 
-import logging
-import tomllib
 from io import BytesIO
+from logging import getLogger
 from typing import TYPE_CHECKING
 from zipfile import ZipFile, ZipInfo
 
-import requests
+from requests import get
+
+from opendpm.versions import verify_version
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-logger = logging.getLogger(__name__)
+    from opendpm.versions import Version
+
+logger = getLogger(__name__)
 
 
-def load_config(config: Path) -> dict[str, str]:
-    """Load database source URLs from the config file."""
-    with config.open("rb") as f:
-        return tomllib.load(f)
-
-
-def download_archive(url: str) -> BytesIO:
-    """Download a zip file containing Access databases."""
+def download_url(url: str) -> bytes:
+    """Download the zip file containing the DPM database."""
     logger.info("Downloading from %s", url)
-    response = requests.get(url, timeout=60, allow_redirects=False)
+    response = get(url, timeout=30, allow_redirects=False)
     response.raise_for_status()
 
-    return BytesIO(response.content)
+    return response.content
 
 
 def find_access_database(archive: ZipFile) -> ZipInfo | None:
@@ -40,20 +37,26 @@ def find_access_database(archive: ZipFile) -> ZipInfo | None:
     return None
 
 
-def fetch_databases(config: Path, target: Path) -> None:
-    """Download all database files specified in the config.
+def extract_database(archive: BytesIO, name: str, target: Path) -> None:
+    """Extract Access database from the archive to the target with the given name."""
+    with ZipFile(archive) as zip_file:
+        if db_file := find_access_database(zip_file):
+            db_file.filename = f"dpm_{name}.accdb"
+            target.mkdir(parents=True, exist_ok=True)
+            zip_file.extract(db_file, target)
+
+
+def fetch_version(version: Version, target: Path) -> None:
+    """Download and extract database file specified in the version.
 
     Args:
-        config: Path to the sources.toml config file
+        version: Version to download
         target: Directory to save downloaded databases
 
     """
-    sources = load_config(config)
-    for version, url in sources.items():
-        archive_data = download_archive(url)
-        with ZipFile(archive_data) as archive:
-            if db_file := find_access_database(archive):
-                db_file.filename = f"dpm_{version}.accdb"
-                target.mkdir(parents=True, exist_ok=True)
-                archive.extract(db_file, target)
-                logger.info("Downloaded version %s", version)
+    version_bytes = download_url(version["url"])
+    if not verify_version(version_bytes, version["hash"]):
+        logger.warning("Hash verification failed")
+    archive_data = BytesIO(version_bytes)
+    extract_database(archive_data, version["id"], target)
+    logger.info("Downloaded version %s", version["id"])

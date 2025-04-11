@@ -1,4 +1,0 @@
-# Configuration for source Access database files
-# Format: version = "url"
-
-"4.0.0" = "https://www.eba.europa.eu/sites/default/files/2024-12/11b02b99-1486-4a54-815d-289558589773/dpm_2.0_release_4.0.zip"

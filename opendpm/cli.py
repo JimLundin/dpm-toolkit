@@ -1,11 +1,11 @@
 """Command line interface for OpenDPM."""
 
-from __future__ import annotations
-
-import argparse
+from argparse import ArgumentParser
 from pathlib import Path
 
-from opendpm import convert, download
+from opendpm.convert import convert_access_to_sqlite
+from opendpm.download import fetch_version
+from opendpm.versions import get_releases, get_versions, latest_release
 
 
 def get_config_path() -> Path:
@@ -13,9 +13,9 @@ def get_config_path() -> Path:
     return Path(__file__).parent / "sources.toml"
 
 
-def create_parser() -> argparse.ArgumentParser:
+def create_parser() -> ArgumentParser:
     """Create the command line argument parser."""
-    parser = argparse.ArgumentParser(description="OpenDPM CLI tool")
+    parser = ArgumentParser(description="OpenDPM CLI tool")
     subparsers = parser.add_subparsers(dest="command", help="Commands")
 
     # Download command
@@ -24,17 +24,30 @@ def create_parser() -> argparse.ArgumentParser:
         help="Download Access databases",
     )
     download_parser.add_argument(
-        "target",
-        nargs="?",
+        "--target",
         type=Path,
         default=Path.cwd(),
-        help="Directory to save downloaded databases",
+        help="Directory to save downloaded database (default: %(default)s)",
     )
     download_parser.add_argument(
-        "--config-path",
-        type=Path,
-        default=get_config_path(),
-        help="Path to sources.toml config file (default: %(default)s)",
+        "--version",
+        help="Specific version ID to download",
+    )
+    download_parser.add_argument(
+        "--verify",
+        action="store_true",
+        help="Verify downloaded files using hash",
+    )
+
+    # List command
+    list_parser = subparsers.add_parser(
+        "list",
+        help="List available database versions",
+    )
+    list_parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Show all versions (including betas)",
     )
 
     # Convert command
@@ -57,12 +70,6 @@ def create_parser() -> argparse.ArgumentParser:
         help="Directory containing Access databases",
     )
 
-    # Config path command
-    subparsers.add_parser(
-        "config",
-        help="Print the path to the default config file",
-    )
-
     return parser
 
 
@@ -70,14 +77,24 @@ def main() -> None:
     """Entry point for the CLI."""
     parser = create_parser()
     args = parser.parse_args()
+    versions = get_versions()
+    releases = get_releases(versions)
 
-    if args.command == "download":
-        download.fetch_databases(args.config_path, args.target)
+    if args.command == "list":
+        if args.all:
+            print(versions)  # noqa: T201
+        else:
+            print(releases)  # noqa: T201
+
+    elif args.command == "download":
+        if args.version:
+            fetch_version(args.version, args.target)
+        else:
+            release = latest_release(releases)
+            fetch_version(release, args.target)
+
     elif args.command == "convert":
-        convert.convert_access_to_sqlite(args.source, args.target)
-    elif args.command == "config":
-        # Print just the path without any logging output
-        print(get_config_path())  # noqa: T201
+        convert_access_to_sqlite(args.source, args.target)
     else:
         parser.print_help()
 
