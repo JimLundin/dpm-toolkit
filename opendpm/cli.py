@@ -5,7 +5,7 @@ from pathlib import Path
 
 from opendpm.convert import convert_access_to_sqlite
 from opendpm.download import fetch_version
-from opendpm.versions import get_releases, get_versions, latest_release
+from opendpm.versions import get_releases, get_versions, latest_release, render_version
 
 
 def get_config_path() -> Path:
@@ -82,9 +82,9 @@ def main() -> None:
 
     if args.command == "list":
         if args.all:
-            print(versions)  # noqa: T201
+            print("\n".join(f"{render_version(v)}" for v in versions))  # noqa: T201
         else:
-            print(releases)  # noqa: T201
+            print("\n".join(f"{render_version(v)}" for v in releases))  # noqa: T201
 
     elif args.command == "download":
         if args.version:

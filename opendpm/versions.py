@@ -72,3 +72,8 @@ def verify_version(content: bytes, version_hash: Hash) -> bool:
         return version_hash["value"] == hasher.hexdigest()
 
     return False
+
+
+def render_version(version: Version) -> str:
+    """Render a version string."""
+    return f"{version['id']} ({version['release_date']})"
