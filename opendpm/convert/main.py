@@ -1,7 +1,7 @@
 """Main module for database conversion."""
 
-import logging
 from datetime import UTC, datetime
+from logging import getLogger
 from pathlib import Path
 
 from sqlalchemy import create_engine, text
@@ -15,7 +15,7 @@ from opendpm.convert.processing import (
 )
 from opendpm.convert.utils import print_path
 
-logger = logging.getLogger(__name__)
+logger = getLogger(__name__)
 
 
 def convert_access_to_sqlite(source: Path, target: Path) -> None:

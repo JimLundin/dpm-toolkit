@@ -1,6 +1,6 @@
 """Database processing utilities for handling multiple Access databases."""
 
-import logging
+from logging import getLogger
 from pathlib import Path
 
 from sqlalchemy import Engine, MetaData, Table, create_engine, event, insert, select
@@ -15,7 +15,7 @@ from opendpm.convert.transformations import (
     parse,
 )
 
-logger = logging.getLogger(__name__)
+logger = getLogger(__name__)
 
 type TableDataMap = list[tuple[Table, TableData]]
 
@@ -23,7 +23,7 @@ type TableDataMap = list[tuple[Table, TableData]]
 def get_database(source: Path) -> Path | None:
     """Get an Access database. Prioritize DPM databases."""
     databases = list(source.glob("**/*.accdb"))
-    dpms = [database for database in databases if "dpm" in database.name]
+    dpms = [database for database in databases if "dpm" in database.stem.lower()]
     if dpms:
         return dpms[0]
 
