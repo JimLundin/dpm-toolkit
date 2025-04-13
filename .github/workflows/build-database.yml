@@ -44,7 +44,7 @@ jobs:
       id: version
       shell: bash
       run: |
-        echo "hash=$(python -m opendpm list --version latest --format JSON | sha256sum)" >> $GITHUB_OUTPUT
+        echo "hash=$(python -m opendpm list --version latest --format json | sha256sum)" >> $GITHUB_OUTPUT
     
     - name: Cache downloaded databases
       id: cache-dbs
