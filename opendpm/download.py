@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from enum import StrEnum, auto
 from io import BytesIO
 from logging import getLogger
 from typing import TYPE_CHECKING
@@ -9,7 +10,6 @@ from zipfile import ZipFile
 
 from requests import get
 
-from opendpm.cli import Sources
 from opendpm.versions import verify_source
 
 if TYPE_CHECKING:
@@ -18,6 +18,13 @@ if TYPE_CHECKING:
     from opendpm.versions import Source, Version
 
 logger = getLogger(__name__)
+
+
+class Types(StrEnum):
+    """Types of database files."""
+
+    ACCESS = auto()
+    SQLITE = auto()
 
 
 def download_url(url: str) -> bytes:
@@ -44,24 +51,24 @@ def fetch_source(source: Source) -> BytesIO:
     return BytesIO(version_bytes)
 
 
-def fetch_version(version: Version, target: Path, source: Sources) -> None:
+def fetch_version(version: Version, target: Path, source_type: Types) -> None:
     """Download and extract database file specified by the version.
 
     Args:
         version: Version to download from
         target: Directory to save downloaded databases.
-        source: Type of source to download from
+        source_type: Type of database to download
 
     """
-    if source == Sources.ACCESS:
+    if source_type == Types.ACCESS:
         archive_data = fetch_source(version["access"])
-    elif source == Sources.SQLITE:
+    elif source_type == Types.SQLITE:
         if "sqlite" not in version:
             logger.error("SQLite source not found for version %s", version["id"])
             return
         archive_data = fetch_source(version["sqlite"])
     else:
-        msg = f"Invalid source type: {source}"
+        msg = f"Invalid source type: {source_type}"
         raise ValueError(msg)
     target_folder = target / version["id"]
     extract_database(archive_data, target_folder)

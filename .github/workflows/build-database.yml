@@ -40,10 +40,11 @@ jobs:
       run: |
         Start-Process -FilePath "AccessDatabaseEngine.exe" -ArgumentList "/quiet" -Wait
     
-    - name: Get config path
-      id: config
+    - name: List available versions
+      id: versions
       shell: bash
-      run: echo "path=$(opendpm config)" >> $GITHUB_OUTPUT
+      run: |
+        echo "versions=$(python -m opendpm list --format JSON)" >> $GITHUB_OUTPUT
     
     - name: Cache downloaded databases
       id: cache-dbs
@@ -51,15 +52,15 @@ jobs:
       with:
         path: |
           *.accdb
-        key: ${{ hashFiles(steps.config.outputs.path) }}
+        key: ${{ hashFiles(fromJson(steps.versions.outputs.versions)) }}
 
-    - name: Download database files
+    - name: Download latest database files
       if: steps.cache-dbs.outputs.cache-hit != 'true'
       shell: bash
       run: |
-        opendpm download
+        opendpm download --type access
 
-    - name: Build SQLite database
+    - name: Convert to SQLite database
       shell: bash
       run: |
         opendpm convert

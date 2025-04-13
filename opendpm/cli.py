@@ -5,7 +5,7 @@ from enum import StrEnum, auto
 from pathlib import Path
 
 from opendpm.convert import convert_access_to_sqlite
-from opendpm.download import fetch_version
+from opendpm.download import Types, fetch_version
 from opendpm.versions import (
     Formats,
     Version,
@@ -18,13 +18,6 @@ from opendpm.versions import (
     render_version,
     render_versions,
 )
-
-
-class Sources(StrEnum):
-    """Sources of database files."""
-
-    ACCESS = auto()
-    SQLITE = auto()
 
 
 class Groups(StrEnum):
@@ -116,10 +109,10 @@ def create_parser() -> ArgumentParser:
         help="Directory to save downloaded database (default: %(default)s)",
     )
     download_parser.add_argument(
-        "--source",
+        "--type",
         type=str,
-        choices=Sources,
-        default=Sources.SQLITE,
+        choices=Types,
+        default=Types.SQLITE,
         help="Source type (default: %(default)s)",
     )
 
@@ -180,7 +173,7 @@ def main() -> None:
         handle_list_command(args)
     elif args.command == "download":
         if version := handle_version(args.version):
-            fetch_version(version, args.target, args.source)
+            fetch_version(version, args.target, args.type)
         else:
             print(f"Version {args.version} not found")
     elif args.command == "convert":
