@@ -40,11 +40,11 @@ jobs:
       run: |
         Start-Process -FilePath "AccessDatabaseEngine.exe" -ArgumentList "/quiet" -Wait
     
-    - name: List latest version
-      id: version
+    - name: Get hash of latest version
+      id: hash
       shell: bash
       run: |
-        echo "hash=$(python -m opendpm list --version latest --format json | sha256sum)" >> $GITHUB_OUTPUT
+        echo "hash=$(python -m opendpm list --version latest --format json | jq -r .access.hash.value)" >> $GITHUB_OUTPUT
     
     - name: Cache downloaded databases
       id: cache-dbs
@@ -52,7 +52,7 @@ jobs:
       with:
         path: |
           *.accdb
-        key: ${{ steps.version.outputs.hash }}
+        key: ${{ steps.hash.outputs.hash }}
 
     - name: Download latest database files
       if: steps.cache-dbs.outputs.cache-hit != 'true'
