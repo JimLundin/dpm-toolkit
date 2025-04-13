@@ -1,16 +1,63 @@
 """Command line interface for OpenDPM."""
 
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
+from enum import StrEnum, auto
 from pathlib import Path
 
 from opendpm.convert import convert_access_to_sqlite
 from opendpm.download import fetch_version
-from opendpm.versions import get_releases, get_versions, latest_release, render_version
+from opendpm.versions import (
+    Formats,
+    Version,
+    Versions,
+    get_drafts,
+    get_releases,
+    get_version,
+    get_versions,
+    latest_version,
+    render_version,
+    render_versions,
+)
 
 
-def get_config_path() -> Path:
-    """Get the default config file path."""
-    return Path(__file__).parent / "sources.toml"
+class Sources(StrEnum):
+    """Sources of database files."""
+
+    ACCESS = auto()
+    SQLITE = auto()
+
+
+class Groups(StrEnum):
+    """Groups of versions."""
+
+    RELEASES = auto()
+    DRAFTS = auto()
+    ALL = auto()
+
+
+class Options(StrEnum):
+    """Options for the command line interface."""
+
+    RELEASE = auto()
+    DRAFT = auto()
+    LATEST = auto()
+
+
+VERSIONS = get_versions()
+VERSION_IDS = [v["id"] for v in VERSIONS]
+VERSION_CHOICES = [*Options, *VERSION_IDS]
+
+LATEST: dict[Options, Version] = {
+    Options.RELEASE: latest_version(get_releases(VERSIONS)),
+    Options.DRAFT: latest_version(get_drafts(VERSIONS)),
+    Options.LATEST: latest_version(VERSIONS),
+}
+
+GROUPS: dict[Groups, Versions] = {
+    Groups.RELEASES: get_releases(VERSIONS),
+    Groups.DRAFTS: get_drafts(VERSIONS),
+    Groups.ALL: VERSIONS,
+}
 
 
 def create_parser() -> ArgumentParser:
@@ -18,10 +65,49 @@ def create_parser() -> ArgumentParser:
     parser = ArgumentParser(description="OpenDPM CLI tool")
     subparsers = parser.add_subparsers(dest="command", help="Commands")
 
+    # List command
+    list_parser = subparsers.add_parser(
+        "list",
+        help="List available database versions",
+        description="Display available versions with their release dates and types",
+    )
+
+    version_groups = list_parser.add_mutually_exclusive_group()
+    version_groups.add_argument(
+        "--version",
+        "-v",
+        type=str,
+        choices=VERSION_CHOICES,
+        help="Version to display",
+    )
+    version_groups.add_argument(
+        "--group",
+        "-g",
+        type=str,
+        choices=Groups,
+        default=Groups.ALL,
+        help="Show only releases, drafts, or all versions (default: %(default)s)",
+    )
+    list_parser.add_argument(
+        "--format",
+        "-f",
+        choices=Formats,
+        default=Formats.SIMPLE,
+        help="Output format (default: %(default)s)",
+    )
+
     # Download command
     download_parser = subparsers.add_parser(
         "download",
-        help="Download Access databases",
+        help="Download databases",
+        description="Download a specific version of the DPM database",
+    )
+    download_parser.add_argument(
+        "--version",
+        type=str,
+        choices=VERSION_CHOICES,
+        default=Options.LATEST,
+        help="Version to download (default: %(default)s)",
     )
     download_parser.add_argument(
         "--target",
@@ -30,24 +116,11 @@ def create_parser() -> ArgumentParser:
         help="Directory to save downloaded database (default: %(default)s)",
     )
     download_parser.add_argument(
-        "--version",
-        help="Specific version ID to download",
-    )
-    download_parser.add_argument(
-        "--verify",
-        action="store_true",
-        help="Verify downloaded files using hash",
-    )
-
-    # List command
-    list_parser = subparsers.add_parser(
-        "list",
-        help="List available database versions",
-    )
-    list_parser.add_argument(
-        "--all",
-        action="store_true",
-        help="Show all versions (including betas)",
+        "--source",
+        type=str,
+        choices=Sources,
+        default=Sources.SQLITE,
+        help="Source type (default: %(default)s)",
     )
 
     # Convert command
@@ -56,43 +129,60 @@ def create_parser() -> ArgumentParser:
         help="Convert Access databases to SQLite",
     )
     convert_parser.add_argument(
-        "target",
-        nargs="?",
+        "--target",
         type=Path,
         default=Path.cwd(),
-        help="Directory to save converted databases",
+        help="Directory to save SQLite databases (default: %(default)s)",
     )
     convert_parser.add_argument(
-        "source",
-        nargs="?",
+        "--source",
         type=Path,
         default=Path.cwd(),
-        help="Directory containing Access databases",
+        help="Directory containing Access databases (default: %(default)s)",
     )
 
     return parser
+
+
+def handle_group(group: Groups) -> Versions | None:
+    """Handle the 'group' subcommand."""
+    if versions := GROUPS.get(group):
+        return versions
+    print(f"Invalid group: {group}")
+    return None
+
+
+def handle_version(version: Options) -> Version | None:
+    """Handle the 'version' subcommand."""
+    if latest := LATEST.get(version):
+        return latest
+    return get_version(VERSIONS, version)
+
+
+def handle_list_command(args: Namespace) -> None:
+    """Handle the 'list' subcommand."""
+    if versions_to_show := handle_group(args.group):
+        print(render_versions(versions_to_show, args.format))
+        return
+    if version_to_show := handle_version(args.version):
+        print(render_version(version_to_show, args.format))
+        return
+
+    print("No versions available")
 
 
 def main() -> None:
     """Entry point for the CLI."""
     parser = create_parser()
     args = parser.parse_args()
-    versions = get_versions()
-    releases = get_releases(versions)
 
     if args.command == "list":
-        if args.all:
-            print("\n".join(f"{render_version(v)}" for v in versions))  # noqa: T201
-        else:
-            print("\n".join(f"{render_version(v)}" for v in releases))  # noqa: T201
-
+        handle_list_command(args)
     elif args.command == "download":
-        if args.version:
-            fetch_version(args.version, args.target)
+        if version := handle_version(args.version):
+            fetch_version(version, args.target, args.source)
         else:
-            release = latest_release(releases)
-            fetch_version(release, args.target)
-
+            print(f"Version {args.version} not found")
     elif args.command == "convert":
         convert_access_to_sqlite(args.source, args.target)
     else:

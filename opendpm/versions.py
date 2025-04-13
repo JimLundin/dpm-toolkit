@@ -1,13 +1,23 @@
 """Module for loading and managing version information."""
 
+from collections.abc import Sequence
 from datetime import date
+from enum import StrEnum, auto
 from hashlib import sha256
+from json import dumps
 from logging import getLogger
 from pathlib import Path
 from tomllib import load
-from typing import Literal, TypedDict
+from typing import Literal, NotRequired, TypedDict
 
 logger = getLogger(__name__)
+
+
+class Formats(StrEnum):
+    """Output formats."""
+
+    JSON = auto()
+    SIMPLE = auto()
 
 
 class Hash(TypedDict):
@@ -17,13 +27,20 @@ class Hash(TypedDict):
     value: str
 
 
+class Source(TypedDict):
+    """Source of a database."""
+
+    url: str
+    hash: Hash
+
+
 class Base(TypedDict):
     """Version of a database."""
 
     id: str
-    url: str
-    hash: Hash
     release_date: date
+    access: Source
+    sqlite: NotRequired[Source]
 
 
 class Release(Base):
@@ -32,18 +49,18 @@ class Release(Base):
     type: Literal["release"]
 
 
-class Beta(Base):
+class Draft(Base):
     """Version of a database."""
 
-    type: Literal["beta"]
+    type: Literal["draft"]
     superseded_by: str
 
 
-type Version = Release | Beta
+type Version = Release | Draft
 
-type Releases = list[Release]
-type Betas = list[Beta]
-type Versions = list[Version]
+type Releases = Sequence[Release]
+type Drafts = Sequence[Draft]
+type Versions = Sequence[Version]
 
 VERSION_FILE = Path(__file__).parent / "versions.toml"
 
@@ -60,20 +77,47 @@ def get_releases(versions: Versions) -> Releases:
     return [version for version in versions if version["type"] == "release"]
 
 
-def latest_release(releases: Releases) -> Release:
-    """Get the latest release from the given versions."""
-    return max(releases, key=lambda version: version["release_date"])
+def get_drafts(versions: Versions) -> Drafts:
+    """Get the drafts from the given versions."""
+    return [version for version in versions if version["type"] == "draft"]
 
 
-def verify_version(content: bytes, version_hash: Hash) -> bool:
-    """Verify the content against the hash provided in the version."""
-    if version_hash["type"] == "sha256":
+def latest_version(versions: Versions) -> Version:
+    """Get the latest version from the given versions."""
+    return max(versions, key=lambda version: version["release_date"])
+
+
+def get_version(versions: Versions, version_id: str) -> Version | None:
+    """Get the version with the given ID."""
+    return next((v for v in versions if v["id"] == version_id), None)
+
+
+def verify_source(content: bytes, source_hash: Hash) -> bool:
+    """Verify the content against the hash provided in the source."""
+    if source_hash["type"] == "sha256":
         hasher = sha256(content)
-        return version_hash["value"] == hasher.hexdigest()
+        return source_hash["value"] == hasher.hexdigest()
 
     return False
 
 
-def render_version(version: Version) -> str:
+def date_serializer(obj: object) -> str | None:
+    """Convert date to ISO format."""
+    if isinstance(obj, date):
+        return obj.isoformat()
+
+    return None
+
+
+def render_version(version: Version, fmt: Formats = Formats.SIMPLE) -> str:
     """Render a version string."""
-    return f"{version['id']} ({version['release_date']})"
+    if fmt == Formats.JSON:
+        return dumps(version, indent=2, default=date_serializer)
+    return "\n".join(f"{key}: {value}" for key, value in version.items())
+
+
+def render_versions(versions: Versions, fmt: Formats = Formats.SIMPLE) -> str:
+    """Render a list of versions."""
+    if fmt == Formats.JSON:
+        return dumps(versions, indent=2, default=date_serializer)
+    return "\n".join(v["id"] for v in versions)
