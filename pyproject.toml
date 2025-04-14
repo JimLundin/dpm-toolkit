@@ -23,9 +23,7 @@ unsafe-fixes = true
 [tool.ruff.lint]
 fixable = ["ALL"]
 select = ["ALL"]
-
-[tool.ruff.lint.per-file-ignores]
-"cli.py" = ["T201"]
+ignore = ["T201"]
 
 [tool.mypy]
 strict = true

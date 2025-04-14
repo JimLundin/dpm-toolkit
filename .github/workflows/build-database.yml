@@ -44,7 +44,7 @@ jobs:
       id: version
       shell: bash
       run: |
-        echo "version=$(opendpm list --version latest --json)" >> $GITHUB_OUTPUT
+        echo "version=$(opendpm list -v latest --json)" >> $GITHUB_OUTPUT
     
     - name: Cache downloaded databases
       id: cache-dbs
@@ -58,7 +58,7 @@ jobs:
       if: steps.cache-dbs.outputs.cache-hit != 'true'
       shell: bash
       run: |
-        opendpm download --type access
+        opendpm download -v latest --access
 
     - name: Convert to SQLite database
       shell: bash

@@ -7,7 +7,7 @@ from json import dumps
 from pathlib import Path
 
 from opendpm.convert import convert_access_to_sqlite
-from opendpm.download import Types, fetch_version
+from opendpm.download import extract_database, fetch_source
 from opendpm.versions import (
     Version,
     Versions,
@@ -17,6 +17,13 @@ from opendpm.versions import (
     get_versions,
     latest_version,
 )
+
+
+class Types(StrEnum):
+    """Types of database files."""
+
+    ACCESS = auto()
+    SQLITE = auto()
 
 
 class Groups(StrEnum):
@@ -94,6 +101,7 @@ def create_parser() -> ArgumentParser:
     )
     download_parser.add_argument(
         "--version",
+        "-v",
         type=str,
         choices=VERSION_CHOICES,
         default=Options.LATEST,
@@ -105,12 +113,16 @@ def create_parser() -> ArgumentParser:
         default=Path.cwd(),
         help="Directory to save downloaded database (default: %(default)s)",
     )
-    download_parser.add_argument(
-        "--type",
-        type=str,
-        choices=Types,
-        default=Types.SQLITE,
-        help="Source type (default: %(default)s)",
+    download_type = download_parser.add_mutually_exclusive_group()
+    download_type.add_argument(
+        "--access",
+        action="store_true",
+        help="Download Access database",
+    )
+    download_type.add_argument(
+        "--sqlite",
+        action="store_true",
+        help="Download SQLite database, this is the default",
     )
 
     # Convert command
@@ -159,22 +171,46 @@ def date_serializer(obj: object) -> str | None:
 
 def handle_list_command(args: Namespace) -> None:
     """Handle the 'list' subcommand."""
-    if version_to_show := handle_version(args.version):
+    if version := handle_version(args.version):
         if args.json:
-            print(dumps(version_to_show, default=date_serializer))
+            print(dumps(version, default=date_serializer))
         else:
-            print(
-                "\n".join(f"{key}: {value}" for key, value in version_to_show.items()),
-            )
+            print("\n".join(f"{key}: {value}" for key, value in version.items()))
         return
-    if versions_to_show := handle_group(args.group):
+    if versions := handle_group(args.group):
         if args.json:
-            print(dumps(versions_to_show, default=date_serializer))
+            print(dumps(versions, default=date_serializer))
         else:
-            print("\n".join(v["id"] for v in versions_to_show))
+            print("\n".join(v["id"] for v in versions))
         return
 
     print("No versions available")
+
+
+def handle_download_command(args: Namespace) -> None:
+    """Handle the 'download' subcommand."""
+    if version := handle_version(args.version):
+        if not args.access:
+            if "sqlite" in version:
+                source = version["sqlite"]
+            else:
+                print(f"No SQLite source for version {version['id']}")
+                print("Would you like to download the Access source instead?")
+                response = input("(y/n): ").lower()
+                if response != "y":
+                    return
+                source = version["access"]
+        else:
+            source = version["access"]
+
+        print(f"Downloading version {version['id']}")
+        archive_data = fetch_source(source)
+        target_folder = args.target / version["id"]
+        extract_database(archive_data, target_folder)
+        print(f"Downloaded version {version['id']}")
+
+    else:
+        print(f"Version {args.version} not found")
 
 
 def main() -> None:
@@ -185,10 +221,7 @@ def main() -> None:
     if args.command == "list":
         handle_list_command(args)
     elif args.command == "download":
-        if version := handle_version(args.version):
-            fetch_version(version, args.target, args.type)
-        else:
-            print(f"Version {args.version} not found")
+        handle_download_command(args)
     elif args.command == "convert":
         convert_access_to_sqlite(args.source, args.target)
     else:
