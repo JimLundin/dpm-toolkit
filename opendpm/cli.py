@@ -1,13 +1,14 @@
 """Command line interface for OpenDPM."""
 
 from argparse import ArgumentParser, Namespace
+from datetime import date
 from enum import StrEnum, auto
+from json import dumps
 from pathlib import Path
 
 from opendpm.convert import convert_access_to_sqlite
 from opendpm.download import Types, fetch_version
 from opendpm.versions import (
-    Formats,
     Version,
     Versions,
     get_drafts,
@@ -15,8 +16,6 @@ from opendpm.versions import (
     get_version,
     get_versions,
     latest_version,
-    render_version,
-    render_versions,
 )
 
 
@@ -82,11 +81,9 @@ def create_parser() -> ArgumentParser:
         help="Show only releases, drafts, or all versions (default: %(default)s)",
     )
     list_parser.add_argument(
-        "--format",
-        "-f",
-        choices=Formats,
-        default=Formats.SIMPLE,
-        help="Output format (default: %(default)s)",
+        "--json",
+        action="store_true",
+        help="Output in JSON format",
     )
 
     # Download command
@@ -152,13 +149,29 @@ def handle_group(group: Groups) -> Versions | None:
     return None
 
 
+def date_serializer(obj: object) -> str | None:
+    """Convert date to ISO format."""
+    if isinstance(obj, date):
+        return obj.isoformat()
+
+    return None
+
+
 def handle_list_command(args: Namespace) -> None:
     """Handle the 'list' subcommand."""
     if version_to_show := handle_version(args.version):
-        print(render_version(version_to_show, args.format))
+        if args.json:
+            print(dumps(version_to_show, default=date_serializer))
+        else:
+            print(
+                "\n".join(f"{key}: {value}" for key, value in version_to_show.items()),
+            )
         return
     if versions_to_show := handle_group(args.group):
-        print(render_versions(versions_to_show, args.format))
+        if args.json:
+            print(dumps(versions_to_show, default=date_serializer))
+        else:
+            print("\n".join(v["id"] for v in versions_to_show))
         return
 
     print("No versions available")

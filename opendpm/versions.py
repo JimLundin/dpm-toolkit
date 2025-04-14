@@ -2,22 +2,13 @@
 
 from collections.abc import Sequence
 from datetime import date
-from enum import StrEnum, auto
 from hashlib import sha256
-from json import dumps
 from logging import getLogger
 from pathlib import Path
 from tomllib import load
 from typing import Literal, NotRequired, TypedDict
 
 logger = getLogger(__name__)
-
-
-class Formats(StrEnum):
-    """Output formats."""
-
-    JSON = auto()
-    SIMPLE = auto()
 
 
 class Hash(TypedDict):
@@ -99,25 +90,3 @@ def verify_source(content: bytes, source_hash: Hash) -> bool:
         return source_hash["value"] == hasher.hexdigest()
 
     return False
-
-
-def date_serializer(obj: object) -> str | None:
-    """Convert date to ISO format."""
-    if isinstance(obj, date):
-        return obj.isoformat()
-
-    return None
-
-
-def render_version(version: Version, fmt: Formats = Formats.SIMPLE) -> str:
-    """Render a version string."""
-    if fmt == Formats.JSON:
-        return dumps(version, default=date_serializer)
-    return "\n".join(f"{key}: {value}" for key, value in version.items())
-
-
-def render_versions(versions: Versions, fmt: Formats = Formats.SIMPLE) -> str:
-    """Render a list of versions."""
-    if fmt == Formats.JSON:
-        return dumps(versions, default=date_serializer)
-    return "\n".join(v["id"] for v in versions)

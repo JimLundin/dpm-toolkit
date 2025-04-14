@@ -44,7 +44,7 @@ jobs:
       id: version
       shell: bash
       run: |
-        echo "version=$(opendpm list --version latest --format json)" >> $GITHUB_OUTPUT
+        echo "version=$(opendpm list --version latest --json)" >> $GITHUB_OUTPUT
     
     - name: Cache downloaded databases
       id: cache-dbs
