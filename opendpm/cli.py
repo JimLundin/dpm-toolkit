@@ -122,19 +122,26 @@ def create_parser() -> ArgumentParser:
         help="Convert Access databases to SQLite",
     )
     convert_parser.add_argument(
-        "--target",
-        type=Path,
-        default=Path.cwd(),
-        help="Directory to save SQLite databases (default: %(default)s)",
-    )
-    convert_parser.add_argument(
         "--source",
         type=Path,
         default=Path.cwd(),
         help="Directory containing Access databases (default: %(default)s)",
     )
+    convert_parser.add_argument(
+        "--target",
+        type=Path,
+        default=Path.cwd(),
+        help="Directory to save SQLite databases (default: %(default)s)",
+    )
 
     return parser
+
+
+def handle_version(version_id: Options) -> Version | None:
+    """Handle the 'version' subcommand."""
+    if latest := LATEST.get(version_id):
+        return latest
+    return get_version(VERSIONS, version_id)
 
 
 def handle_group(group: Groups) -> Versions | None:
@@ -145,20 +152,13 @@ def handle_group(group: Groups) -> Versions | None:
     return None
 
 
-def handle_version(version: Options) -> Version | None:
-    """Handle the 'version' subcommand."""
-    if latest := LATEST.get(version):
-        return latest
-    return get_version(VERSIONS, version)
-
-
 def handle_list_command(args: Namespace) -> None:
     """Handle the 'list' subcommand."""
-    if versions_to_show := handle_group(args.group):
-        print(render_versions(versions_to_show, args.format))
-        return
     if version_to_show := handle_version(args.version):
         print(render_version(version_to_show, args.format))
+        return
+    if versions_to_show := handle_group(args.group):
+        print(render_versions(versions_to_show, args.format))
         return
 
     print("No versions available")
