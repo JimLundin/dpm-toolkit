@@ -112,12 +112,12 @@ def date_serializer(obj: object) -> str | None:
 def render_version(version: Version, fmt: Formats = Formats.SIMPLE) -> str:
     """Render a version string."""
     if fmt == Formats.JSON:
-        return dumps(version, indent=2, default=date_serializer)
+        return dumps(version, default=date_serializer)
     return "\n".join(f"{key}: {value}" for key, value in version.items())
 
 
 def render_versions(versions: Versions, fmt: Formats = Formats.SIMPLE) -> str:
     """Render a list of versions."""
     if fmt == Formats.JSON:
-        return dumps(versions, indent=2, default=date_serializer)
+        return dumps(versions, default=date_serializer)
     return "\n".join(v["id"] for v in versions)
