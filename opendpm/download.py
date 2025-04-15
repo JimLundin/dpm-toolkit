@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
+from hashlib import sha256
 from io import BytesIO
 from typing import TYPE_CHECKING
 from zipfile import ZipFile
 
 from requests import get
-
-from opendpm.versions import verify_source
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -34,6 +33,8 @@ def extract_database(archive: BytesIO, target: Path) -> None:
 def fetch_source(source: Source) -> BytesIO:
     """Download and extract database file specified by the source."""
     version_bytes = download_url(source["url"])
-    if not verify_source(version_bytes, source["hash"]):
+    if sha256(version_bytes).hexdigest() != source["hash"]:
         print("Hash verification failed")
+    else:
+        print("Hash verification successful")
     return BytesIO(version_bytes)

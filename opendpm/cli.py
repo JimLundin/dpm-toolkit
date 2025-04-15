@@ -19,13 +19,6 @@ from opendpm.versions import (
 )
 
 
-class Types(StrEnum):
-    """Types of database files."""
-
-    ACCESS = auto()
-    SQLITE = auto()
-
-
 class Groups(StrEnum):
     """Groups of versions."""
 
@@ -46,13 +39,13 @@ VERSIONS = get_versions()
 VERSION_IDS = [v["id"] for v in VERSIONS]
 VERSION_CHOICES = [*Options, *VERSION_IDS]
 
-LATEST: dict[Options, Version] = {
+VERSION = {
     Options.RELEASE: latest_version(get_releases(VERSIONS)),
     Options.DRAFT: latest_version(get_drafts(VERSIONS)),
     Options.LATEST: latest_version(VERSIONS),
 }
 
-GROUPS: dict[Groups, Versions] = {
+GROUPS = {
     Groups.RELEASES: get_releases(VERSIONS),
     Groups.DRAFTS: get_drafts(VERSIONS),
     Groups.ALL: VERSIONS,
@@ -148,8 +141,8 @@ def create_parser() -> ArgumentParser:
 
 def handle_version(version_id: Options) -> Version | None:
     """Handle the 'version' subcommand."""
-    if latest := LATEST.get(version_id):
-        return latest
+    if version := VERSION.get(version_id):
+        return version
     return get_version(VERSIONS, version_id)
 
 
@@ -190,20 +183,8 @@ def handle_list_command(args: Namespace) -> None:
 def handle_download_command(args: Namespace) -> None:
     """Handle the 'download' subcommand."""
     if version := handle_version(args.version):
-        if not args.access:
-            if "sqlite" in version:
-                source = version["sqlite"]
-            else:
-                print(f"No SQLite source for version {version['id']}")
-                print("Would you like to download the Access source instead?")
-                response = input("(y/n): ").lower()
-                if response != "y":
-                    return
-                source = version["access"]
-        else:
-            source = version["access"]
-
         print(f"Downloading version {version['id']}")
+        source = version["access"] if args.access else version["sqlite"]
         archive_data = fetch_source(source)
         target_folder = args.target / version["id"]
         extract_database(archive_data, target_folder)

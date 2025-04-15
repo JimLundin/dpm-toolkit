@@ -52,7 +52,7 @@ jobs:
       with:
         path: |
           *.accdb
-        key: ${{ fromJson(steps.version.outputs.version).access.hash.value }}
+        key: ${{ fromJson(steps.version.outputs.version).access.hash }}
 
     - name: Download latest database files
       if: steps.cache-dbs.outputs.cache-hit != 'true'
