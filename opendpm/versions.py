@@ -4,24 +4,28 @@ from collections.abc import Sequence
 from datetime import date
 from pathlib import Path
 from tomllib import load
-from typing import Literal, TypedDict
+from typing import Literal, NotRequired, TypedDict
 
 
 class Source(TypedDict):
     """Source of a database."""
 
     url: str
-    hash: str
+    checksum: NotRequired[str]
 
 
 class Version(TypedDict):
     """Version of a database."""
 
     id: str
-    release_date: date
-    type: Literal["release", "draft"]
-    access: Source
-    sqlite: Source
+    date: date
+    version: str
+    type: Literal["sample", "draft", "release", "errata"]
+    revision: NotRequired[int]
+    replaced_by: NotRequired[str]
+    original: Source
+    archive: NotRequired[Source]
+    converted: NotRequired[Source]
 
 
 type Versions = Sequence[Version]
@@ -36,19 +40,14 @@ def get_versions() -> Versions:
         return versions
 
 
-def get_releases(versions: Versions) -> Versions:
-    """Get the releases from the given versions."""
-    return [version for version in versions if version["type"] == "release"]
-
-
-def get_drafts(versions: Versions) -> Versions:
-    """Get the drafts from the given versions."""
-    return [version for version in versions if version["type"] == "draft"]
+def get_versions_by_type(versions: Versions, *version_types: str) -> Versions:
+    """Get the versions of the given type."""
+    return [v for v in versions if v["type"] in version_types]
 
 
 def latest_version(versions: Versions) -> Version:
     """Get the latest version from the given versions."""
-    return max(versions, key=lambda version: version["release_date"])
+    return max(versions, key=lambda version: version["date"])
 
 
 def get_version(versions: Versions, version_id: str) -> Version | None:

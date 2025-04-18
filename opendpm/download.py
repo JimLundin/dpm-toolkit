@@ -15,26 +15,31 @@ if TYPE_CHECKING:
     from opendpm.versions import Source
 
 
-def download_url(url: str) -> bytes:
+def verify_checksum(data: bytes, checksum: str) -> bool:
+    """Verify the checksum of the data."""
+    if not checksum.startswith("sha256:"):
+        print("Invalid checksum format: ", checksum)
+        return False
+
+    return checksum == f"sha256:{sha256(data).hexdigest()}"
+
+
+def download_source(source: Source) -> BytesIO:
     """Download the zip file containing the DPM database."""
-    response = get(url, timeout=30, allow_redirects=False)
+    response = get(source["url"], timeout=30, allow_redirects=False)
     response.raise_for_status()
 
-    return response.content
+    if checksum := source.get("checksum"):
+        if not verify_checksum(response.content, checksum):
+            print("Checksum verification failed")
+    else:
+        print("No checksum provided")
+
+    return BytesIO(response.content)
 
 
-def extract_database(archive: BytesIO, target: Path) -> None:
-    """Extract Access database from the archive to the target with the given name."""
+def extract_archive(archive: BytesIO, target: Path) -> None:
+    """Extract files from the archive to the target with the given name."""
     with ZipFile(archive) as zip_file:
         target.mkdir(parents=True, exist_ok=True)
         zip_file.extractall(target)
-
-
-def fetch_source(source: Source) -> BytesIO:
-    """Download and extract database file specified by the source."""
-    version_bytes = download_url(source["url"])
-    if sha256(version_bytes).hexdigest() != source["hash"]:
-        print("Hash verification failed")
-    else:
-        print("Hash verification successful")
-    return BytesIO(version_bytes)

@@ -2,54 +2,25 @@
 
 from argparse import ArgumentParser, Namespace
 from datetime import date
-from enum import StrEnum, auto
 from json import dumps
 from pathlib import Path
 
 from opendpm.convert import convert_access_to_sqlite
-from opendpm.download import extract_database, fetch_source
+from opendpm.download import download_source, extract_archive
 from opendpm.versions import (
+    Source,
     Version,
-    Versions,
-    get_drafts,
-    get_releases,
     get_version,
     get_versions,
+    get_versions_by_type,
     latest_version,
 )
 
-
-class Groups(StrEnum):
-    """Groups of versions."""
-
-    RELEASES = auto()
-    DRAFTS = auto()
-    ALL = auto()
-
-
-class Options(StrEnum):
-    """Options for the command line interface."""
-
-    RELEASE = auto()
-    DRAFT = auto()
-    LATEST = auto()
-
-
 VERSIONS = get_versions()
 VERSION_IDS = [v["id"] for v in VERSIONS]
-VERSION_CHOICES = [*Options, *VERSION_IDS]
 
-VERSION = {
-    Options.RELEASE: latest_version(get_releases(VERSIONS)),
-    Options.DRAFT: latest_version(get_drafts(VERSIONS)),
-    Options.LATEST: latest_version(VERSIONS),
-}
-
-GROUPS = {
-    Groups.RELEASES: get_releases(VERSIONS),
-    Groups.DRAFTS: get_drafts(VERSIONS),
-    Groups.ALL: VERSIONS,
-}
+RELEASE = latest_version(get_versions_by_type(VERSIONS, "release", "errata"))
+LATEST = latest_version(VERSIONS)
 
 
 def create_parser() -> ArgumentParser:
@@ -57,7 +28,6 @@ def create_parser() -> ArgumentParser:
     parser = ArgumentParser(description="OpenDPM CLI tool")
     subparsers = parser.add_subparsers(dest="command", help="Commands")
 
-    # List command
     list_parser = subparsers.add_parser(
         "list",
         help="List available database versions",
@@ -66,19 +36,21 @@ def create_parser() -> ArgumentParser:
 
     version_groups = list_parser.add_mutually_exclusive_group()
     version_groups.add_argument(
+        "--release",
+        action="store_true",
+        help="Show the latest release version",
+    )
+    version_groups.add_argument(
+        "--latest",
+        action="store_true",
+        help="Show the latest version",
+    )
+    version_groups.add_argument(
         "--version",
         "-v",
         type=str,
-        choices=VERSION_CHOICES,
+        choices=VERSION_IDS,
         help="Version to display",
-    )
-    version_groups.add_argument(
-        "--group",
-        "-g",
-        type=str,
-        choices=Groups,
-        default=Groups.ALL,
-        help="Show only releases, drafts, or all versions (default: %(default)s)",
     )
     list_parser.add_argument(
         "--json",
@@ -86,19 +58,28 @@ def create_parser() -> ArgumentParser:
         help="Output in JSON format",
     )
 
-    # Download command
     download_parser = subparsers.add_parser(
         "download",
         help="Download databases",
         description="Download a specific version of the DPM database",
     )
-    download_parser.add_argument(
+    version_groups = download_parser.add_mutually_exclusive_group()
+    version_groups.add_argument(
+        "--release",
+        action="store_true",
+        help="Show the latest release version",
+    )
+    version_groups.add_argument(
+        "--latest",
+        action="store_true",
+        help="Show the latest version",
+    )
+    version_groups.add_argument(
         "--version",
         "-v",
         type=str,
-        choices=VERSION_CHOICES,
-        default=Options.LATEST,
-        help="Version to download (default: %(default)s)",
+        choices=VERSION_IDS,
+        help="Version to download",
     )
     download_parser.add_argument(
         "--target",
@@ -108,17 +89,21 @@ def create_parser() -> ArgumentParser:
     )
     download_type = download_parser.add_mutually_exclusive_group()
     download_type.add_argument(
-        "--access",
+        "--original",
         action="store_true",
-        help="Download Access database",
+        help="Download original Access database",
     )
     download_type.add_argument(
-        "--sqlite",
+        "--archive",
         action="store_true",
-        help="Download SQLite database, this is the default",
+        help="Download archive Access database",
+    )
+    download_type.add_argument(
+        "--converted",
+        action="store_true",
+        help="Download converted SQLite database, this is the default",
     )
 
-    # Convert command
     convert_parser = subparsers.add_parser(
         "convert",
         help="Convert Access databases to SQLite",
@@ -139,18 +124,14 @@ def create_parser() -> ArgumentParser:
     return parser
 
 
-def handle_version(version_id: Options) -> Version | None:
+def handle_version(args: Namespace) -> Version | None:
     """Handle the 'version' subcommand."""
-    if version := VERSION.get(version_id):
-        return version
-    return get_version(VERSIONS, version_id)
-
-
-def handle_group(group: Groups) -> Versions | None:
-    """Handle the 'group' subcommand."""
-    if versions := GROUPS.get(group):
-        return versions
-    print(f"Invalid group: {group}")
+    if args.release:
+        return RELEASE
+    if args.latest:
+        return LATEST
+    if args.version:
+        return get_version(VERSIONS, args.version)
     return None
 
 
@@ -164,34 +145,56 @@ def date_serializer(obj: object) -> str | None:
 
 def handle_list_command(args: Namespace) -> None:
     """Handle the 'list' subcommand."""
-    if version := handle_version(args.version):
+    if version := handle_version(args):
         if args.json:
             print(dumps(version, default=date_serializer))
         else:
             print("\n".join(f"{key}: {value}" for key, value in version.items()))
         return
-    if versions := handle_group(args.group):
-        if args.json:
-            print(dumps(versions, default=date_serializer))
-        else:
-            print("\n".join(v["id"] for v in versions))
-        return
+    print("No version specified, showing all versions")
+    if args.json:
+        print(dumps(VERSIONS, default=date_serializer))
+    else:
+        print("\n".join(VERSION_IDS))
 
-    print("No versions available")
+
+def handle_source(args: Namespace, version: Version) -> Source | None:
+    """Handle the 'source' subcommand."""
+    if args.original:
+        return version["original"]
+
+    if args.archive:
+        if archive := version.get("archive"):
+            return archive
+        return None
+
+    if args.converted:
+        if converted := version.get("converted"):
+            return converted
+        return None
+
+    print("No source specified, using EBA source")
+    return version["original"]
 
 
 def handle_download_command(args: Namespace) -> None:
     """Handle the 'download' subcommand."""
-    if version := handle_version(args.version):
-        print(f"Downloading version {version['id']}")
-        source = version["access"] if args.access else version["sqlite"]
-        archive_data = fetch_source(source)
-        target_folder = args.target / version["id"]
-        extract_database(archive_data, target_folder)
-        print(f"Downloaded version {version['id']}")
+    version = handle_version(args)
+    if not version:
+        print("No version specified, using latest release version")
+        version = RELEASE
 
-    else:
-        print(f"Version {args.version} not found")
+    version_id = version["id"]
+    print(f"Downloading version {version_id}")
+    source = handle_source(args, version)
+    if not source:
+        print("Source not available")
+        return
+
+    archive = download_source(source)
+    target_folder = args.target / version_id
+    extract_archive(archive, target_folder)
+    print(f"Downloaded version {version_id} to {target_folder}")
 
 
 def main() -> None:

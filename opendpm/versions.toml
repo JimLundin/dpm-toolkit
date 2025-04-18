@@ -1,25 +1,55 @@
 # Configuration for DPM source databases
 
 [[versions]]
-id = "4.0.0-draft"
-type = "draft"
-release_date = 2024-10-28
-[versions.access]
-url = "https://www.eba.europa.eu/sites/default/files/2024-10/9af4a241-1a4e-4ee4-9eb0-5f61648522e2/dpm_2.0_release_4.0.zip"
-hash = "5383693c3d19cf06439b395bb42381eea2c95eb60ae5635ee824fdc0c92071b6"
+id = "3.2-sample"
+version = "3.2"
+date = 2023-06-13
+type = "sample"
+original = { url = "https://www.eba.europa.eu/assets/Reporting%20Framework/sample_dpm_2.0_database.zip" }
 
 [[versions]]
-id = "4.0.0"
+id = "3.5-sample"
+version = "3.5"
+date = 2024-07-09
+type = "sample"
+original = { url = "https://www.eba.europa.eu/sites/default/files/2024-07/39caec2e-4ede-4418-91c5-1190e03b9034/dpm_databse_3.5_dpm_2.0.zip" }
+
+[[versions]]
+id = "4.0-draft"
+version = "4.0"
+date = 2024-10-28
+type = "draft"
+replaced_by = "4.0-release"
+original = { url = "https://www.eba.europa.eu/sites/default/files/2024-10/9af4a241-1a4e-4ee4-9eb0-5f61648522e2/dpm_2.0_release_4.0.zip" }
+
+[[versions]]
+id = "4.0-release"
+version = "4.0"
+date = 2024-12-19
 type = "release"
-release_date = 2024-12-19
-[versions.access]
-url = "https://www.eba.europa.eu/sites/default/files/2024-12/11b02b99-1486-4a54-815d-289558589773/dpm_2.0_release_4.0.zip"
-hash = "968553d3058a4851c4ad0d937fc5e6b2813e4ce2f127cf842922d7b716c99072"
+replaced_by = "4.0-errata-4"
+original = { url = "https://www.eba.europa.eu/sites/default/files/2024-12/11b02b99-1486-4a54-815d-289558589773/dpm_2.0_release_4.0.zip" }
 
 [[versions]]
-id = "4.1.0-draft"
+id = "4.0-errata-4"
+version = "4.0"
+date = 2025-03-10
+type = "errata"
+revision = 4
+replaced_by = "4.0-errata-5"
+original = { url = "https://www.eba.europa.eu/sites/default/files/2025-03/c235b72f-d5fc-4ba3-a79c-23b5ad2a9eea/DPM2.0_release_4.0-2025-03-10.zip" }
+
+[[versions]]
+id = "4.0-errata-5"
+version = "4.0"
+date = 2025-03-20
+type = "errata"
+revision = 5
+original = { url = "https://www.eba.europa.eu/sites/default/files/2025-03/1cd56b9d-5919-4071-91e9-3d8a3ccff9e5/DPM2.0_release_4.0_2025-03-20.zip" }
+
+[[versions]]
+id = "4.1-draft"
+version = "4.1"
+date = 2025-03-27
 type = "draft"
-release_date = 2025-03-27
-[versions.access]
-url = "https://www.eba.europa.eu/sites/default/files/2025-03/d931f7ac-0493-42c8-8e7a-3207c5479131/DPM%20Database%202.0%20%28release%204.1%20draft%29.zip"
-hash = "1ee08badae303b67a578ff6f4d6bd40469968e8391f833f6d7fbdb568c742f3a"
+original = { url = "https://www.eba.europa.eu/sites/default/files/2025-03/d931f7ac-0493-42c8-8e7a-3207c5479131/DPM%20Database%202.0%20%28release%204.1%20draft%29.zip" }
