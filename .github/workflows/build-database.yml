@@ -58,7 +58,7 @@ jobs:
       if: steps.cache-dbs.outputs.cache-hit != 'true'
       shell: bash
       run: |
-        opendpm download -v latest --access
+        opendpm download --latest
 
     - name: Convert to SQLite database
       shell: bash
