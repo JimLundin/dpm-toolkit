@@ -6,9 +6,6 @@ authors = [
     { name = "Jim Lundin", email = "jimeriklundin@gmail.com" }
 ]
 dependencies = [
-    "pyodbc>=5.1.0",
-    "sqlalchemy>=2.0.25",
-    "sqlalchemy-access>=2.0.0",
     "requests>=2.32.3",
 ]
 readme = "README.md"
@@ -16,6 +13,16 @@ requires-python = ">= 3.13"
 
 [project.scripts]
 opendpm = "opendpm.cli:main"
+
+[project.optional-dependencies]
+scrape = [
+    "beautifulsoup4>=4.13.4",
+]
+convert = [
+    "pyodbc>=5.2.0",
+    "sqlalchemy>=2.0.37",
+    "sqlalchemy-access>=2.0.3",
+]
 
 [tool.ruff]
 unsafe-fixes = true
@@ -39,8 +46,12 @@ build-backend = "hatchling.build"
 dev = [
     "mypy>=1.15.0",
     "ruff>=0.11.4",
+    "types-beautifulsoup4>=4.12.0.20250204",
     "types-requests>=2.32.0.20250328",
 ]
+
+[tool.uv]
+default-groups = "all"
 
 [tool.hatch.build.targets.wheel]
 packages = ["opendpm"]
