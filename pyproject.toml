@@ -50,9 +50,6 @@ dev = [
     "types-requests>=2.32.0.20250328",
 ]
 
-[tool.uv]
-default-groups = "all"
-
 [tool.hatch.build.targets.wheel]
 packages = ["opendpm"]
 
