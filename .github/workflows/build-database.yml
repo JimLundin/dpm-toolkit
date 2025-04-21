@@ -44,7 +44,7 @@ jobs:
       id: version
       shell: bash
       run: |
-        echo "version=$(opendpm list --latest --json)" >> $GITHUB_OUTPUT
+        echo "id=$(opendpm list --latest --json | jq -r .id)" >> $GITHUB_OUTPUT
     
     - name: Cache downloaded databases
       id: cache-dbs
@@ -52,7 +52,7 @@ jobs:
       with:
         path: |
           *.accdb
-        key: ${{ steps.version.outputs.version }}
+        key: ${{ steps.version.outputs.id }}
 
     - name: Download latest database files
       if: steps.cache-dbs.outputs.cache-hit != 'true'
