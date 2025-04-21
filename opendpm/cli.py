@@ -7,6 +7,7 @@ from pathlib import Path
 
 from opendpm.convert import convert_access_to_sqlite
 from opendpm.download import download_source, extract_archive
+from opendpm.scraper import get_new_reporting_frameworks
 from opendpm.versions import (
     Source,
     Version,
@@ -53,6 +54,17 @@ def create_parser() -> ArgumentParser:
         help="Version to display",
     )
     list_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output in JSON format",
+    )
+
+    update_parser = subparsers.add_parser(
+        "update",
+        help="Find new download urls",
+        description="Find new download urls",
+    )
+    update_parser.add_argument(
         "--json",
         action="store_true",
         help="Output in JSON format",
@@ -158,6 +170,15 @@ def handle_list_command(args: Namespace) -> None:
         print("\n".join(VERSION_IDS))
 
 
+def handle_update_command(args: Namespace) -> None:
+    """Handle the 'update' subcommand."""
+    new_reporting_frameworks = get_new_reporting_frameworks()
+    if args.json:
+        print(dumps(new_reporting_frameworks))
+        return
+    print(get_new_reporting_frameworks())
+
+
 def handle_source(args: Namespace, version: Version) -> Source | None:
     """Handle the 'source' subcommand."""
     if args.original:
@@ -204,6 +225,8 @@ def main() -> None:
 
     if args.command == "list":
         handle_list_command(args)
+    elif args.command == "update":
+        handle_update_command(args)
     elif args.command == "download":
         handle_download_command(args)
     elif args.command == "convert":

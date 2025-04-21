@@ -1,0 +1,32 @@
+# we need to run this script on a schedule to get any new download urls
+# if we find a new url we should branch the repository and add the new url
+# then create a pull request. if the branch already exists we should update the pull request
+
+name: New download urls
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  get-new-download-urls:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+      - name: Get new download urls
+        run: |
+          opendpm update --json
+
+      - name: Create pull request
+        run: |
+          gh pr create --title "Add new download urls" --body "Add new download urls"
+          

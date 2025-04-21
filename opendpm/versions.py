@@ -1,10 +1,13 @@
 """Module for loading and managing version information."""
 
+from collections import defaultdict
 from collections.abc import Sequence
 from datetime import date
 from pathlib import Path
 from tomllib import load
 from typing import Literal, NotRequired, TypedDict
+
+type VersionUrls = dict[str, set[str]]
 
 
 class Source(TypedDict):
@@ -53,3 +56,24 @@ def latest_version(versions: Versions) -> Version:
 def get_version(versions: Versions, version_id: str) -> Version | None:
     """Get the version with the given ID."""
     return next((v for v in versions if v["id"] == version_id), None)
+
+
+def get_version_urls() -> VersionUrls:
+    """Get version urls from version source."""
+    versions = get_versions()
+    version_urls: VersionUrls = defaultdict(set)
+    for version in versions:
+        version_urls[version["version"]].add(version["original"]["url"])
+
+    return version_urls
+
+
+def compare_version_urls(new_urls: VersionUrls) -> VersionUrls:
+    """Compare new URLs with existing version URLs."""
+    version_urls = get_version_urls()
+
+    return {
+        version: new_urls - version_urls.get(version, set())
+        for version, new_urls in new_urls.items()
+        if new_urls - version_urls.get(version, set())
+    }
