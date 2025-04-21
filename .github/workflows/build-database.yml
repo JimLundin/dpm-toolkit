@@ -19,7 +19,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -e .
+        pip install -e .[convert]
 
     - name: Cache Access Database Engine
       id: cache-access-engine
@@ -44,7 +44,7 @@ jobs:
       id: version
       shell: bash
       run: |
-        echo "id=$(opendpm list --latest --json | jq -r .id)" >> $GITHUB_OUTPUT
+        echo "version=$(opendpm list --latest --json)" >> $GITHUB_OUTPUT
     
     - name: Cache downloaded databases
       id: cache-dbs
@@ -52,7 +52,7 @@ jobs:
       with:
         path: |
           *.accdb
-        key: ${{ steps.version.outputs.id }}
+        key: ${{ steps.version.outputs.version }}
 
     - name: Download latest database files
       if: steps.cache-dbs.outputs.cache-hit != 'true'

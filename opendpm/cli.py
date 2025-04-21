@@ -5,9 +5,7 @@ from datetime import date
 from json import dumps
 from pathlib import Path
 
-from opendpm.convert import convert_access_to_sqlite
 from opendpm.download import download_source, extract_archive
-from opendpm.scraper import get_new_reporting_frameworks
 from opendpm.versions import (
     Source,
     Version,
@@ -172,6 +170,12 @@ def handle_list_command(args: Namespace) -> None:
 
 def handle_update_command(args: Namespace) -> None:
     """Handle the 'update' subcommand."""
+    try:
+        from opendpm.scraper import get_new_reporting_frameworks
+    except ImportError:
+        print("Please install the 'scrape' extra: pip install opendpm[scrape]")
+        return
+
     new_reporting_frameworks = get_new_reporting_frameworks()
     if args.json:
         print(dumps(new_reporting_frameworks))
@@ -225,11 +229,17 @@ def main() -> None:
 
     if args.command == "list":
         handle_list_command(args)
-    elif args.command == "update":
+    elif args.command == "scrape":
         handle_update_command(args)
     elif args.command == "download":
         handle_download_command(args)
     elif args.command == "convert":
+        try:
+            from opendpm.convert import convert_access_to_sqlite
+        except ImportError:
+            print("Please install the 'convert' extra: pip install opendpm[convert]")
+            return
+
         convert_access_to_sqlite(args.source, args.target)
     else:
         parser.print_help()
