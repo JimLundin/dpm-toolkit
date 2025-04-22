@@ -31,7 +31,7 @@ jobs:
       shell: bash
       run: |
         # Format the output to wrap versions in include key
-        echo "versions={\"include\":$(opendpm list --json)}" >> $GITHUB_OUTPUT
+        echo "versions={\"includes\":$(opendpm list --json)}" >> $GITHUB_OUTPUT
   
   build-versions:
     needs: list-versions
