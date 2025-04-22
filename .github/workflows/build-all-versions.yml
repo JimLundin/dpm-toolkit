@@ -10,7 +10,7 @@ jobs:
   list-versions:
     runs-on: ubuntu-latest
     outputs:
-      versions: ${{ steps.get-versions.outputs.versions }}
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
     
     steps:
     - uses: actions/checkout@v4
@@ -26,17 +26,19 @@ jobs:
         python -m pip install --upgrade pip
         pip install -e .
     
-    - name: Get all available versions
-      id: get-versions
+    - name: Get versions and set matrix
+      id: set-matrix
       shell: bash
       run: |
-        # Format the output to wrap versions in include key
-        echo "versions={\"includes\":$(opendpm list --json)}" >> $GITHUB_OUTPUT
+        # Get all versions and format as a matrix
+        VERSIONS=$(opendpm list --json)
+        # Convert to proper GitHub Actions matrix format
+        echo "matrix={\"includes\":$VERSIONS}" >> $GITHUB_OUTPUT
   
   build-versions:
     needs: list-versions
     strategy:
-      matrix: ${{ fromJson(needs.list-versions.outputs.versions) }}
+      matrix: ${{ fromJson(needs.list-versions.outputs.matrix) }}
       # Allow other versions to build even if one fails
       fail-fast: false
     
