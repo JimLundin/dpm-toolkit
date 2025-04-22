@@ -30,6 +30,7 @@ jobs:
       id: set-matrix
       shell: bash
       run: |
+        echo opendpm list --json
         echo opendpm list --json | jq 'map(.id)'
         echo version_ids=$(opendpm list --json | jq 'map(.id)') >> $GITHUB_OUTPUT
   
