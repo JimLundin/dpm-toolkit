@@ -162,7 +162,6 @@ def handle_list_command(args: Namespace) -> None:
         else:
             print("\n".join(f"{key}: {value}" for key, value in version.items()))
         return
-    print("No version specified, showing all versions")
     if args.json:
         dump(VERSIONS, stdout, default=date_serializer)
     else:
