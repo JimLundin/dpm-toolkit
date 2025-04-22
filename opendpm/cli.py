@@ -57,12 +57,12 @@ def create_parser() -> ArgumentParser:
         help="Output in JSON format",
     )
 
-    update_parser = subparsers.add_parser(
-        "update",
+    scrape_parser = subparsers.add_parser(
+        "scrape",
         help="Find new download urls",
         description="Find new download urls",
     )
-    update_parser.add_argument(
+    scrape_parser.add_argument(
         "--json",
         action="store_true",
         help="Output in JSON format",
