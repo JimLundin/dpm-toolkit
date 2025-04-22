@@ -30,7 +30,7 @@ jobs:
       id: set-matrix
       shell: bash
       run: |
-        echo version_ids={\"include\":$(opendpm list --json | jq 'map(.id)')} >> $GITHUB_OUTPUT
+        echo version_ids={\"includes\":$(opendpm list --json | jq 'map(.id)')} >> $GITHUB_OUTPUT
   
   build-versions:
     needs: list-versions
@@ -41,4 +41,4 @@ jobs:
     
     uses: ./.github/workflows/build-database.yml
     with:
-      version_id: ${{ matrix.version_ids }}
+      version_id: ${{ matrix.includes }}
