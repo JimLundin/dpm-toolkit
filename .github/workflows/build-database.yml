@@ -5,7 +5,7 @@ on:
     inputs:
       version_id:
         description: 'The version ID to build.'
-        required: false
+        required: true
         type: string
 
 jobs:
