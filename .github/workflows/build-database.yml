@@ -2,6 +2,12 @@ name: Build Database
 
 on:
   workflow_call:
+    inputs:
+      version_id:
+        description: 'The version ID to build. If not provided, latest version will be used.'
+        required: false
+        type: string
+        default: ''
 
 jobs:
   build:
@@ -40,25 +46,19 @@ jobs:
       run: |
         Start-Process -FilePath "AccessDatabaseEngine.exe" -ArgumentList "/quiet" -Wait
     
-    - name: Get latest version
-      id: version
-      shell: bash
-      run: |
-        echo "version=$(opendpm list --latest --json)" >> $GITHUB_OUTPUT
-    
     - name: Cache downloaded databases
       id: cache-dbs
       uses: actions/cache@v4
       with:
         path: |
           **/*.accdb
-        key: ${{ fromJson(steps.version.outputs.version).id }}
+        key: ${{ inputs.version_id }}
 
-    - name: Download latest database files
+    - name: Download database files
       if: steps.cache-dbs.outputs.cache-hit != 'true'
       shell: bash
       run: |
-        opendpm download --latest
+        opendpm download -v ${{ inputs.version_id }}
 
     - name: Convert to SQLite database
       shell: bash
@@ -75,7 +75,7 @@ jobs:
     - name: Upload SQLite database artifact
       uses: actions/upload-artifact@v4
       with:
-        name: dpm-sqlite
+        name: dpm-sqlite-${{ inputs.version_id }}
         path: |
           dpm.sqlite
           dpm.py

@@ -35,10 +35,6 @@ def convert_access_to_sqlite(source: Path, target: Path) -> None:
     access = create_access_engine(database)
     metadata, tables = extract_schema_and_data(access)
 
-    sqlite = create_engine("sqlite:///:memory:")
-    metadata.create_all(sqlite)
-    load_data(sqlite, tables)
-
     target.mkdir(parents=True, exist_ok=True)
     with (target / "dpm.py").open("w") as model_file:
         model_file.write(Model(metadata).render())
@@ -47,6 +43,10 @@ def convert_access_to_sqlite(source: Path, target: Path) -> None:
     if sqlite_path.exists():
         print("Target database already exists, overwriting.")
         sqlite_path.unlink(missing_ok=True)
+
+    sqlite = create_engine("sqlite:///:memory:")
+    metadata.create_all(sqlite)
+    load_data(sqlite, tables)
 
     with sqlite.connect() as connection:
         connection.execute(text(f"VACUUM INTO '{sqlite_path}'"))
