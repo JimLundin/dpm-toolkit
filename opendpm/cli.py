@@ -2,8 +2,9 @@
 
 from argparse import ArgumentParser, Namespace
 from datetime import date
-from json import dumps
+from json import dump
 from pathlib import Path
+from sys import stdout
 
 from opendpm.download import download_source, extract_archive
 from opendpm.versions import (
@@ -157,13 +158,13 @@ def handle_list_command(args: Namespace) -> None:
     """Handle the 'list' subcommand."""
     if version := handle_version(args):
         if args.json:
-            print(dumps(version, default=date_serializer))
+            dump(version, stdout, default=date_serializer)
         else:
             print("\n".join(f"{key}: {value}" for key, value in version.items()))
         return
     print("No version specified, showing all versions")
     if args.json:
-        print(dumps(VERSIONS, default=date_serializer))
+        dump(VERSIONS, stdout, default=date_serializer)
     else:
         print("\n".join(VERSION_IDS))
 
@@ -178,7 +179,7 @@ def handle_update_command(args: Namespace) -> None:
 
     new_reporting_frameworks = get_new_reporting_frameworks()
     if args.json:
-        print(dumps(new_reporting_frameworks))
+        dump(new_reporting_frameworks, stdout)
         return
     print(get_new_reporting_frameworks())
 

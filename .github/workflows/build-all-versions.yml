@@ -30,7 +30,6 @@ jobs:
       id: set-matrix
       shell: bash
       run: |
-        # Extract only version IDs and create a simplified matrix
         echo version_ids=$(opendpm list --json | jq 'map(.id)') >> $GITHUB_OUTPUT
   
   build-versions:
