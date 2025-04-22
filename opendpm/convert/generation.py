@@ -201,11 +201,19 @@ class Model:
                 for fk in column.foreign_keys
             )
         else:
+            # Self referential FKs
             foreign_keys.extend(
-                f"{fk.column.name}"
-                if fk.column.table == column.table
-                else f"{fk.column.table.name}.{fk.column.name}"
+                f'"{fk.column.name}"'
+                if fk.column.name == column.name
+                else fk.column.name
                 for fk in column.foreign_keys
+                if fk.column.table == column.table
+            )
+            # External pointing FKs
+            foreign_keys.extend(
+                f"{fk.column.table.name}.{fk.column.name}"
+                for fk in column.foreign_keys
+                if fk.column.table != column.table
             )
 
         return (format_foreign_key(fk) for fk in foreign_keys)
@@ -214,23 +222,25 @@ class Model:
         """Generate SQLAlchemy relationship definitions."""
         relationships: list[str] = []
 
+        # This is split to avoid circular dependencies/race conditions
         relationships.extend(
-            self._generate_relationship(column, fk.column.table)
+            self._generate_relationship(column, fk.column)
             for column in table.columns
             for fk in column.foreign_keys
             if normalise_column_name(column.name) != fk.column.table.name
         )
         relationships.extend(
-            self._generate_relationship(column, fk.column.table)
+            self._generate_relationship(column, fk.column)
             for column in table.columns
             for fk in column.foreign_keys
             if normalise_column_name(column.name) == fk.column.table.name
         )
         return relationships
 
-    def _generate_relationship(self, src_col: Column[Any], ref_table: Table) -> str:
+    def _generate_relationship(self, src_col: Column[Any], ref_col: Column[Any]) -> str:
         """Generate a SQLAlchemy relationship definition."""
         src_name = normalise_column_name(src_col.name)
+        ref_table = ref_col.table
         if src_col.name == "RowGUID":  # for entities that reference Concept and RowGUID
             src_name = "RowConcept"
         if src_name == src_col.table.name:  # this covers PK to PK relationships
@@ -240,6 +250,9 @@ class Model:
                 src_name = ref_table.name
             else:  # for 'SubtypeDiscriminator'
                 src_name = f"{src_name}{ref_table.name}"
+
+        if src_col.table == ref_table and src_col.name == ref_col.name:
+            src_name = "Self"
 
         src_type = f"{ref_table.name} | None" if src_col.nullable else ref_table.name
 
