@@ -68,6 +68,7 @@ jobs:
       shell: bash
       run: |
         pip install ruff
+        ruff format *.py
         ruff check --fix-only *.py
         ruff format *.py
 
