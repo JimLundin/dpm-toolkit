@@ -72,6 +72,12 @@ jobs:
         ruff check --fix-only *.py
         ruff format *.py
 
+    - name: Type check generated models
+      shell: bash
+      run: |
+        pip install mypy
+        mypy *.py
+
     - name: Upload SQLite database artifact
       uses: actions/upload-artifact@v4
       with:
