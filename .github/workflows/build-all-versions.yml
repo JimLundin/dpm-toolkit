@@ -30,19 +30,16 @@ jobs:
       id: get-versions
       shell: bash
       run: |
-        # Get all versions as a JSON array
-        VERSIONS=$(opendpm list --json)
-        # Format as a JSON string for GitHub Actions output
-        echo "versions=$VERSIONS" >> $GITHUB_OUTPUT
+        # Format the output to wrap versions in include key
+        echo "versions={\"include\":$(opendpm list --json)}" >> $GITHUB_OUTPUT
   
   build-versions:
     needs: list-versions
     strategy:
-      matrix:
-        version: ${{ fromJson(needs.list-versions.outputs.versions) }}
+      matrix: ${{ fromJson(needs.list-versions.outputs.versions) }}
       # Allow other versions to build even if one fails
       fail-fast: false
     
     uses: ./.github/workflows/build-database.yml
     with:
-      version_id: ${{ matrix.version.id }}
+      version_id: ${{ matrix.id }}
