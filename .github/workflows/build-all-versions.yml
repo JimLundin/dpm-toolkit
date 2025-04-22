@@ -10,7 +10,7 @@ jobs:
   list-versions:
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      version_ids: ${{ steps.set-matrix.outputs.version_ids }}
     
     steps:
     - uses: actions/checkout@v4
@@ -30,18 +30,16 @@ jobs:
       id: set-matrix
       shell: bash
       run: |
-        # Get all versions and format as a matrix
-        VERSIONS=$(opendpm list --json)
-        # Convert to proper GitHub Actions matrix format
-        echo "matrix={\"includes\":$VERSIONS}" >> $GITHUB_OUTPUT
+        # Extract only version IDs and create a simplified matrix
+        echo version_ids=$(opendpm list --json | jq 'map(.id)') >> $GITHUB_OUTPUT
   
   build-versions:
     needs: list-versions
     strategy:
-      matrix: ${{ fromJson(needs.list-versions.outputs.matrix) }}
+      matrix: ${{ fromJson(needs.list-versions.outputs.version_ids) }}
       # Allow other versions to build even if one fails
       fail-fast: false
     
     uses: ./.github/workflows/build-database.yml
     with:
-      version_id: ${{ matrix.id }}
+      version_id: ${{ matrix.version_id }}
