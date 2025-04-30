@@ -22,11 +22,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e .
-      - name: Get new download urls
-        run: |
-          opendpm update --json
-
-      - name: Create pull request
-        run: |
-          gh pr create --title "Add new download urls" --body "Add new download urls"
-          
+      - name: Run get-new-download-urls.sh
+        run: bash .github/scripts/get-new-download-urls.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
