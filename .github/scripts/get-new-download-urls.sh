@@ -7,7 +7,7 @@ PR_TITLE="$JOB_NAME"
 PR_BODY="Automated PR for new download URLs."
 
 # Run the CLI and capture output
-SCRAPE_RESULT=$(opendpm scrape)
+SCRAPE_RESULT=$(opendpm scrape --json)
 
 # Always try to create the branch (safe if it already exists)
 git config user.name "github-actions[bot]"
