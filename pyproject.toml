@@ -1,6 +1,6 @@
 [project]
 name = "opendpm"
-version = "0.1.0"
+version = "2025.5.7"
 description = "Open-source tools and models for working with DPM databases"
 authors = [
     { name = "Jim Lundin", email = "jimeriklundin@gmail.com" }
