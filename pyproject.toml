@@ -51,7 +51,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src"]
+packages = ["src/opendpm"]
 
 [tool.hatch.metadata]
 allow-direct-references = true
