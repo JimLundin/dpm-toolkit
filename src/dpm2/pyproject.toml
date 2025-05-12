@@ -1,0 +1,19 @@
+[project]
+name = "dpm2"
+version = "2025.5.7"
+description = "Data Package Model 2 artifacts for DPM databases"
+authors = [
+    { name = "Jim Lundin", email = "jimeriklundin@gmail.com" }
+]
+readme = "README.md"
+requires-python = ">= 3.13"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dpm2"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
