@@ -1,12 +1,16 @@
 [project]
 name = "dpm2"
-version = "2025.5.7"
-description = "Data Package Model 2 artifacts for DPM databases"
+dynamic = ["version"]
+description = "Data Point Model 2 artifacts"
 authors = [
     { name = "Jim Lundin", email = "jimeriklundin@gmail.com" }
 ]
 readme = "README.md"
 requires-python = ">= 3.13"
+
+dependencies = [
+    "sqlalchemy>=2.0.40",
+]
 
 [build-system]
 requires = ["hatchling"]

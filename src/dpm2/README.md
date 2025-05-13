@@ -4,14 +4,21 @@ This package contains data artifacts for DPM databases, produced by the conversi
 
 ## Structure
 
-- `data/`: Contains the generated data artifacts
-  - `models/`: Database models and schemas
-  - `reference/`: Reference data and lookup tables
-  - `metadata/`: Metadata about the DPM database structure
+- `dpm.sqlite`: SQLite database file
+- `dpm.py`: SQLAlchemy models
+- `utils.py`: Utility functions for working with the database
 
 ## Usage
 
 This package is intended to be used as a dependency for applications that need access to DPM data models.
+
+```python
+from dpm2 import session, SomeTable
+
+with session.begin() as s:
+    # Use the session for database operations
+    result = s.execute(select(SomeTable).where(SomeTable.some_column == some_value))
+```
 
 ## Building the Data Package
 
