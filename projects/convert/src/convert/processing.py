@@ -6,7 +6,7 @@ from pathlib import Path
 from sqlalchemy import Engine, MetaData, Table, create_engine, event, insert, select
 from sqlalchemy.orm import Session
 
-from opendpm.convert.transformations import (
+from convert.transformations import (
     TableData,
     add_foreign_keys,
     apply_enums,

@@ -6,10 +6,12 @@ from json import dump
 from pathlib import Path
 from sys import stdout
 
-from opendpm.download import download_source, extract_archive
-from opendpm.versions import (
+from archive import (
     Source,
     Version,
+    compare_version_urls,
+    download_source,
+    extract_archive,
     get_version,
     get_versions,
     get_versions_by_type,
@@ -171,16 +173,17 @@ def handle_list_command(args: Namespace) -> None:
 def handle_update_command(args: Namespace) -> None:
     """Handle the 'update' subcommand."""
     try:
-        from opendpm.scraper import get_new_reporting_frameworks
+        from scrape import get_active_reporting_frameworks
     except ImportError:
         print("Please install the 'scrape' extra: pip install opendpm[scrape]")
         return
 
-    new_reporting_frameworks = get_new_reporting_frameworks()
+    active_reporting_frameworks = get_active_reporting_frameworks()
+    new_reporting_frameworks = compare_version_urls(active_reporting_frameworks)
     if args.json:
         dump(new_reporting_frameworks, stdout)
         return
-    print(get_new_reporting_frameworks())
+    print(new_reporting_frameworks)
 
 
 def handle_source(args: Namespace, version: Version) -> Source | None:
@@ -235,7 +238,7 @@ def main() -> None:
         handle_download_command(args)
     elif args.command == "convert":
         try:
-            from opendpm.convert import convert_access_to_sqlite
+            from convert import convert_access_to_sqlite
         except ImportError:
             print("Please install the 'convert' extra: pip install opendpm[convert]")
             return

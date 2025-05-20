@@ -8,8 +8,6 @@ from typing import Final
 from bs4 import BeautifulSoup, Tag
 from requests import get, head
 
-from opendpm.versions import VersionUrls, compare_version_urls
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -81,16 +79,15 @@ def get_framework_version(url: str) -> str:
     return f"{digits[0]}.{digits[1:]}" if digits else ""
 
 
-def get_new_reporting_frameworks() -> VersionUrls:
-    """Get new reporting frameworks."""
+def get_active_reporting_frameworks() -> dict[str, set[str]]:
+    """Get active reporting frameworks."""
     version_url = {
         get_framework_version(url): url for url in get_reporting_frameworks()
     }
     filter_version_url = {
         version: url for version, url in version_url.items() if version[0] > "3"
     }
-    found_version_urls = {
+    return {
         version: extract_urls(url, ("dpm", "2.0", "zip"), ("glossary",))
         for version, url in filter_version_url.items()
     }
-    return compare_version_urls(found_version_urls)

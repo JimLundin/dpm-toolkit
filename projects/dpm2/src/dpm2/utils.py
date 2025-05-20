@@ -7,7 +7,7 @@ from typing import cast
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session
 
-dpm_db = Path(__file__).parent / "dpm.sqlite"
+db_path = Path(__file__).parent / "dpm.sqlite"
 
 
 def get_engine() -> Engine:
@@ -23,10 +23,10 @@ def get_engine() -> Engine:
     """
     engine = create_engine("sqlite://")
 
-    with connect(dpm_db) as source_conn, engine.begin() as target_conn:
+    with connect(db_path) as source_conn, engine.begin() as target_conn:
         dbapi_conn = cast("Connection | None", target_conn.connection.dbapi_connection)
         if dbapi_conn is None:
-            msg = "Failed to get DBAPI connection from SQLAlchemy engine"
+            msg = "Failed to get connection to DPM database"
             raise RuntimeError(msg)
 
         source_conn.backup(dbapi_conn)
@@ -34,4 +34,11 @@ def get_engine() -> Engine:
     return engine
 
 
-session = Session(get_engine())
+# TODO(Jim): move this to a context manager
+class DB:
+    """Represent an instance of the DPM database."""
+
+    def __init__(self) -> None:
+        """Initialize the DB instance."""
+        self.engine = get_engine()
+        self.session = Session(self.engine)

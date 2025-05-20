@@ -5,14 +5,14 @@ from pathlib import Path
 
 from sqlalchemy import create_engine, text
 
-from opendpm.convert.generation import Model
-from opendpm.convert.processing import (
+from convert.generation import Model
+from convert.processing import (
     create_access_engine,
     extract_schema_and_data,
     get_database,
     load_data,
 )
-from opendpm.convert.utils import print_path
+from convert.utils import print_path
 
 
 def convert_access_to_sqlite(source: Path, target: Path) -> None:

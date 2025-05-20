@@ -1,0 +1,16 @@
+[project]
+name = "convert"
+version = "0.1.0"
+description = "Add your description here"
+authors = [
+    { name = "Jim Lundin", email = "jimeriklundin@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "sqlalchemy>=2.0.37",
+    "sqlalchemy-access>=2.0.3",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

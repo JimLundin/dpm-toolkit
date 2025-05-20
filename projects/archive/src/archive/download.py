@@ -12,7 +12,7 @@ from requests import get
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from opendpm.versions import Source
+    from archive import Source
 
 
 def verify_checksum(data: bytes, checksum: str) -> bool:
