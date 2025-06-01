@@ -17,6 +17,7 @@ from sqlalchemy import (
     String,
     Table,
     Text,
+    Uuid,
 )
 from sqlalchemy.engine.interfaces import ReflectedColumn
 from sqlalchemy.types import TypeEngine
@@ -92,7 +93,7 @@ def genericize(_i: Inspector, _t: str, column: ReflectedColumn) -> None:
     if column_name in COLUMN_TYPE_OVERRIDES:
         column_type = COLUMN_TYPE_OVERRIDES[column_name]["sql"]
     elif is_guid(column_name):
-        column_type = Text()
+        column_type = Uuid()
     elif is_date(column_name):
         column_type = Date()
     elif is_bool(column_name):
