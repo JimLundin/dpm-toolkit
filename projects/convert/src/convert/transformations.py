@@ -14,9 +14,7 @@ from sqlalchemy import (
     Inspector,
     Integer,
     Row,
-    String,
     Table,
-    Text,
     Uuid,
 )
 from sqlalchemy.engine.interfaces import ReflectedColumn
@@ -103,10 +101,6 @@ def genericize(_i: Inspector, _t: str, column: ReflectedColumn) -> None:
     else:
         column_type = column_type.as_generic()
 
-    # All Strings are Text in SQLite
-    # Reconsider this if other databases are allowed
-    if isinstance(column_type, String):
-        column_type = Text()
     column["type"] = column_type
 
 

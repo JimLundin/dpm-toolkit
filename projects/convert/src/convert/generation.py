@@ -31,6 +31,7 @@ class Model:
         """Initialize the model generator."""
         self.metadata = metadata
         self.imports: dict[str, set[str]] = defaultdict(set)
+        self.typing_imports: dict[str, set[str]] = defaultdict(set)
         self.base = "DPM"
 
     def render(self) -> str:
@@ -54,10 +55,12 @@ class Model:
     def _generate_file(self, models: list[str]) -> str:
         """Render the complete model file."""
         base_class = self._generate_base_class()
+        typing_imports = self._generate_typing_imports()
         imports = self._generate_imports()
         header = [
             '"""SQLAlchemy models generated from DPM by the OpenDPM project."""',
             imports,
+            typing_imports,
             base_class,
         ]
 
@@ -78,6 +81,14 @@ class Model:
         return "\n".join(
             f"from {module} import {', '.join(names)}" if names else f"import {module}"
             for module, names in self.imports.items()
+        )
+
+    def _generate_typing_imports(self) -> str:
+        """Generate typing import statements."""
+        self.imports["typing"].add("TYPE_CHECKING")
+        return "if TYPE_CHECKING:\n" + "\n".join(
+            f"{indent}from {module} import {', '.join(names)}"
+            for module, names in self.typing_imports.items()
         )
 
     def _generate_table(self, table: Table) -> str:
@@ -131,7 +142,7 @@ class Model:
         if table.columns.get("RowGUID") is None:
             return ""
 
-        self.imports["typing"].add("ClassVar")
+        self.typing_imports["typing"].add("ClassVar")
         return '__mapper_args__: ClassVar = {"primary_key": (RowGUID,)}\n'
 
     def _generate_mapped_column(self, column: Column[Any]) -> str:
@@ -166,13 +177,13 @@ class Model:
         python_type_name = python_type.__name__
 
         if python_type == date:
-            self.imports["datetime"].add("date")
+            self.typing_imports["datetime"].add("date")
         elif python_type == datetime:
-            self.imports["datetime"].add("datetime")
+            self.typing_imports["datetime"].add("datetime")
         elif python_type == Decimal:
-            self.imports["decimal"].add("Decimal")
+            self.typing_imports["decimal"].add("Decimal")
         elif python_type == UUID:
-            self.imports["uuid"].add("UUID")
+            self.typing_imports["uuid"].add("UUID")
 
         if isinstance(column_type, Enum):
             self.imports["typing"].add("Literal")
