@@ -23,7 +23,7 @@ class Version(TypedDict):
     id: str
     date: date
     version: str
-    type: Literal["sample", "draft", "release", "errata"]
+    type: Literal["sample", "draft", "final", "release", "errata"]
     revision: NotRequired[int]
     replaced_by: NotRequired[str]
     original: Source
