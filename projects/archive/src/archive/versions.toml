@@ -3,68 +3,65 @@
 [[versions]]
 id = "3.2-sample"
 version = "3.2"
-semver = "3.2.0-beta.1"
-date = 2023-06-13
 type = "sample"
+semver = "3.2.0-alpha.1"
+date = 2023-06-13
 original = { url = "https://www.eba.europa.eu/assets/Reporting%20Framework/sample_dpm_2.0_database.zip" }
 
 [[versions]]
 id = "3.5-sample"
 version = "3.5"
-semver = "3.5.0-beta.1"
-date = 2024-07-09
 type = "sample"
+semver = "3.5.0-alpha.1"
+date = 2024-07-09
 original = { url = "https://www.eba.europa.eu/sites/default/files/2024-07/39caec2e-4ede-4418-91c5-1190e03b9034/dpm_databse_3.5_dpm_2.0.zip" }
 
 [[versions]]
 id = "4.0-draft"
 version = "4.0"
-semver = "4.0.0-rc.1"
-date = 2024-10-28
 type = "draft"
-replaced_by = "4.0-release"
+semver = "4.0.0-beta.1"
+date = 2024-10-28
 original = { url = "https://www.eba.europa.eu/sites/default/files/2024-10/9af4a241-1a4e-4ee4-9eb0-5f61648522e2/dpm_2.0_release_4.0.zip" }
 
 [[versions]]
 id = "4.0-release"
 version = "4.0"
+type = "release"
 semver = "4.0.0"
 date = 2024-12-19
-type = "release"
-replaced_by = "4.0-errata-4"
 original = { url = "https://www.eba.europa.eu/sites/default/files/2024-12/11b02b99-1486-4a54-815d-289558589773/dpm_2.0_release_4.0.zip" }
 
 [[versions]]
 id = "4.0-errata-4"
 version = "4.0"
+type = "errata"
 semver = "4.0.4"
 date = 2025-03-10
-type = "errata"
 revision = 4
-replaced_by = "4.0-errata-5"
 original = { url = "https://www.eba.europa.eu/sites/default/files/2025-03/c235b72f-d5fc-4ba3-a79c-23b5ad2a9eea/DPM2.0_release_4.0-2025-03-10.zip" }
 
 [[versions]]
 id = "4.0-errata-5"
 version = "4.0"
+type = "errata"
 semver = "4.0.5"
 date = 2025-03-20
-type = "errata"
 revision = 5
 original = { url = "https://www.eba.europa.eu/sites/default/files/2025-03/1cd56b9d-5919-4071-91e9-3d8a3ccff9e5/DPM2.0_release_4.0_2025-03-20.zip" }
 
 [[versions]]
 id = "4.1-draft"
 version = "4.1"
-semver = "4.1.0-rc.1"
-date = 2025-03-27
 type = "draft"
+semver = "4.1.0-beta.1"
+date = 2025-03-27
 original = { url = "https://www.eba.europa.eu/sites/default/files/2025-03/d931f7ac-0493-42c8-8e7a-3207c5479131/DPM%20Database%202.0%20%28release%204.1%20draft%29.zip" }
 
 [[versions]]
 id = "4.1-final"
 version = "4.1"
+type = "final"
 semver = "4.1.0"
 date = 2025-05-28
-type = "final"
 original = { url = "https://www.eba.europa.eu/sites/default/files/2025-05/b0fb26ab-265c-41f9-9c8d-72b3f8895143/DPM%202.0%20release%204.1.zip" }
