@@ -6,6 +6,7 @@ from collections.abc import Iterable
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
+from uuid import UUID
 
 from sqlalchemy import Column, Enum, MetaData, Table
 from sqlalchemy.exc import SAWarning
@@ -170,6 +171,8 @@ class Model:
             self.imports["datetime"].add("datetime")
         elif python_type == Decimal:
             self.imports["decimal"].add("Decimal")
+        elif python_type == UUID:
+            self.imports["uuid"].add("UUID")
 
         if isinstance(column_type, Enum):
             self.imports["typing"].add("Literal")
