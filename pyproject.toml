@@ -43,8 +43,6 @@ dev = [
     "types-requests>=2.32.0.20250328",
 ]
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/opendpm"]
 
 [tool.hatch.metadata]
 allow-direct-references = true
