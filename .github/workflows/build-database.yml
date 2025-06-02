@@ -14,17 +14,17 @@ jobs:
     
     steps:
     - uses: actions/checkout@v4
+
+    - name: Install UV
+      uses: astral-sh/setup-uv@v5
     
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.13'
-        cache: 'pip'
+        python-version-file: 'pyproject.toml'
     
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e .[convert]
+    - name: Install project
+      run: uv sync --locked --all-extras --dev
 
     - name: Cache Access Database Engine
       id: cache-access-engine
@@ -67,7 +67,6 @@ jobs:
     - name: Format generated models with ruff
       shell: bash
       run: |
-        pip install ruff
         ruff format *.py
         ruff check --fix-only *.py
         ruff format *.py
@@ -75,7 +74,6 @@ jobs:
     - name: Type check generated models
       shell: bash
       run: |
-        pip install mypy
         mypy *.py
 
     - name: Upload SQLite database artifact
