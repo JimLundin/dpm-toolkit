@@ -25,7 +25,7 @@ jobs:
     
     - name: Install dependencies
       run: |
-        uv sync --locked --all-extras --dev
+        uv sync --locked
     
     - name: Get latest version
       id: get-latest-version
