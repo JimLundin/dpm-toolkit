@@ -57,12 +57,12 @@ jobs:
       if: steps.cache-dbs.outputs.cache-hit != 'true'
       shell: bash
       run: |
-        opendpm download -v ${{ inputs.version_id }}
+        uv run opendpm download -v ${{ inputs.version_id }}
 
     - name: Convert to SQLite database
       shell: bash
       run: |
-        opendpm convert
+        uv run opendpm convert
         
     - name: Format generated models with ruff
       shell: bash
