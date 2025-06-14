@@ -22,11 +22,9 @@ def disk_engine() -> Engine:
 
 def in_memory_engine() -> Engine:
     """Get an engine to the dpm db."""
-    source_db = connect(db_path)
     memory_db = connect(":memory:")
-    source_db.backup(memory_db)
-    source_db.close()
-
+    with connect(db_path) as source_db:
+        source_db.backup(memory_db)
     return create_engine("sqlite://", creator=lambda: memory_db)
 
 
