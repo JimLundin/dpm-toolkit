@@ -1,44 +1,37 @@
 """db utilities for using the dpm db."""
 
 from pathlib import Path
-from sqlite3 import Connection, connect
-from typing import cast
+from sqlite3 import connect
 
-from sqlalchemy import Engine, create_engine
-from sqlalchemy.orm import Session
+from sqlalchemy import Connection, Engine, create_engine, text
+from sqlalchemy.event import listen
+from sqlalchemy.pool import ConnectionPoolEntry
 
 db_path = Path(__file__).parent / "dpm.sqlite"
 
 
-def get_engine() -> Engine:
-    """Get an engine to the dpm db.
+def set_readonly(connection: Connection, _record: ConnectionPoolEntry) -> None:
+    """Set the connection to readonly."""
+    connection.execute(text("PRAGMA readonly = true"))
 
-    This function copies the packaged database into memory to prevent
-    modifications to the original database file and allow users to
-    make arbitrary changes safely.
 
-    Returns:
-        Engine: SQLAlchemy engine connected to the in-memory copy of the database
+def disk_engine() -> Engine:
+    """Get an engine to the dpm db."""
+    return create_engine(f"sqlite:///{db_path}?mode=ro", connect_args={"uri": True})
 
-    """
-    engine = create_engine("sqlite://")
 
-    with connect(db_path) as source_conn, engine.begin() as target_conn:
-        dbapi_conn = cast("Connection | None", target_conn.connection.dbapi_connection)
-        if dbapi_conn is None:
-            msg = "Failed to get connection to DPM database"
-            raise RuntimeError(msg)
+def in_memory_engine() -> Engine:
+    """Get an engine to the dpm db."""
+    source_db = connect(str(db_path))
+    memory_db = connect(":memory:")
+    source_db.backup(memory_db)
+    source_db.close()
 
-        source_conn.backup(dbapi_conn)
+    return create_engine("sqlite://", creator=lambda: memory_db)
 
+
+def get_db(*, in_memory: bool = False) -> Engine:
+    """Get an engine to the dpm db."""
+    engine = in_memory_engine() if in_memory else disk_engine()
+    listen(engine, "connect", set_readonly)
     return engine
-
-
-# TODO(Jim): move this to a context manager
-class DB:
-    """Represent an instance of the DPM database."""
-
-    def __init__(self) -> None:
-        """Initialize the DB instance."""
-        self.engine = get_engine()
-        self.session = Session(self.engine)
