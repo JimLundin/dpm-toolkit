@@ -65,3 +65,12 @@ type = "final"
 semver = "4.1.0"
 date = 2025-05-28
 original = { url = "https://www.eba.europa.eu/sites/default/files/2025-05/b0fb26ab-265c-41f9-9c8d-72b3f8895143/DPM%202.0%20release%204.1.zip" }
+
+[[versions]]
+id = "4.1-errata-1"
+version = "4.1"
+type = "errata"
+semver = "4.1.1"
+date = 2025-07-04
+revision = 1
+original = { url = "https://www.eba.europa.eu/sites/default/files/2025-07/c5e64c91-0e04-4419-8943-4963271ed983/DPM%202.0%20%20Database_v%204_1_20250625.accdb_.zip" }
