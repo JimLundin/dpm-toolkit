@@ -24,7 +24,7 @@ jobs:
         python-version-file: 'pyproject.toml'
     
     - name: Install project
-      run: uv sync --locked --extra convert --dev
+      run: uv sync --extra convert --dev
 
     - name: Cache Access Database Engine
       id: cache-access-engine
@@ -67,9 +67,9 @@ jobs:
     - name: Format generated models with ruff
       shell: bash
       run: |
-        uv run ruff format *.py
-        uv run ruff check --fix-only *.py
-        uv run ruff format *.py
+        uv run ruff format
+        uv run ruff check --fix-only
+        uv run ruff format
 
     - name: Type check generated models
       shell: bash
