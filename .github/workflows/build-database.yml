@@ -67,19 +67,19 @@ jobs:
     - name: Format generated models with ruff
       shell: bash
       run: |
-        uv run ruff format
-        uv run ruff check --fix-only
-        uv run ruff format
+        uv run ruff format *.py
+        uv run ruff check *.py --fix-only
+        uv run ruff format *.py
 
     - name: Type check generated models using mypy
       shell: bash
       run: |
-        uv run mypy .
+        uv run mypy *.py
 
     - name: Type check generated models using ty (ignore errors)
       shell: bash
       run: |
-        uv run ty check . --exit-zero
+        uv run ty check *.py --exit-zero
 
     - name: Upload SQLite database artifact
       uses: actions/upload-artifact@v4
