@@ -24,7 +24,7 @@ jobs:
         python-version-file: 'pyproject.toml'
     
     - name: Install project
-      run: uv sync --locked
+      run: uv sync
     
     - name: Get versions and set matrix
       id: set-matrix
