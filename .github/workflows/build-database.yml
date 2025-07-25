@@ -75,7 +75,7 @@ jobs:
       shell: bash
       run: |
         uv run mypy .
-        uv run ty
+        uv run ty check
 
     - name: Upload SQLite database artifact
       uses: actions/upload-artifact@v4
