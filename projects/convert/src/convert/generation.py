@@ -14,6 +14,18 @@ from sqlalchemy.exc import SAWarning
 
 indent = "    "
 
+KEYWORDS = {
+    "class",
+    "def",
+    "for",
+    "if",
+    "in",
+    "is",
+    "lambda",
+    "return",
+    "while",
+}
+
 
 def normalise_column_name(name: str) -> str:
     """Normalise column names by applying heuristics."""
@@ -276,8 +288,13 @@ class Model:
 
         src_type = f"{ref_table.name} | None" if src_col.nullable else ref_table.name
 
+        src_name = to_snake_case(src_name)
+
+        if src_name in KEYWORDS:
+            src_name = to_snake_case(src_type)
+
         self.imports["sqlalchemy.orm"].update(("Mapped", "relationship"))
         return (
-            f"{indent}{to_snake_case(src_name)}: Mapped[{src_type}]"
+            f"{indent}{src_name}: Mapped[{src_type}]"
             f" = relationship(foreign_keys={to_snake_case(src_col.name)})"
         )
