@@ -225,7 +225,7 @@ class Model:
             foreign_keys.extend(
                 f'"{to_snake_case(fk.column.name)}"'
                 if fk.column.name == column.name
-                else fk.column.name
+                else to_snake_case(fk.column.name)
                 for fk in column.foreign_keys
                 if fk.column.table == column.table
             )
