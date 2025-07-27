@@ -278,6 +278,6 @@ class Model:
 
         self.imports["sqlalchemy.orm"].update(("Mapped", "relationship"))
         return (
-            f"{indent}{src_name}: Mapped[{src_type}]"
+            f"{indent}{to_snake_case(src_name)}: Mapped[{src_type}]"
             f" = relationship(foreign_keys={to_snake_case(src_col.name)})"
         )
