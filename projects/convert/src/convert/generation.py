@@ -217,13 +217,13 @@ class Model:
         if column.table.name == "Concept":
             # For Concept, we quote the references to avoid circular dependencies
             foreign_keys.extend(
-                f'"{fk.column.table.name}.{fk.column.name}"'
+                f'"{fk.column.table.name}.{to_snake_case(fk.column.name)}"'
                 for fk in column.foreign_keys
             )
         else:
             # Self referential FKs
             foreign_keys.extend(
-                f'"{fk.column.name}"'
+                f'"{to_snake_case(fk.column.name)}"'
                 if fk.column.name == column.name
                 else fk.column.name
                 for fk in column.foreign_keys
@@ -231,7 +231,7 @@ class Model:
             )
             # External pointing FKs
             foreign_keys.extend(
-                f"{fk.column.table.name}.{fk.column.name}"
+                f"{fk.column.table.name}.{to_snake_case(fk.column.name)}"
                 for fk in column.foreign_keys
                 if fk.column.table != column.table
             )
