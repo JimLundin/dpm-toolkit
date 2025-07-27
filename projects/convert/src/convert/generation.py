@@ -5,6 +5,7 @@ from collections import defaultdict
 from collections.abc import Iterable
 from datetime import date, datetime
 from decimal import Decimal
+from re import sub
 from typing import Any
 from uuid import UUID
 
@@ -17,6 +18,11 @@ indent = "    "
 def normalise_column_name(name: str) -> str:
     """Normalise column names by applying heuristics."""
     return name.removesuffix("GUID").replace("VID", "Version").removesuffix("ID")
+
+
+def to_snake_case(name: str) -> str:
+    """Convert a name to snake_case."""
+    return sub("([a-z0-9])([A-Z])|([A-Z])([A-Z][a-z])", r"\1\3_\2\4", name).lower()
 
 
 def format_foreign_key(key: str) -> str:
@@ -147,7 +153,7 @@ class Model:
 
     def _generate_mapped_column(self, column: Column[Any]) -> str:
         """Generate SQLAlchemy column definition."""
-        name = column.name
+        name = to_snake_case(column.name)
         python_type = self._get_python_type(column)
 
         self.imports["sqlalchemy.orm"].add("Mapped")
