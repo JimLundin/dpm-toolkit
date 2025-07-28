@@ -27,8 +27,13 @@ KEYWORDS = {
 }
 
 
-def normalise_column_name(name: str) -> str:
-    """Normalise column names by applying heuristics."""
+def to_pascal_case(name: str) -> str:
+    """Normalise table names to PascalCase."""
+    return "".join(word[0].upper() + word[1:] for word in name.split("_"))
+
+
+def to_relation_name(name: str) -> str:
+    """Normalise relation names."""
     return name.removesuffix("GUID").replace("VID", "Version").removesuffix("ID")
 
 
@@ -118,9 +123,8 @@ class Model:
         )
 
         self.imports["sqlalchemy"].add("Table as AlchemyTable")
-        return (
-            f"{table.name} = AlchemyTable(\n{INDENT}{f',\n{INDENT}'.join(lines)}\n)\n"
-        )
+        return f"""{to_pascal_case(table.name)} = AlchemyTable(
+            \n{INDENT}{f",\n{INDENT}".join(lines)}\n)\n"""
 
     def _generate_column(self, column: Column[Any]) -> str:
         """Generate a SQLAlchemy column."""
@@ -140,7 +144,7 @@ class Model:
         """Generate a SQLAlchemy model for a table."""
         noqa = "" if table.name.isalpha() else "# noqa: N801"
         lines = (
-            f"class {table.name}({self.base}):{noqa}",
+            f"class {to_pascal_case(table.name)}({self.base}):{noqa}",
             f'{INDENT}"""Auto-generated model for the {table.name} table."""',
             f'{INDENT}__tablename__ = "{table.name}"\n',
             f"{INDENT}# We quote the references to avoid circular dependencies"
@@ -228,7 +232,7 @@ class Model:
         if column.table.name == "Concept":
             # For Concept, we quote the references to avoid circular dependencies
             foreign_keys.extend(
-                f'"{fk.column.table.name}.{to_snake_case(fk.column.name)}"'
+                f'"{to_pascal_case(fk.column.table.name)}.{to_snake_case(fk.column.name)}"'
                 for fk in column.foreign_keys
             )
         else:
@@ -242,7 +246,7 @@ class Model:
             )
             # External pointing FKs
             foreign_keys.extend(
-                f"{fk.column.table.name}.{to_snake_case(fk.column.name)}"
+                f"{to_pascal_case(fk.column.table.name)}.{to_snake_case(fk.column.name)}"
                 for fk in column.foreign_keys
                 if fk.column.table != column.table
             )
@@ -258,19 +262,19 @@ class Model:
             self._generate_relationship(column, fk.column)
             for column in table.columns
             for fk in column.foreign_keys
-            if normalise_column_name(column.name) != fk.column.table.name
+            if to_relation_name(column.name) != fk.column.table.name
         )
         relationships.extend(
             self._generate_relationship(column, fk.column)
             for column in table.columns
             for fk in column.foreign_keys
-            if normalise_column_name(column.name) == fk.column.table.name
+            if to_relation_name(column.name) == fk.column.table.name
         )
         return relationships
 
     def _generate_relationship(self, src_col: Column[Any], ref_col: Column[Any]) -> str:
         """Generate a SQLAlchemy relationship definition."""
-        src_name = normalise_column_name(src_col.name)
+        src_name = to_relation_name(src_col.name)
         ref_table = ref_col.table
         if src_col.name == "RowGUID":  # for entities that reference Concept and RowGUID
             src_name = "RowConcept"
@@ -294,6 +298,6 @@ class Model:
 
         self.imports["sqlalchemy.orm"].update(("Mapped", "relationship"))
         return (
-            f"{INDENT}{src_name}: Mapped[{src_type}]"
+            f"{INDENT}{src_name}: Mapped[{to_pascal_case(src_type)}]"
             f" = relationship(foreign_keys={to_snake_case(src_col.name)})"
         )
