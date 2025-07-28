@@ -291,7 +291,7 @@ class Model:
         src_name = to_snake_case(src_name)
 
         if src_name in KEYWORDS:
-            src_name = to_snake_case(src_type)
+            src_name = f"{src_name}_"
 
         self.imports["sqlalchemy.orm"].update(("Mapped", "relationship"))
         return (
