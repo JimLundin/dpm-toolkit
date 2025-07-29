@@ -161,11 +161,13 @@ class Model:
 
     def _generate_mapper_args(self, table: Table) -> str:
         """Generate a SQLAlchemy mapper for a table."""
-        if table.columns.get("RowGUID") is None:
+        row_guid = "RowGUID"
+        if table.columns.get(row_guid) is None:
             return ""
 
         self.typing_imports["typing"].add("ClassVar")
-        return '__mapper_args__: ClassVar = {"primary_key": (row_guid,)}\n'
+        return f"""__mapper_args__: ClassVar =
+        {"primary_key": ({to_snake_case(row_guid)},)}\n"""
 
     def _generate_mapped_column(self, column: Column[Any]) -> str:
         """Generate SQLAlchemy column definition."""
