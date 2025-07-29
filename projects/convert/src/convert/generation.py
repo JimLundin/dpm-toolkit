@@ -175,16 +175,17 @@ class Model:
         self.imports["sqlalchemy.orm"].add("Mapped")
         declaration = f"{INDENT}{name}: Mapped[{python_type}]"
 
-        kwargs = self._generate_column_key_attributes(column)
         fks = self._generate_column_foreign_keys(column)
+        kwargs = self._generate_column_key_attributes(column)
 
-        kwargs_str = ", ".join(f"{k}={v}" for k, v in kwargs.items())
+        name_str = f'"{column.name}"'
         fks_str = ", ".join(fks)
+        kwargs_str = ", ".join(f"{k}={v}" for k, v in kwargs.items())
 
-        combined_args = ", ".join(filter(None, [fks_str, kwargs_str]))
+        combined_args = ", ".join(filter(None, [name_str, fks_str, kwargs_str]))
 
         self.imports["sqlalchemy.orm"].add("mapped_column")
-        return f'{declaration} = mapped_column("{column.name}", {combined_args})'
+        return f"{declaration} = mapped_column({combined_args})"
 
     def _get_python_type(self, column: Column[Any]) -> str:
         """Get Python type for a column."""
