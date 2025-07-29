@@ -178,16 +178,13 @@ class Model:
         kwargs = self._generate_column_key_attributes(column)
         fks = self._generate_column_foreign_keys(column)
 
-        if not kwargs and not fks:
-            return declaration
-
         kwargs_str = ", ".join(f"{k}={v}" for k, v in kwargs.items())
         fks_str = ", ".join(fks)
 
         combined_args = ", ".join(filter(None, [fks_str, kwargs_str]))
 
         self.imports["sqlalchemy.orm"].add("mapped_column")
-        return f"{declaration} = mapped_column({combined_args})"
+        return f'{declaration} = mapped_column("{column.name}", {combined_args})'
 
     def _get_python_type(self, column: Column[Any]) -> str:
         """Get Python type for a column."""
@@ -216,8 +213,6 @@ class Model:
         kwargs: dict[str, Any] = {}
         if column.primary_key:
             kwargs["primary_key"] = True
-
-        kwargs["name"] = f'"{column.name}"'
 
         return kwargs
 
