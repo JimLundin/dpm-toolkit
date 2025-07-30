@@ -71,7 +71,8 @@ def extract_schema_and_data(source: Engine) -> tuple[MetaData, TableDataMap]:
 
             # Clear indexes to avoid name collisions and save space
             table.indexes.clear()
-            table.kwargs["sqlite_with_rowid"] = False
+            if table.primary_key:
+                table.kwargs["sqlite_with_rowid"] = False
 
             apply_enums(table, enums)
             mark_non_nullable(table, nullables)
