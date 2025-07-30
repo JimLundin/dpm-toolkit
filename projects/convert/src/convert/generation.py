@@ -166,8 +166,11 @@ class Model:
             return ""
 
         self.typing_imports["typing"].add("ClassVar")
-        return f"""__mapper_args__: ClassVar =
-        {{'primary_key': ({snake_case(row_guid)},)}}"""
+        return (
+            "__mapper_args__: ClassVar = {\n"
+            f'{INDENT}"primary_key": ({snake_case(row_guid)},)\n'
+            "}\n"
+        )
 
     def _generate_mapped_column(self, column: Column[Any]) -> str:
         """Generate SQLAlchemy column definition."""
