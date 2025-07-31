@@ -12,7 +12,6 @@ from convert.processing import (
     get_database,
     load_data,
 )
-from convert.utils import print_path
 
 
 def convert_access_to_sqlite(source: Path, target: Path) -> None:
@@ -27,7 +26,7 @@ def convert_access_to_sqlite(source: Path, target: Path) -> None:
 
     database = source if source.is_file() else get_database(source)
     if not database:
-        print(f"No Access database files found in {print_path(source)}")
+        print(f"No Access database files found in {source}")
         return
 
     print(f"Processing: {database.stem}")
@@ -50,7 +49,7 @@ def convert_access_to_sqlite(source: Path, target: Path) -> None:
 
     with sqlite.connect() as connection:
         connection.execute(text(f"VACUUM INTO '{sqlite_path}'"))
-        print(f"Saved: {print_path(sqlite_path)}")
+        print(f"Saved: {sqlite_path}")
 
     stop_time = datetime.now(UTC)
     print(f"Migrated database in {stop_time - start_time}")
