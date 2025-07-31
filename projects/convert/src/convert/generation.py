@@ -276,7 +276,7 @@ class Model:
         src_name = relation_name(src_col.name)
         ref_table = ref_col.table
         if src_col.name == "RowGUID":  # for entities that reference Concept and RowGUID
-            src_name = "RowConcept"
+            src_name = "UniqueConcept"
         if src_name == src_col.table.name:  # this covers PK to PK relationships
             src_name = ref_table.name
         if src_name == src_col.name:  # avoid name collision when the name = column name
