@@ -142,22 +142,21 @@ class Model:
 
     def _generate_class(self, table: Table) -> str:
         """Generate a SQLAlchemy model for a table."""
-        noqa = "" if table.name.isalpha() else "# noqa: N801"
-        lines = (
-            f"class {pascal_case(table.name)}({self.base}):{noqa}",
-            f'{INDENT}"""Auto-generated model for the {table.name} table."""',
-            f'{INDENT}__tablename__ = "{table.name}"\n',
-            f"{INDENT}# We quote the references to avoid circular dependencies"
-            if table.name == "Concept"
-            else "",
-            *(self._generate_mapped_column(column) for column in table.columns),
-            f"\n{INDENT}{self._generate_mapper_args(table)}"
-            if not table.primary_key
-            else "",
-            *self._generate_relationships(table),
+        return "\n".join(
+            (
+                f"class {pascal_case(table.name)}({self.base}):",
+                f'{INDENT}"""Auto-generated model for the {table.name} table."""',
+                f'{INDENT}__tablename__ = "{table.name}"\n',
+                f"{INDENT}# We quote the references to avoid circular dependencies"
+                if table.name == "Concept"
+                else "",
+                *(self._generate_mapped_column(column) for column in table.columns),
+                f"\n{INDENT}{self._generate_mapper_args(table)}"
+                if not table.primary_key
+                else "",
+                *self._generate_relationships(table),
+            ),
         )
-
-        return "\n".join(lines)
 
     def _generate_mapper_args(self, table: Table) -> str:
         """Generate a SQLAlchemy mapper for a table."""
