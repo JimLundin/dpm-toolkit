@@ -5,21 +5,44 @@ from collections import defaultdict
 from collections.abc import Iterable
 from datetime import date, datetime
 from decimal import Decimal
+from re import sub
 from typing import Any
 from uuid import UUID
 
 from sqlalchemy import Column, Enum, MetaData, Table
 from sqlalchemy.exc import SAWarning
 
-indent = "    "
+INDENT = "    "
+
+KEYWORDS = {
+    "class",
+    "def",
+    "for",
+    "if",
+    "in",
+    "is",
+    "lambda",
+    "return",
+    "while",
+}
 
 
-def normalise_column_name(name: str) -> str:
-    """Normalise column names by applying heuristics."""
+def pascal_case(name: str) -> str:
+    """Normalise table names to PascalCase."""
+    return "".join(word[0].upper() + word[1:] for word in name.split("_"))
+
+
+def relation_name(name: str) -> str:
+    """Normalise relation names."""
     return name.removesuffix("GUID").replace("VID", "Version").removesuffix("ID")
 
 
-def format_foreign_key(key: str) -> str:
+def snake_case(name: str) -> str:
+    """Convert a name to snake_case."""
+    return sub("([a-z0-9])([A-Z])|([A-Z])([A-Z][a-z])", r"\1\3_\2\4", name).lower()
+
+
+def foreign_key(key: str) -> str:
     """Render a foreign key."""
     return f"ForeignKey({key})"
 
@@ -73,7 +96,7 @@ class Model:
             "# We use DeclarativeMeta instead of DeclarativeBase\n"
             "# to be compatible with mypy and __mapper_args__\n"
             f"class {self.base}(metaclass=DeclarativeMeta):\n"
-            f'{indent}"""Base class for all DPM models."""'
+            f'{INDENT}"""Base class for all DPM models."""'
         )
 
     def _generate_imports(self) -> str:
@@ -87,7 +110,7 @@ class Model:
         """Generate typing import statements."""
         self.imports["typing"].add("TYPE_CHECKING")
         return "if TYPE_CHECKING:\n" + "\n".join(
-            f"{indent}from {module} import {', '.join(names)}"
+            f"{INDENT}from {module} import {', '.join(names)}"
             for module, names in self.typing_imports.items()
         )
 
@@ -100,9 +123,8 @@ class Model:
         )
 
         self.imports["sqlalchemy"].add("Table as AlchemyTable")
-        return (
-            f"{table.name} = AlchemyTable(\n{indent}{f',\n{indent}'.join(lines)}\n)\n"
-        )
+        return f"""{pascal_case(table.name)} = AlchemyTable(
+            \n{INDENT}{f",\n{INDENT}".join(lines)}\n)\n"""
 
     def _generate_column(self, column: Column[Any]) -> str:
         """Generate a SQLAlchemy column."""
@@ -120,55 +142,53 @@ class Model:
 
     def _generate_class(self, table: Table) -> str:
         """Generate a SQLAlchemy model for a table."""
-        noqa = "" if table.name.isalpha() else "# noqa: N801"
-        lines = (
-            f"class {table.name}({self.base}):{noqa}",
-            f'{indent}"""Auto-generated model for the {table.name} table."""',
-            f'{indent}__tablename__ = "{table.name}"\n',
-            f"{indent}# We quote the references to avoid circular dependencies"
-            if table.name == "Concept"
-            else "",
-            *(self._generate_mapped_column(column) for column in table.columns),
-            f"\n{indent}{self._generate_mapper_args(table)}"
-            if not table.primary_key
-            else "",
-            *self._generate_relationships(table),
+        return "\n".join(
+            (
+                f"class {pascal_case(table.name)}({self.base}):",
+                f'{INDENT}"""Auto-generated model for the {table.name} table."""',
+                f'{INDENT}__tablename__ = "{table.name}"\n',
+                f"{INDENT}# We quote the references to avoid circular dependencies"
+                if table.name == "Concept"
+                else "",
+                *(self._generate_mapped_column(column) for column in table.columns),
+                f"\n{INDENT}{self._generate_mapper_args(table)}"
+                if not table.primary_key
+                else "",
+                *self._generate_relationships(table),
+            ),
         )
-
-        return "\n".join(lines)
 
     def _generate_mapper_args(self, table: Table) -> str:
         """Generate a SQLAlchemy mapper for a table."""
-        if table.columns.get("RowGUID") is None:
+        row_guid = "RowGUID"
+        row_guid_column = table.columns.get(row_guid)
+        if row_guid_column is None or row_guid_column.nullable:
             return ""
 
         self.typing_imports["typing"].add("ClassVar")
-        return '__mapper_args__: ClassVar = {"primary_key": (RowGUID,)}\n'
+        return (
+            "__mapper_args__: ClassVar = {\n"
+            f'{INDENT}"primary_key": ({snake_case(row_guid)},)\n'
+            "}\n"
+        )
 
     def _generate_mapped_column(self, column: Column[Any]) -> str:
         """Generate SQLAlchemy column definition."""
-        name = column.name
+        name = snake_case(column.name)
         python_type = self._get_python_type(column)
 
         self.imports["sqlalchemy.orm"].add("Mapped")
-        declaration = f"{indent}{name}: Mapped[{python_type}]"
+        declaration = f"{INDENT}{name}: Mapped[{python_type}]"
 
-        kwargs = self._generate_column_key_attributes(column)
         fks = self._generate_column_foreign_keys(column)
+        kwargs = self._generate_column_key_attributes(column)
 
-        # if the column name does not start with an uppercase letter, add a noqa
-        noqa = "# noqa: N815" if not name[0].isupper() and len(name) > 1 else ""
-
-        if not kwargs and not fks:
-            return f"{declaration}{noqa}"
-
-        kwargs_str = ", ".join(f"{k}={v}" for k, v in kwargs.items())
-        fks_str = ", ".join(fks)
-
-        combined_args = ", ".join(filter(None, [fks_str, kwargs_str]))
+        combined_args = ", ".join(
+            (f'"{column.name}"', *fks, *(f"{k}={v}" for k, v in kwargs.items())),
+        )
 
         self.imports["sqlalchemy.orm"].add("mapped_column")
-        return f"{declaration} = mapped_column({combined_args}){noqa}"
+        return f"{declaration} = mapped_column({combined_args})"
 
     def _get_python_type(self, column: Column[Any]) -> str:
         """Get Python type for a column."""
@@ -211,26 +231,26 @@ class Model:
         if column.table.name == "Concept":
             # For Concept, we quote the references to avoid circular dependencies
             foreign_keys.extend(
-                f'"{fk.column.table.name}.{fk.column.name}"'
+                f'"{pascal_case(fk.column.table.name)}.{snake_case(fk.column.name)}"'
                 for fk in column.foreign_keys
             )
         else:
             # Self referential FKs
             foreign_keys.extend(
-                f'"{fk.column.name}"'
+                f'"{snake_case(fk.column.name)}"'
                 if fk.column.name == column.name
-                else fk.column.name
+                else snake_case(fk.column.name)
                 for fk in column.foreign_keys
                 if fk.column.table == column.table
             )
             # External pointing FKs
             foreign_keys.extend(
-                f"{fk.column.table.name}.{fk.column.name}"
+                f"{pascal_case(fk.column.table.name)}.{snake_case(fk.column.name)}"
                 for fk in column.foreign_keys
                 if fk.column.table != column.table
             )
 
-        return (format_foreign_key(fk) for fk in foreign_keys)
+        return (foreign_key(fk) for fk in foreign_keys)
 
     def _generate_relationships(self, table: Table) -> list[str]:
         """Generate SQLAlchemy relationship definitions."""
@@ -241,22 +261,22 @@ class Model:
             self._generate_relationship(column, fk.column)
             for column in table.columns
             for fk in column.foreign_keys
-            if normalise_column_name(column.name) != fk.column.table.name
+            if relation_name(column.name) != fk.column.table.name
         )
         relationships.extend(
             self._generate_relationship(column, fk.column)
             for column in table.columns
             for fk in column.foreign_keys
-            if normalise_column_name(column.name) == fk.column.table.name
+            if relation_name(column.name) == fk.column.table.name
         )
         return relationships
 
     def _generate_relationship(self, src_col: Column[Any], ref_col: Column[Any]) -> str:
         """Generate a SQLAlchemy relationship definition."""
-        src_name = normalise_column_name(src_col.name)
+        src_name = relation_name(src_col.name)
         ref_table = ref_col.table
         if src_col.name == "RowGUID":  # for entities that reference Concept and RowGUID
-            src_name = "RowConcept"
+            src_name = "UniqueConcept"
         if src_name == src_col.table.name:  # this covers PK to PK relationships
             src_name = ref_table.name
         if src_name == src_col.name:  # avoid name collision when the name = column name
@@ -270,8 +290,13 @@ class Model:
 
         src_type = f"{ref_table.name} | None" if src_col.nullable else ref_table.name
 
+        src_name = snake_case(src_name)
+
+        if src_name in KEYWORDS:
+            src_name = f"{src_name}_"
+
         self.imports["sqlalchemy.orm"].update(("Mapped", "relationship"))
         return (
-            f"{indent}{src_name}: Mapped[{src_type}]"
-            f" = relationship(foreign_keys={src_col.name})"
+            f"{INDENT}{src_name}: Mapped[{pascal_case(src_type)}]"
+            f" = relationship(foreign_keys={snake_case(src_col.name)})"
         )
