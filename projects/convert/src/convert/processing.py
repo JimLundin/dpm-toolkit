@@ -4,7 +4,6 @@ from logging import getLogger
 from pathlib import Path
 
 from sqlalchemy import Engine, MetaData, Table, create_engine, event, insert, select
-from sqlalchemy.orm import Session
 
 from convert.transformations import (
     TableData,
@@ -64,13 +63,14 @@ def extract_schema_and_data(source: Engine) -> tuple[MetaData, TableDataMap]:
     metadata = reflect_schema(source)
 
     tables: TableDataMap = []
-    with Session(source) as session:
+    with source.begin() as connection:
         for table in metadata.tables.values():
-            data = session.execute(select(table)).all()
+            data = connection.execute(select(table)).all()
             rows, enums, nullables = parse(data)
 
             # Clear indexes to avoid name collisions and save space
             table.indexes.clear()
+            # We are using non-integer primary keys, we disable rowid to save space
             if table.primary_key:
                 table.kwargs["sqlite_with_rowid"] = False
 
