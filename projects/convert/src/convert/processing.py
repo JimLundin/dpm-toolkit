@@ -86,8 +86,6 @@ def extract_schema_and_data(source: Engine) -> tuple[MetaData, TableDataMap]:
 
 def load_data(target: Engine, tables: TableDataMap) -> None:
     """Populate the target database with data from the source database."""
-    with Session(target) as session:
+    with target.begin() as connection:
         for table, data in tables:
-            session.execute(insert(table), data)
-
-        session.commit()
+            connection.execute(insert(table), data)
