@@ -162,7 +162,8 @@ class Model:
     def _generate_mapper_args(self, table: Table) -> str:
         """Generate a SQLAlchemy mapper for a table."""
         row_guid = "RowGUID"
-        if table.columns.get(row_guid) is None:
+        row_guid_column = table.columns.get(row_guid)
+        if row_guid_column is None or row_guid_column.nullable:
             return ""
 
         self.typing_imports["typing"].add("ClassVar")
