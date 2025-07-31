@@ -184,11 +184,9 @@ class Model:
         fks = self._generate_column_foreign_keys(column)
         kwargs = self._generate_column_key_attributes(column)
 
-        name_str = f'"{column.name}"'
-        fks_str = ", ".join(fks)
-        kwargs_str = ", ".join(f"{k}={v}" for k, v in kwargs.items())
-
-        combined_args = ", ".join(filter(None, [name_str, fks_str, kwargs_str]))
+        combined_args = ", ".join(
+            (f'"{column.name}"', *fks, *(f"{k}={v}" for k, v in kwargs.items())),
+        )
 
         self.imports["sqlalchemy.orm"].add("mapped_column")
         return f"{declaration} = mapped_column({combined_args})"
