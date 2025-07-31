@@ -89,3 +89,5 @@ def load_data(target: Engine, tables: TableDataMap) -> None:
     with Session(target) as session:
         for table, data in tables:
             session.execute(insert(table), data)
+
+        session.commit()
