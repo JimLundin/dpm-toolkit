@@ -1,5 +1,6 @@
 """Model generator for generating SQLAlchemy models from database metadata."""
 
+import keyword
 import warnings
 from collections import defaultdict
 from collections.abc import Iterable
@@ -13,18 +14,6 @@ from sqlalchemy import Column, Enum, MetaData, Table
 from sqlalchemy.exc import SAWarning
 
 INDENT = "    "
-
-KEYWORDS = {
-    "class",
-    "def",
-    "for",
-    "if",
-    "in",
-    "is",
-    "lambda",
-    "return",
-    "while",
-}
 
 
 def pascal_case(name: str) -> str:
@@ -292,7 +281,7 @@ class Model:
 
         src_name = snake_case(src_name)
 
-        if src_name in KEYWORDS:
+        if src_name in keyword.kwlist:
             src_name = f"{src_name}_"
 
         self.imports["sqlalchemy.orm"].update(("Mapped", "relationship"))
