@@ -1,0 +1,45 @@
+name: Publish DPM2 Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish'
+        required: true
+        type: string
+
+jobs:
+  publish:
+    runs-on: windows-latest  # Required for Access DB conversion
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install UV
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+      
+      - name: Set up Python
+        run: uv python install 3.13
+      
+      - name: Sync dependencies
+        run: uv sync
+      
+      - name: Regenerate dpm2 package
+        run: uv run opendpm convert --output projects/dpm2/src/dpm2/
+      
+      - name: Update dpm2 version
+        run: |
+          # Update version in projects/dpm2/pyproject.toml
+          # You may want to use a script or sed command here
+          echo "Manual version update required in projects/dpm2/pyproject.toml"
+      
+      - name: Build dpm2 package
+        run: uv build
+        working-directory: projects/dpm2
+      
+      - name: Publish dpm2 to PyPI
+        run: uv publish
+        working-directory: projects/dpm2
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
