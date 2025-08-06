@@ -17,6 +17,12 @@ jobs:
       - name: Set up Python
         run: uv python install 3.13
 
+      - name: Set CalVer version
+        run: |
+          VERSION=$(date +'%Y.%-m.%-d')
+          uv version $VERSION
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
       - name: Sync dependencies
         run: uv sync
 
