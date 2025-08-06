@@ -134,6 +134,21 @@ def create_parser() -> ArgumentParser:
         help="Directory to save SQLite databases (default: %(default)s)",
     )
 
+    schema_parser = subparsers.add_parser(
+        "schema",
+        help="Generate SQLAlchemy schema from Access database",
+    )
+    schema_parser.add_argument(
+        "--source",
+        type=Path,
+        help="Path of the SQLite to convert",
+    )
+    schema_parser.add_argument(
+        "--target",
+        type=Path,
+        help="Path to save SQLAlchemy schema file",
+    )
+
     return parser
 
 
@@ -225,6 +240,28 @@ def handle_download_command(args: Namespace) -> None:
     print(f"Downloaded version {version_id} to {target_folder}")
 
 
+def handle_convert_command(args: Namespace) -> None:
+    """Handle the 'convert' subcommand."""
+    try:
+        from convert import convert_access_to_sqlite
+    except ImportError:
+        print("Please install the 'convert' extra: pip install opendpm[convert]")
+        return
+
+    convert_access_to_sqlite(args.source, args.target)
+
+
+def handle_schema_command(args: Namespace) -> None:
+    """Handle the 'generate-schema' subcommand."""
+    try:
+        from schema import generate_schema
+    except ImportError:
+        print("Please install the 'schema' extra: pip install opendpm[schema]")
+        return
+
+    generate_schema(args.source, args.target)
+
+
 def main() -> None:
     """Entry point for the CLI."""
     parser = create_parser()
@@ -237,13 +274,9 @@ def main() -> None:
     elif args.command == "download":
         handle_download_command(args)
     elif args.command == "convert":
-        try:
-            from convert import convert_access_to_sqlite
-        except ImportError:
-            print("Please install the 'convert' extra: pip install opendpm[convert]")
-            return
-
-        convert_access_to_sqlite(args.source, args.target)
+        handle_convert_command(args)
+    elif args.command == "schema":
+        handle_schema_command(args)
     else:
         parser.print_help()
 

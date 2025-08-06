@@ -16,6 +16,7 @@ opendpm = "opendpm.cli:main"
 [project.optional-dependencies]
 scrape = ["scrape"]
 convert = ["convert"]
+schema = ["schema"]
 
 [tool.ruff]
 unsafe-fixes = true
@@ -55,3 +56,4 @@ members = ["projects/*"]
 archive = { workspace = true }
 convert = { workspace = true }
 scrape = { workspace = true }
+schema = { workspace = true }
