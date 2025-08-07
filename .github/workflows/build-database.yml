@@ -26,7 +26,7 @@ jobs:
         run: uv python install
 
       - name: Install project
-        run: uv sync --extra convert --dev
+        run: uv sync --extra convert --extra schema --dev
 
       - name: Cache Access Database Engine
         id: cache-access-engine
@@ -65,6 +65,11 @@ jobs:
         shell: bash
         run: |
           uv run opendpm convert
+
+      - name: Generate SQLAlchemy schema
+        shell: bash
+        run: |
+          uv run opendpm schema --source dpm.sqlite
 
       - name: Format generated models with ruff
         shell: bash

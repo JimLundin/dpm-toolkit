@@ -8,6 +8,7 @@ members = [
     "convert",
     "dpm2",
     "opendpm",
+    "schema",
     "scrape",
 ]
 
@@ -165,6 +166,9 @@ dependencies = [
 convert = [
     { name = "convert" },
 ]
+schema = [
+    { name = "schema" },
+]
 scrape = [
     { name = "scrape" },
 ]
@@ -183,8 +187,9 @@ requires-dist = [
     { name = "archive", virtual = "projects/archive" },
     { name = "convert", marker = "extra == 'convert'", virtual = "projects/convert" },
     { name = "scrape", marker = "extra == 'scrape'", virtual = "projects/scrape" },
+    { name = "schema", marker = "extra == 'schema'", virtual = "projects/schema" },
 ]
-provides-extras = ["scrape", "convert"]
+provides-extras = ["scrape", "convert", "schema"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -258,6 +263,17 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/b6/2b/2a1c8deb5f5dfa3871eb7daa41492c4d2b2824a74d2b38e788617612a66d/ruff-0.11.4-py3-none-win_amd64.whl", hash = "sha256:5a9fa1c69c7815e39fcfb3646bbfd7f528fa8e2d4bebdcf4c2bd0fa037a255fb", size = 11399146, upload-time = "2025-04-04T18:24:45.651Z" },
     { url = "https://files.pythonhosted.org/packages/4f/03/3aec4846226d54a37822e4c7ea39489e4abd6f88388fba74e3d4abe77300/ruff-0.11.4-py3-none-win_arm64.whl", hash = "sha256:d435db6b9b93d02934cf61ef332e66af82da6d8c69aefdea5994c89997c7a0fc", size = 10450306, upload-time = "2025-04-04T18:24:49.603Z" },
 ]
+
+[[package]]
+name = "schema"
+version = "0.1.0"
+source = { virtual = "projects/schema" }
+dependencies = [
+    { name = "sqlalchemy" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "sqlalchemy", specifier = ">=2.0.37" }]
 
 [[package]]
 name = "scrape"

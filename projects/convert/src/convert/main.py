@@ -6,7 +6,6 @@ from pathlib import Path
 
 from sqlalchemy import create_engine, text
 
-from convert.generation import Model
 from convert.processing import (
     create_access_engine,
     extract_schema_and_data,
@@ -17,8 +16,8 @@ from convert.processing import (
 logger = getLogger(__name__)
 
 
-def convert_access_to_sqlite(source: Path, target: Path) -> None:
-    """Migrate Access databases to SQLite.
+def migrate_to_sqlite(source: Path, target: Path) -> None:
+    """Migrate Access database to SQLite.
 
     Args:
         source: Directory or path to Access database
@@ -38,8 +37,6 @@ def convert_access_to_sqlite(source: Path, target: Path) -> None:
     metadata, tables = extract_schema_and_data(access)
 
     target.mkdir(parents=True, exist_ok=True)
-    with (target / "dpm.py").open("w") as model_file:
-        model_file.write(Model(metadata).render())
 
     sqlite_path = target / "dpm.sqlite"
     if sqlite_path.exists():
