@@ -15,7 +15,7 @@ members = [
 [[package]]
 name = "archive"
 version = "0.1.0"
-source = { editable = "projects/archive" }
+source = { virtual = "projects/archive" }
 dependencies = [
     { name = "requests" },
 ]
@@ -70,7 +70,7 @@ wheels = [
 [[package]]
 name = "convert"
 version = "0.1.0"
-source = { editable = "projects/convert" }
+source = { virtual = "projects/convert" }
 dependencies = [
     { name = "sqlalchemy" },
     { name = "sqlalchemy-access" },
@@ -184,10 +184,10 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "archive", editable = "projects/archive" },
-    { name = "convert", marker = "extra == 'convert'", editable = "projects/convert" },
+    { name = "archive", virtual = "projects/archive" },
+    { name = "convert", marker = "extra == 'convert'", virtual = "projects/convert" },
+    { name = "scrape", marker = "extra == 'scrape'", virtual = "projects/scrape" },
     { name = "schema", marker = "extra == 'schema'", virtual = "projects/schema" },
-    { name = "scrape", marker = "extra == 'scrape'", editable = "projects/scrape" },
 ]
 provides-extras = ["scrape", "convert", "schema"]
 
@@ -278,7 +278,7 @@ requires-dist = [{ name = "sqlalchemy", specifier = ">=2.0.37" }]
 [[package]]
 name = "scrape"
 version = "0.1.0"
-source = { editable = "projects/scrape" }
+source = { virtual = "projects/scrape" }
 dependencies = [
     { name = "beautifulsoup4" },
     { name = "requests" },
