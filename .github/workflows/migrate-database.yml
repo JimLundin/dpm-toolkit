@@ -26,7 +26,7 @@ jobs:
         run: uv python install
 
       - name: Install project
-        run: uv sync --dev
+        run: uv sync --extra migrate --dev
 
       - name: Cache Access Database Engine
         id: cache-access-engine
