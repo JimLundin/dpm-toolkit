@@ -45,7 +45,7 @@ jobs:
       - name: Download Microsoft Access Database Engine
         if: steps.cache-access-engine.outputs.cache-hit != 'true'
         run: |
-          curl -L "${{ env.ACCESS_ENGINE_URL }}"
+          curl -L "${{ env.ACCESS_ENGINE_URL }}" -o "${{ env.ACCESS_ENGINE_INSTALLER }}"
 
       - name: Install Microsoft Access Database Engine
         shell: powershell
