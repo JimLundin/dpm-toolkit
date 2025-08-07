@@ -1,5 +1,11 @@
 name: Migrate Database
 
+env:
+  ACCESS_ENGINE_INSTALLER: AccessDatabaseEngine.exe
+  ACCESS_ENGINE_CACHE_KEY: access-db-engine-2016-x64
+  ACCESS_ENGINE_URL: https://download.microsoft.com/download/3/5/C/35C84C36-661A-44E6-9324-8786B8DBE231/accessdatabaseengine_X64.exe
+  SQLITE_OUTPUT_FILE: dpm.sqlite
+
 on:
   workflow_call:
     inputs:
@@ -32,27 +38,26 @@ jobs:
         id: cache-access-engine
         uses: actions/cache@v4
         with:
-          path: AccessDatabaseEngine.exe
-          key: access-db-engine-2016-x64
+          path: ${{ env.ACCESS_ENGINE_INSTALLER }}
+          key: ${{ env.ACCESS_ENGINE_CACHE_KEY }}
 
       - name: Download Microsoft Access Database Engine
         if: steps.cache-access-engine.outputs.cache-hit != 'true'
         shell: powershell
         run: |
-          $url = "https://download.microsoft.com/download/3/5/C/35C84C36-661A-44E6-9324-8786B8DBE231/accessdatabaseengine_X64.exe"
-          Invoke-WebRequest -Uri $url -OutFile "AccessDatabaseEngine.exe"
+          $url = "${{ env.ACCESS_ENGINE_URL }}"
+          Invoke-WebRequest -Uri $url -OutFile "${{ env.ACCESS_ENGINE_INSTALLER }}"
 
       - name: Install Microsoft Access Database Engine
         shell: powershell
         run: |
-          Start-Process -FilePath "AccessDatabaseEngine.exe" -ArgumentList "/quiet" -Wait
+          Start-Process -FilePath "${{ env.ACCESS_ENGINE_INSTALLER }}" -ArgumentList /quiet -Wait
 
       - name: Cache downloaded databases
         id: cache-dbs
         uses: actions/cache@v4
         with:
-          path: |
-            **/*.accdb
+          path: "**/*.accdb"
           key: ${{ inputs.version_id }}
 
       - name: Download database files
@@ -70,5 +75,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.version_id }}-sqlite
-          path: |
-            dpm.sqlite
+          path: ${{ env.SQLITE_OUTPUT_FILE }}
