@@ -22,7 +22,6 @@ jobs:
     needs: migrate
     uses: ./.github/workflows/generate-schema.yml
     with:
-      version_id: ${{ inputs.version_id }}
       sqlite_artifact_name: ${{ needs.migrate.outputs.artifact_name }}
 
   combine-artifacts:
