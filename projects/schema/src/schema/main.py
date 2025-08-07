@@ -11,12 +11,13 @@ from schema.generation import Model
 logger = getLogger(__name__)
 
 
-def generate_schema(source: Path, target: Path) -> None:
+def generate_schema(source: Path, target: Path = Path(), name: str = "dpm") -> None:
     """Generate SQLAlchemy schema from converted SQLite database.
 
     Args:
         source: Path to SQLite database
-        target: Path to save SQLAlchemy schema file
+        target: Directory to save SQLAlchemy schema file
+        name: Desired name of the output schema file
 
     """
     start_time = datetime.now(UTC)
@@ -32,7 +33,8 @@ def generate_schema(source: Path, target: Path) -> None:
     logger.info("Processing: %s", source.stem)
 
     target.mkdir(parents=True, exist_ok=True)
-    with target.open("w") as model_file:
+    file_path = target / f"{name}.py"
+    with file_path.open("w") as model_file:
         schema = Model(metadata).render()
         model_file.write(schema)
 

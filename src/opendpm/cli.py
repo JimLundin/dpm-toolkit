@@ -140,13 +140,22 @@ def create_parser() -> ArgumentParser:
     )
     schema_parser.add_argument(
         "--source",
+        "-s",
         type=Path,
         help="Path of the SQLite to convert",
     )
     schema_parser.add_argument(
         "--target",
+        "-t",
         type=Path,
+        default=Path.cwd(),
         help="Path to save SQLAlchemy schema file",
+    )
+    schema_parser.add_argument(
+        "--name",
+        type=str,
+        default="dpm",
+        help="Name of the output file for the model schema",
     )
 
     return parser
@@ -259,7 +268,7 @@ def handle_schema_command(args: Namespace) -> None:
         print("Please install the 'schema' extra: pip install opendpm[schema]")
         return
 
-    generate_schema(args.source, args.target)
+    generate_schema(args.source, args.target, args.name)
 
 
 def main() -> None:
