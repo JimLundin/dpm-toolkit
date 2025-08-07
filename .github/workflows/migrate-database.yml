@@ -1,10 +1,8 @@
 name: Migrate Database
 
 env:
-  ACCESS_ENGINE_INSTALLER: AccessDatabaseEngine.exe
-  ACCESS_ENGINE_CACHE_KEY: access-db-engine-2016-x64
+  ACCESS_ENGINE_INSTALLER: accessdatabaseengine_X64.exe
   ACCESS_ENGINE_URL: https://download.microsoft.com/download/3/5/C/35C84C36-661A-44E6-9324-8786B8DBE231/accessdatabaseengine_X64.exe
-  SQLITE_OUTPUT_FILE: dpm.sqlite
 
 on:
   workflow_call:
@@ -42,16 +40,17 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.ACCESS_ENGINE_INSTALLER }}
-          key: ${{ env.ACCESS_ENGINE_CACHE_KEY }}
+          key: ${{ env.ACCESS_ENGINE_INSTALLER }}
 
       - name: Download Microsoft Access Database Engine
         if: steps.cache-access-engine.outputs.cache-hit != 'true'
         run: |
-          curl -L "${{ env.ACCESS_ENGINE_URL }}" -o "${{ env.ACCESS_ENGINE_INSTALLER }}"
+          curl -L "${{ env.ACCESS_ENGINE_URL }}"
 
       - name: Install Microsoft Access Database Engine
+        shell: powershell
         run: |
-          ./${{ env.ACCESS_ENGINE_INSTALLER }} /quiet
+          Start-Process -FilePath "${{ env.ACCESS_ENGINE_INSTALLER }}" -ArgumentList "/quiet" -Wait
 
       - name: Cache downloaded databases
         id: cache-dbs
@@ -73,4 +72,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.version_id }}-sqlite
-          path: ${{ env.SQLITE_OUTPUT_FILE }}
+          path: dpm.sqlite
