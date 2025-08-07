@@ -1,0 +1,59 @@
+name: Generate Schema
+
+on:
+  workflow_call:
+    inputs:
+      sqlite_artifact_name:
+        description: "The name of the artifact containing the SQLite database."
+        required: true
+        type: string
+    outputs:
+      artifact_name:
+        description: "The name of the uploaded artifact containing the generated schema"
+        value: ${{ inputs.sqlite_artifact_name }}-schema
+
+jobs:
+  generate-schema:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install python
+        run: uv python install
+
+      - name: Install project
+        run: uv sync --extra schema --dev
+
+      - name: Download SQLite database artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.sqlite_artifact_name }}
+
+      - name: Generate SQLAlchemy schema
+        run: |
+          uv run opendpm schema --source dpm.sqlite
+
+      - name: Format generated models with ruff
+        run: |
+          uv run ruff format *.py
+          uv run ruff check *.py --fix-only
+          uv run ruff format *.py
+
+      - name: Type check generated models using mypy
+        run: |
+          uv run mypy *.py
+
+      - name: Type check generated models using ty (ignore errors)
+        run: |
+          uv run ty check *.py --exit-zero
+
+      - name: Upload schema artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.sqlite_artifact_name }}-schema
+          path: |
+            dpm.py
