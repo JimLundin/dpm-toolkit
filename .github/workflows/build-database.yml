@@ -18,14 +18,14 @@ jobs:
     with:
       version_id: ${{ inputs.version_id }}
 
-  generate-schema:
+  schema:
     needs: migrate
     uses: ./.github/workflows/generate-schema.yml
     with:
       sqlite_artifact_name: ${{ needs.migrate.outputs.artifact_name }}
 
   combine-artifacts:
-    needs: [migrate, generate-schema]
+    needs: [migrate, schema]
     runs-on: ubuntu-latest
     steps:
       - name: Download SQLite database artifact
@@ -36,7 +36,7 @@ jobs:
       - name: Download schema artifact
         uses: actions/download-artifact@v4
         with:
-          name: ${{ needs.generate-schema.outputs.artifact_name }}
+          name: ${{ needs.schema.outputs.artifact_name }}
 
       - name: Upload combined artifact
         uses: actions/upload-artifact@v4
