@@ -5,8 +5,8 @@ requires-python = ">=3.13"
 [manifest]
 members = [
     "archive",
-    "convert",
     "dpm2",
+    "migrate",
     "opendpm",
     "schema",
     "scrape",
@@ -68,21 +68,6 @@ wheels = [
 ]
 
 [[package]]
-name = "convert"
-version = "0.1.0"
-source = { virtual = "projects/convert" }
-dependencies = [
-    { name = "sqlalchemy" },
-    { name = "sqlalchemy-access" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "sqlalchemy", specifier = ">=2.0.37" },
-    { name = "sqlalchemy-access", specifier = ">=2.0.3" },
-]
-
-[[package]]
 name = "dpm2"
 version = "0.1.0"
 source = { editable = "projects/dpm2" }
@@ -127,6 +112,21 @@ wheels = [
 ]
 
 [[package]]
+name = "migrate"
+version = "0.1.0"
+source = { virtual = "projects/migrate" }
+dependencies = [
+    { name = "sqlalchemy" },
+    { name = "sqlalchemy-access" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "sqlalchemy", specifier = ">=2.0.37" },
+    { name = "sqlalchemy-access", specifier = ">=2.0.3" },
+]
+
+[[package]]
 name = "mypy"
 version = "1.15.0"
 source = { registry = "https://pypi.org/simple" }
@@ -163,8 +163,8 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-convert = [
-    { name = "convert" },
+migrate = [
+    { name = "migrate" },
 ]
 schema = [
     { name = "schema" },
@@ -185,11 +185,11 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "archive", virtual = "projects/archive" },
-    { name = "convert", marker = "extra == 'convert'", virtual = "projects/convert" },
-    { name = "scrape", marker = "extra == 'scrape'", virtual = "projects/scrape" },
+    { name = "migrate", marker = "extra == 'migrate'", virtual = "projects/migrate" },
     { name = "schema", marker = "extra == 'schema'", virtual = "projects/schema" },
+    { name = "scrape", marker = "extra == 'scrape'", virtual = "projects/scrape" },
 ]
-provides-extras = ["scrape", "convert", "schema"]
+provides-extras = ["scrape", "migrate", "schema"]
 
 [package.metadata.requires-dev]
 dev = [

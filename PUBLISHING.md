@@ -9,7 +9,7 @@ The OpenDPM workspace contains two packages that require publishing:
 1. **opendpm** - Main CLI tool (published to PyPI)
 2. **dpm2** - Generated Python package from conversion artifacts (requires regeneration before publishing)
 
-The other workspace projects (`archive`, `convert`, `scrape`) are internal dependencies and should not be published separately.
+The other workspace projects (`archive`, `migrate`, `scrape`) are internal dependencies and should not be published separately.
 
 ## Prerequisites
 
@@ -62,7 +62,7 @@ The workflow is available at `.github/workflows/publish-opendpm.yml` and will:
 cd /path/to/opendpm
 
 # 3. Regenerate dpm2 package using the CLI
-uv run opendpm convert --output projects/dpm2/src/dpm2/
+uv run opendpm migrate --output projects/dpm2/src/dpm2/
 
 # 4. Update version in projects/dpm2/pyproject.toml if needed
 

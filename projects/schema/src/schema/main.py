@@ -12,7 +12,7 @@ logger = getLogger(__name__)
 
 
 def generate_schema(source: Path, target: Path = Path(), name: str = "dpm") -> None:
-    """Generate SQLAlchemy schema from converted SQLite database.
+    """Generate SQLAlchemy schema from migrated SQLite database.
 
     Args:
         source: Path to SQLite database

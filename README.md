@@ -87,7 +87,7 @@ opendpm download --release --converted
 pip install opendpm[convert]
 
 # Convert your own Access databases
-opendpm convert --source /path/to/access/files --target /path/to/output
+opendpm migrate --source /path/to/access/files --target /path/to/output
 ```
 
 ### Non-Windows Users
@@ -113,7 +113,7 @@ opendpm download [--release|--latest|--version VERSION]
 opendpm scrape [--json]
 
 # Convert Access to SQLite (Windows only)
-opendpm convert --source SOURCE --target TARGET
+opendpm migrate --source SOURCE --target TARGET
 ```
 
 ### Version Selection
@@ -141,7 +141,7 @@ opendpm download --version "3.2" --target ./dpm-data
 opendpm list --json
 
 # Convert local Access database (Windows only)
-opendpm convert --source ./access-files --target ./sqlite-output
+opendpm migrate --source ./access-files --target ./sqlite-output
 ```
 
 ## Using the Generated Models

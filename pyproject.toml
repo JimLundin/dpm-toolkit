@@ -15,7 +15,7 @@ opendpm = "opendpm.cli:main"
 
 [project.optional-dependencies]
 scrape = ["scrape"]
-convert = ["convert"]
+migrate = ["migrate"]
 schema = ["schema"]
 
 [tool.ruff]
@@ -54,6 +54,6 @@ members = ["projects/*"]
 
 [tool.uv.sources]
 archive = { workspace = true }
-convert = { workspace = true }
+migrate = { workspace = true }
 scrape = { workspace = true }
 schema = { workspace = true }
