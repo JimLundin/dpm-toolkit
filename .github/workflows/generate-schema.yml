@@ -13,7 +13,7 @@ on:
         value: ${{ inputs.sqlite_artifact_name }}-schema
 
 jobs:
-  generate-schema:
+  schema:
     runs-on: ubuntu-latest
 
     steps:
