@@ -23,7 +23,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
 
       - name: Install python
-        uses: uv python install
+        run: uv python install
 
       - name: Install project
         run: uv sync --extra convert --dev
