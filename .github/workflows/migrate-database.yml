@@ -51,7 +51,7 @@ jobs:
 
       - name: Install Microsoft Access Database Engine
         run: |
-          ./${{ env.ACCESS_ENGINE_INSTALLER }} /quiet
+          ./${{ env.ACCESS_ENGINE_INSTALLER }}
 
       - name: Cache downloaded databases
         id: cache-dbs
