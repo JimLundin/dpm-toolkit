@@ -5,7 +5,7 @@ on:
 
 jobs:
   publish:
-    runs-on: windows-latest # Required for Access DB conversion
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -13,19 +13,34 @@ jobs:
         uses: astral-sh/setup-uv@v6
 
       - name: Set up Python
-        run: uv python install 3.13
-
-      - name: Set CalVer version
-        run: |
-          $VERSION = Get-Date -Format "yyyy.M.d"
-          uv version $VERSION --package dpm2
-          echo "VERSION=$VERSION" >> $env:GITHUB_ENV
+        run: uv python install
 
       - name: Sync dependencies
         run: uv sync
 
-      - name: Generate latest artifacts
-        run: uv run opendpm convert --output projects/dpm2/src/dpm2/
+      - name: Get latest version
+        id: get-version
+        run: |
+          version_id=$(uv run opendpm list --latest --json | jq -r '.id')
+          echo "version_id=$version_id" >> $GITHUB_OUTPUT
+
+      - name: Build database artifacts
+        id: build-database
+        uses: ./.github/workflows/build-database.yml
+        with:
+          version_id: ${{ steps.get-version.outputs.version_id }}
+
+      - name: Set CalVer version
+        run: |
+          VERSION=$(date +'%Y.%-m.%-d')
+          uv version $VERSION --package dpm2
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Download built artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ steps.build-database.outputs.artifact_name }}
+          path: projects/dpm2/src/dpm2/
 
       - name: Build dpm2 package
         run: uv build
