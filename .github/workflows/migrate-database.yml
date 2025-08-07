@@ -21,6 +21,9 @@ on:
 jobs:
   migrate:
     runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - uses: actions/checkout@v4
@@ -43,15 +46,12 @@ jobs:
 
       - name: Download Microsoft Access Database Engine
         if: steps.cache-access-engine.outputs.cache-hit != 'true'
-        shell: powershell
         run: |
-          $url = "${{ env.ACCESS_ENGINE_URL }}"
-          Invoke-WebRequest -Uri $url -OutFile "${{ env.ACCESS_ENGINE_INSTALLER }}"
+          curl -L "${{ env.ACCESS_ENGINE_URL }}" -o "${{ env.ACCESS_ENGINE_INSTALLER }}"
 
       - name: Install Microsoft Access Database Engine
-        shell: powershell
         run: |
-          Start-Process -FilePath "${{ env.ACCESS_ENGINE_INSTALLER }}" -ArgumentList /quiet -Wait
+          ./${{ env.ACCESS_ENGINE_INSTALLER }} /quiet
 
       - name: Cache downloaded databases
         id: cache-dbs
@@ -62,12 +62,10 @@ jobs:
 
       - name: Download database files
         if: steps.cache-dbs.outputs.cache-hit != 'true'
-        shell: bash
         run: |
           uv run opendpm download -v ${{ inputs.version_id }}
 
       - name: Convert to SQLite database
-        shell: bash
         run: |
           uv run opendpm migrate
 
