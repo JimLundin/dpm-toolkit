@@ -23,25 +23,3 @@ jobs:
     uses: ./.github/workflows/generate-schema.yml
     with:
       sqlite_artifact_name: ${{ needs.migrate.outputs.artifact_name }}
-
-  combine-artifacts:
-    needs: [migrate, schema]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download SQLite database artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ needs.migrate.outputs.artifact_name }}
-
-      - name: Download schema artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ needs.schema.outputs.artifact_name }}
-
-      - name: Upload combined artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ inputs.version_id }}
-          path: |
-            dpm.sqlite
-            dpm.py
