@@ -252,12 +252,12 @@ def handle_download_command(args: Namespace) -> None:
 def handle_convert_command(args: Namespace) -> None:
     """Handle the 'convert' subcommand."""
     try:
-        from convert import convert_access_to_sqlite
+        from convert import migrate_to_sqlite
     except ImportError:
         print("Please install the 'convert' extra: pip install opendpm[convert]")
         return
 
-    convert_access_to_sqlite(args.source, args.target)
+    migrate_to_sqlite(args.source, args.target)
 
 
 def handle_schema_command(args: Namespace) -> None:
