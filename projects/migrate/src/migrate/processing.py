@@ -3,7 +3,7 @@
 from logging import getLogger
 from pathlib import Path
 
-from convert.transformations import (
+from migrate.transformations import (
     TableData,
     add_foreign_keys,
     apply_enums,

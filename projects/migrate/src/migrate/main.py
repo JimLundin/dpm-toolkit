@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from logging import getLogger
 from pathlib import Path
 
-from convert.processing import (
+from migrate.processing import (
     create_access_engine,
     extract_schema_and_data,
     get_database,
