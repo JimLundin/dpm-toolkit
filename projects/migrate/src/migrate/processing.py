@@ -3,6 +3,8 @@
 from logging import getLogger
 from pathlib import Path
 
+from sqlalchemy import Engine, MetaData, Table, create_engine, event, insert, select
+
 from migrate.transformations import (
     TableData,
     add_foreign_keys,
@@ -11,7 +13,6 @@ from migrate.transformations import (
     mark_non_nullable,
     parse,
 )
-from sqlalchemy import Engine, MetaData, Table, create_engine, event, insert, select
 
 logger = getLogger(__name__)
 

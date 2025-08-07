@@ -4,13 +4,14 @@ from datetime import UTC, datetime
 from logging import getLogger
 from pathlib import Path
 
+from sqlalchemy import create_engine, text
+
 from migrate.processing import (
     create_access_engine,
     extract_schema_and_data,
     get_database,
     load_data,
 )
-from sqlalchemy import create_engine, text
 
 logger = getLogger(__name__)
 
