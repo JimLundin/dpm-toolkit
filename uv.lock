@@ -15,7 +15,7 @@ members = [
 [[package]]
 name = "archive"
 version = "0.1.0"
-source = { virtual = "projects/archive" }
+source = { editable = "projects/archive" }
 dependencies = [
     { name = "requests" },
 ]
@@ -184,7 +184,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "archive", virtual = "projects/archive" },
+    { name = "archive", editable = "projects/archive" },
     { name = "migrate", marker = "extra == 'migrate'", virtual = "projects/migrate" },
     { name = "schema", marker = "extra == 'schema'", virtual = "projects/schema" },
     { name = "scrape", marker = "extra == 'scrape'", virtual = "projects/scrape" },

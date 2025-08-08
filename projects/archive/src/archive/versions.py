@@ -1,7 +1,6 @@
 """Module for loading and managing version information."""
 
 from collections import defaultdict
-from collections.abc import Sequence
 from datetime import date
 from pathlib import Path
 from tomllib import load
@@ -31,7 +30,7 @@ class Version(TypedDict):
     converted: NotRequired[Source]
 
 
-type Versions = Sequence[Version]
+type Versions = list[Version]
 
 VERSION_FILE = Path(__file__).parent / "versions.toml"
 
