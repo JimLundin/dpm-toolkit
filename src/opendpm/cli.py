@@ -378,15 +378,17 @@ def handle_download_command(args: Namespace) -> None:
 
 def handle_migrate_command(args: Namespace) -> None:
     """Handle the 'migrate' subcommand."""
+    verbosity = args.getattr("verbosity", Verbosity.INFO)
+
     try:
         from migrate import migrate_to_sqlite
     except ImportError:
-        log_info("Error: Migration requires Windows with ODBC drivers", args.verbosity)
-        log_info("Run: pip install opendpm[migrate]", args.verbosity)
+        log_info("Error: Migration requires Windows with ODBC drivers", verbosity)
+        log_info("Run: pip install opendpm[migrate]", verbosity)
         return
 
-    log_info(f"Migrating from: {args.source}", args.verbosity)
-    log_info(f"Migrating to: {args.target}", args.verbosity)
+    log_info(f"Migrating from: {args.source}", verbosity)
+    log_info(f"Migrating to: {args.target}", verbosity)
     migrate_to_sqlite(args.source, args.target)
 
 
@@ -400,10 +402,6 @@ def handle_schema_command(args: Namespace) -> None:
             args.verbosity,
         )
         log_info("Run: pip install opendpm[schema]", args.verbosity)
-        log_info(
-            "Help: This will install SQLAlchemy and other schema generation tools",
-            args.verbosity,
-        )
         return
 
     log_info(f"Generating schema from: {args.source}", args.verbosity)
