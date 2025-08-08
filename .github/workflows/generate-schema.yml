@@ -35,7 +35,8 @@ jobs:
 
       - name: Generate SQLAlchemy schema
         run: |
-          uv run opendpm schema --source dpm.sqlite
+          SQLITE_FILE=$(find . -name "*.sqlite" -type f | head -1)
+          uv run opendpm schema --source "$SQLITE_FILE" --target .
 
       - name: Format generated models with ruff
         run: |
@@ -55,5 +56,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.sqlite_artifact_name }}-schema
-          path: |
-            dpm.py
+          path: "*.py"

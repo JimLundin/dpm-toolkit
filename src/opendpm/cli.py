@@ -408,7 +408,6 @@ def handle_schema_command(args: Namespace) -> None:
 
     log_info(f"Generating schema from: {args.source}", verbosity)
     log_info(f"Output to: {args.target}", verbosity)
-    log_info(f"Schema name: {args.name}", verbosity)
     generate_schema(args.source, args.target)
 
 

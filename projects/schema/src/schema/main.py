@@ -11,7 +11,7 @@ from schema.generation import Model
 logger = getLogger(__name__)
 
 
-def generate_schema(source: Path, target: Path = Path(), name: str = "dpm") -> None:
+def generate_schema(source: Path, target: Path) -> None:
     """Generate SQLAlchemy schema from migrated SQLite database.
 
     Args:
@@ -23,7 +23,18 @@ def generate_schema(source: Path, target: Path = Path(), name: str = "dpm") -> N
     start_time = datetime.now(UTC)
 
     if not source.is_file():
-        logger.warning("%s is not an SQLite file", source)
+        logger.error("%s must exist", source)
+        return
+    if source.suffix not in (".sqlite", ".db"):
+        logger.error("%s must be a SQLite database file", source)
+        return
+
+    if target.exists():
+        logger.warning("%s already exists, overwriting", target)
+        target.unlink()
+        return
+    if target.suffix != ".py":
+        logger.error("Target %s must be a python file", target)
         return
 
     database = create_engine(f"sqlite:///{source}?mode=ro", connect_args={"uri": True})
@@ -32,9 +43,8 @@ def generate_schema(source: Path, target: Path = Path(), name: str = "dpm") -> N
 
     logger.info("Processing: %s", source.stem)
 
-    target.mkdir(parents=True, exist_ok=True)
-    file_path = target / f"{name}.py"
-    with file_path.open("w") as model_file:
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with target.open("w") as model_file:
         schema = Model(metadata).render()
         model_file.write(schema)
 
