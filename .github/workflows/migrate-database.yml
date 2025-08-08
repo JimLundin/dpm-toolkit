@@ -66,10 +66,10 @@ jobs:
 
       - name: Convert to SQLite database
         run: |
-          uv run opendpm migrate
+          uv run opendpm migrate --source ${{ inputs.version_id }}.accdb --target ${{ inputs.version_id }}.sqlite
 
       - name: Upload SQLite database artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.version_id }}-sqlite
-          path: dpm.sqlite
+          path: ${{ inputs.version_id }}.sqlite
