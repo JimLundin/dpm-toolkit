@@ -378,7 +378,7 @@ def handle_download_command(args: Namespace) -> None:
 
 def handle_migrate_command(args: Namespace) -> None:
     """Handle the 'migrate' subcommand."""
-    verbosity = args.getattr("verbosity", Verbosity.INFO)
+    verbosity = getattr(args, "verbosity", Verbosity.INFO)
 
     try:
         from migrate import migrate_to_sqlite
@@ -394,7 +394,7 @@ def handle_migrate_command(args: Namespace) -> None:
 
 def handle_schema_command(args: Namespace) -> None:
     """Handle the 'generate-schema' subcommand."""
-    verbosity = args.getattr("verbosity", Verbosity.INFO)
+    verbosity = getattr(args, "verbosity", Verbosity.INFO)
 
     try:
         from schema import generate_schema
