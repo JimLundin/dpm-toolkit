@@ -394,6 +394,8 @@ def handle_migrate_command(args: Namespace) -> None:
 
 def handle_schema_command(args: Namespace) -> None:
     """Handle the 'generate-schema' subcommand."""
+    verbosity = args.getattr("verbosity", Verbosity.INFO)
+
     try:
         from schema import generate_schema
     except ImportError:
@@ -401,13 +403,13 @@ def handle_schema_command(args: Namespace) -> None:
             "Error: Schema generation requires additional dependencies",
             args.verbosity,
         )
-        log_info("Run: pip install opendpm[schema]", args.verbosity)
+        log_info("Run: pip install opendpm[schema]", verbosity)
         return
 
-    log_info(f"Generating schema from: {args.source}", args.verbosity)
-    log_info(f"Output to: {args.target}", args.verbosity)
-    log_info(f"Schema name: {args.name}", args.verbosity)
-    generate_schema(args.source, args.target, args.name)
+    log_info(f"Generating schema from: {args.source}", verbosity)
+    log_info(f"Output to: {args.target}", verbosity)
+    log_info(f"Schema name: {args.name}", verbosity)
+    generate_schema(args.source, args.target)
 
 
 def main() -> None:
