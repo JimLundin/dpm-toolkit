@@ -244,12 +244,14 @@ def create_parser() -> ArgumentParser:
     migrate_parser.add_argument(
         "--source",
         type=Path,
-        help="Path of Access database to migrate (default: %(default)s)",
+        required=True,
+        help="Path of Access database to migrate (required)",
     )
     migrate_parser.add_argument(
         "--target",
         type=Path,
-        help="Path to save migrated SQLite database (default: %(default)s)",
+        required=True,
+        help="Path to save migrated SQLite database (required)",
     )
     migrate_parser.add_argument(
         "--overwrite",
@@ -266,7 +268,8 @@ def create_parser() -> ArgumentParser:
         "--source",
         "-s",
         type=Path,
-        help="Path of the SQLite to generate schema from (default: %(default)s)",
+        required=True,
+        help="Path of the SQLite to generate schema from (required)",
     )
     schema_parser.add_argument(
         "--target",
@@ -371,7 +374,10 @@ def handle_download_command(args: Namespace) -> None:
     if args.extract:
         extract_archive(archive, target_folder)
     else:
-        target_folder.write_bytes(archive)
+        # Write archive bytes to a file inside target_folder
+        target_folder.mkdir(parents=True, exist_ok=True)
+        archive_file = target_folder / source.get("filename", f"{version_id}.archive")
+        archive_file.write_bytes(archive)
 
     log_info(f"Downloaded version {version_id} to {target_folder}", args.verbosity)
 
@@ -389,6 +395,12 @@ def handle_migrate_command(args: Namespace) -> None:
 
     log_info(f"Migrating from: {args.source}", verbosity)
     log_info(f"Migrating to: {args.target}", verbosity)
+    if args.source is None or args.target is None:
+        log_info(
+            "Error: Both --source and --target arguments are required for migration.",
+            verbosity,
+        )
+        return
     migrate_to_sqlite(args.source, args.target)
 
 
