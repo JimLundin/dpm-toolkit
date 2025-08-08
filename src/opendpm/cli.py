@@ -95,23 +95,10 @@ def log_info(message: str, verbosity: Verbosity = Verbosity.INFO) -> None:
         return
 
 
-def add_version_argument(subparser: ArgumentParser) -> None:
-    """Add standardized version argument to a subparser."""
-    subparser.add_argument(
-        "--version",
-        "-v",
-        choices=["latest", "release", *VERSION_IDS],
-        default="release",
-        help="Version: latest, release, or the version ID (default: %(default)s)",
-    )
-
-
-def create_parser() -> ArgumentParser:
-    """Create the command line argument parser."""
-    parser = ArgumentParser(description="OpenDPM CLI tool")
-
-    # Global options
-    format_group = parser.add_mutually_exclusive_group()
+def add_common_arguments(subparser: ArgumentParser) -> None:
+    """Add standardized common arguments to a subparser."""
+    # Format options
+    format_group = subparser.add_mutually_exclusive_group()
     format_group.add_argument(
         "--format",
         choices=Format.__members__.values(),
@@ -140,7 +127,8 @@ def create_parser() -> ArgumentParser:
         help="Output in YAML format",
     )
 
-    verbosity_group = parser.add_mutually_exclusive_group()
+    # Verbosity options
+    verbosity_group = subparser.add_mutually_exclusive_group()
     verbosity_group.add_argument(
         "--verbosity",
         choices=Verbosity.__members__.values(),
@@ -177,6 +165,22 @@ def create_parser() -> ArgumentParser:
         help="Suppress non-essential output",
     )
 
+
+def add_version_argument(subparser: ArgumentParser) -> None:
+    """Add standardized version argument to a subparser."""
+    subparser.add_argument(
+        "--version",
+        "-v",
+        choices=["latest", "release", *VERSION_IDS],
+        default="release",
+        help="Version: latest, release, or the version ID (default: %(default)s)",
+    )
+
+
+def create_parser() -> ArgumentParser:
+    """Create the command line argument parser."""
+    parser = ArgumentParser(description="OpenDPM CLI tool")
+
     subparsers = parser.add_subparsers(dest="command", help="Commands")
 
     list_parser = subparsers.add_parser(
@@ -184,20 +188,23 @@ def create_parser() -> ArgumentParser:
         help="List available database versions",
         description="Display available versions with their release dates and types",
     )
+    add_common_arguments(list_parser)
     add_version_argument(list_parser)
     list_parser.set_defaults(version=None)  # Allow showing all versions by default
 
-    subparsers.add_parser(
+    update_parser = subparsers.add_parser(
         "update",
         help="Find new download urls",
         description="Find new download urls and check for updates",
     )
+    add_common_arguments(update_parser)
 
     download_parser = subparsers.add_parser(
         "download",
         help="Download databases",
         description="Download a specific version of the DPM database",
     )
+    add_common_arguments(download_parser)
     add_version_argument(download_parser)
     download_parser.add_argument(
         "--target",
