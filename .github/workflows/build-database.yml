@@ -1,0 +1,25 @@
+name: Build Database
+
+on:
+  workflow_call:
+    inputs:
+      version_id:
+        description: "The version ID to build."
+        required: true
+        type: string
+    outputs:
+      artifact_name:
+        description: "The name of the uploaded artifact containing the built database and schema"
+        value: ${{ inputs.version_id }}
+
+jobs:
+  migrate:
+    uses: ./.github/workflows/migrate-database.yml
+    with:
+      version_id: ${{ inputs.version_id }}
+
+  schema:
+    needs: migrate
+    uses: ./.github/workflows/generate-schema.yml
+    with:
+      sqlite_artifact_name: ${{ needs.migrate.outputs.artifact_name }}

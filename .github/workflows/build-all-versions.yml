@@ -1,0 +1,44 @@
+name: Build All Database Versions
+
+on:
+  push:
+    branches:
+      - '**'  # Run on all branches
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  list-versions:
+    runs-on: ubuntu-latest
+    outputs:
+      version_ids: ${{ steps.set-matrix.outputs.version_ids }}
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install UV
+      uses: astral-sh/setup-uv@v5
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version-file: 'pyproject.toml'
+    
+    - name: Install project
+      run: uv sync
+    
+    - name: Get versions and set matrix
+      id: set-matrix
+      shell: bash
+      run: |
+        echo version_ids={\"includes\":$(uv run opendpm list --json | jq 'map(.id)')} >> $GITHUB_OUTPUT
+  
+  build-versions:
+    needs: list-versions
+    strategy:
+      matrix: ${{ fromJson(needs.list-versions.outputs.version_ids) }}
+      # Allow other versions to build even if one fails
+      fail-fast: false
+    
+    uses: ./.github/workflows/build-database.yml
+    with:
+      version_id: ${{ matrix.includes }}
