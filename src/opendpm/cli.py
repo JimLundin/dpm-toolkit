@@ -60,7 +60,7 @@ def output_data(
             default=date_serializer,
             indent=2 if verbosity == Verbosity.VERBOSE else None,
         )
-    elif format_type == Format.TABLE:
+    elif format_type == Format.YAML:
         try:
             import yaml
 
@@ -68,18 +68,19 @@ def output_data(
         except ImportError:
             print("YAML output requires PyYAML. Install with: pip install PyYAML")
             dump(data, stdout, default=date_serializer)
-    elif isinstance(data, list) and data:
-        # Print as table for list of dicts
-        if verbosity == Verbosity.VERBOSE:
-            for item in data:
-                print("\n".join(f"{key}: {value}" for key, value in item.items()))
-                print("---")
+    elif format_type == Format.TABLE:
+        if isinstance(data, list) and data:
+            # Print as table for list of dicts
+            if verbosity == Verbosity.VERBOSE:
+                for item in data:
+                    print("\n".join(f"{key}: {value}" for key, value in item.items()))
+                    print("---")
+            else:
+                print("\n".join(item["id"] for item in data))
+        elif isinstance(data, dict):
+            print("\n".join(f"{key}: {value}" for key, value in data.items()))
         else:
-            print("\n".join(item["id"] for item in data))
-    elif isinstance(data, dict):
-        print("\n".join(f"{key}: {value}" for key, value in data.items()))
-    else:
-        print(data)
+            print(data)
 
 
 def log_info(message: str, verbosity: Verbosity = Verbosity.INFO) -> None:
@@ -317,7 +318,7 @@ def handle_update_command(args: Namespace) -> None:
 
 def handle_source(args: Namespace, version: Version) -> Source | None:
     """Handle the 'source' subcommand."""
-    source_type = args.get("type", "original")
+    source_type = getattr(args, "type", "original")
 
     if source_type == "original":
         return version.get("original")
