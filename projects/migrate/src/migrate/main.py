@@ -9,7 +9,6 @@ from sqlalchemy import create_engine, text
 from migrate.processing import (
     create_access_engine,
     extract_schema_and_data,
-    get_database,
     load_data,
 )
 
@@ -26,30 +25,34 @@ def migrate_to_sqlite(source: Path, target: Path) -> None:
     """
     start_time = datetime.now(UTC)
 
-    database = source if source.is_file() else get_database(source)
-    if not database:
-        logger.warning("No Access database files found in %s", source)
+    if not source.exists():
+        logger.error("Source %s does not exist", source)
+        return
+    if not source.suffix not in (".mdb", ".accdb"):
+        logger.error("Source must be an Access database file (.mdb or .accdb)")
         return
 
-    logger.info("Processing: %s", database.stem)
+    if target.exists():
+        logger.warning("Target database already exists, overwriting.")
+        target.unlink(missing_ok=True)
+    if target.suffix not in (".sqlite", ".db"):
+        logger.error("Target SQLite database file (.sqlite or .db)")
+        return
 
-    access = create_access_engine(database)
+    logger.info("Processing: %s", source.stem)
+
+    access = create_access_engine(source)
     metadata, tables = extract_schema_and_data(access)
 
-    target.mkdir(parents=True, exist_ok=True)
-
-    sqlite_path = target / "dpm.sqlite"
-    if sqlite_path.exists():
-        logger.warning("Target database already exists, overwriting.")
-        sqlite_path.unlink(missing_ok=True)
+    target.parent.mkdir(parents=True, exist_ok=True)
 
     sqlite = create_engine("sqlite:///:memory:")
     metadata.create_all(sqlite)
     load_data(sqlite, tables)
 
     with sqlite.connect() as connection:
-        connection.execute(text(f"VACUUM INTO '{sqlite_path}'"))
-        logger.info("Saved: %s", sqlite_path)
+        connection.execute(text(f"VACUUM INTO '{target}'"))
+        logger.info("Saved: %s", target)
 
     stop_time = datetime.now(UTC)
     logger.info("Migrated database in %s", stop_time - start_time)

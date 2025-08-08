@@ -19,22 +19,7 @@ logger = getLogger(__name__)
 type TableDataMap = list[tuple[Table, TableData]]
 
 
-def get_database(source: Path) -> Path | None:
-    """Get an Access database. Prioritize DPM databases."""
-    databases = list(source.glob("**/*.accdb"))
-    dpms = [database for database in databases if "dpm" in database.stem.lower()]
-    if dpms:
-        return dpms[0]
-
-    logger.warning("No DPM Access database found in %s, using first match", source)
-    if databases:
-        return databases[0]
-
-    logger.warning("No Access database found in %s", source)
-    return None
-
-
-def create_access_engine(db: str | Path) -> Engine:
+def create_access_engine(db: Path) -> Engine:
     """Get an engine to an Access database."""
     driver = "{Microsoft Access Driver (*.mdb, *.accdb)}"
     conn_str = f"DRIVER={driver};DBQ={db}"
