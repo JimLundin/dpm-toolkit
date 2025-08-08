@@ -36,8 +36,8 @@ def migrate_to_sqlite(source: Path, target: Path) -> None:
         return
 
     if target.exists():
-        logger.warning("Target database already exists, overwriting.")
-        target.unlink(missing_ok=True)
+        logger.error("Target database already exists.")
+        return
     if target.suffix not in (".sqlite", ".db"):
         logger.error(
             "Target must be a SQLite database file (.sqlite or .db), found %s",

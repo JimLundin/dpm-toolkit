@@ -30,8 +30,7 @@ def generate_schema(source: Path, target: Path) -> None:
         return
 
     if target.exists():
-        logger.warning("%s already exists, overwriting", target)
-        target.unlink()
+        logger.error("%s already exists, overwriting", target)
         return
     if target.suffix != ".py":
         logger.error("Target %s must be a python file", target)
