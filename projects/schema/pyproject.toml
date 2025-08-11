@@ -1,6 +1,6 @@
 [project]
 name = "schema"
-version = "0.1.0"
+version = "0.0.0"
 description = "SQLAlchemy schema generation from Access databases"
 authors = [{ name = "Jim Lundin", email = "jimeriklundin@gmail.com" }]
 requires-python = ">=3.13"

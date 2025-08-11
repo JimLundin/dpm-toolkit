@@ -29,20 +29,14 @@ def migrate_to_sqlite(source: Path, target: Path) -> None:
         logger.error("Source %s does not exist", source)
         return
     if source.suffix not in (".mdb", ".accdb"):
-        logger.error(
-            "Source must be an Access database file (.mdb or .accdb), found %s",
-            source.suffix,
-        )
+        logger.error("Source must be an Access database file (.mdb or .accdb)")
         return
 
     if target.exists():
         logger.error("Target database already exists.")
         return
     if target.suffix not in (".sqlite", ".db"):
-        logger.error(
-            "Target must be a SQLite database file (.sqlite or .db), found %s",
-            target.suffix,
-        )
+        logger.error("Target must be a SQLite database file (.sqlite or .db)")
         return
 
     logger.info("Processing: %s", source.stem)
