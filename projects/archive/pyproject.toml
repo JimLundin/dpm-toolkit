@@ -1,7 +1,7 @@
 [project]
 name = "archive"
 version = "0.1.0"
-description = "Add your description here"
+description = "A tool for listing, downloading and verifying dpm publications"
 authors = [{ name = "Jim Lundin", email = "jimeriklundin@gmail.com" }]
 requires-python = ">=3.13"
 dependencies = ["requests>=2.32.3"]
