@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from hashlib import sha256
 from io import BytesIO
+from logging import getLogger
 from typing import TYPE_CHECKING
 from zipfile import ZipFile
 
@@ -14,11 +15,13 @@ if TYPE_CHECKING:
 
     from archive import Source
 
+logger = getLogger(__name__)
+
 
 def verify_checksum(data: bytes, checksum: str) -> bool:
     """Verify the checksum of the data."""
     if not checksum.startswith("sha256:"):
-        print("Invalid checksum format: ", checksum)
+        logger.error("Invalid checksum format: %s", checksum)
         return False
 
     return checksum == f"sha256:{sha256(data).hexdigest()}"
@@ -31,9 +34,9 @@ def download_source(source: Source) -> BytesIO:
 
     if checksum := source.get("checksum"):
         if not verify_checksum(response.content, checksum):
-            print("Checksum verification failed")
+            logger.warning("Checksum verification failed")
     else:
-        print("No checksum provided")
+        logger.warning("No checksum provided")
 
     return BytesIO(response.content)
 

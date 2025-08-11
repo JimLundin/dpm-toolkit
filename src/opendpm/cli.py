@@ -1,13 +1,14 @@
 """Command line interface for OpenDPM."""
 
+import json
 from argparse import ArgumentParser, Namespace
 from collections.abc import Sequence
 from datetime import date
 from enum import StrEnum, auto
-from json import dump
 from pathlib import Path
 from sys import stdout
 
+import yaml
 from archive import (
     Source,
     Version,
@@ -54,20 +55,15 @@ def output_data(
         return
 
     if format_type == Format.JSON:
-        dump(
+        json.dump(
             data,
             stdout,
             default=date_serializer,
             indent=2 if verbosity == Verbosity.VERBOSE else None,
         )
     elif format_type == Format.YAML:
-        try:
-            import yaml
+        print(yaml.dump(data, default_flow_style=False))
 
-            print(yaml.dump(data, default_flow_style=False))
-        except ImportError:
-            print("YAML output requires PyYAML. Install with: pip install PyYAML")
-            dump(data, stdout, default=date_serializer)
     elif format_type == Format.TABLE:
         if isinstance(data, list) and data:
             # Print as table for list of dicts
