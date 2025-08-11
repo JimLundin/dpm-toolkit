@@ -62,7 +62,7 @@ def output_data(
             indent=2 if verbosity == Verbosity.VERBOSE else None,
         )
     elif format_type == Format.YAML:
-        print(yaml.dump(data, default_flow_style=False))
+        print(yaml.safe_dump(data, default_flow_style=False))
 
     elif format_type == Format.TABLE:
         if isinstance(data, list) and data:
@@ -312,7 +312,6 @@ def handle_update_command(args: Namespace) -> None:
         from scrape import get_active_reporting_frameworks
     except ImportError:
         log_info("Error: Update requires the 'scrape' extra", args.verbosity)
-        log_info("Run: pip install opendpm[scrape]", args.verbosity)
         return
 
     log_info("Fetching active reporting frameworks...", args.verbosity)
@@ -386,7 +385,6 @@ def handle_migrate_command(args: Namespace) -> None:
         from migrate import migrate_to_sqlite
     except ImportError:
         log_info("Error: Migration requires Windows with ODBC drivers", verbosity)
-        log_info("Run: pip install opendpm[migrate]", verbosity)
         return
 
     log_info(f"Migrating from: {args.source}", verbosity)
@@ -411,7 +409,6 @@ def handle_schema_command(args: Namespace) -> None:
             "Error: Schema generation requires additional dependencies",
             args.verbosity,
         )
-        log_info("Run: pip install opendpm[schema]", verbosity)
         return
 
     log_info(f"Generating schema from: {args.source}", verbosity)
