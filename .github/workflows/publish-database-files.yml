@@ -71,4 +71,4 @@ jobs:
           name: "DPM Database Files - ${{ env.VERSION_ID }}"
           body: "Database files for version ${{ env.VERSION_ID }}"
           prerelease: ${{ inputs.prerelease }}
-          files: dmp-${{ env.VERSION_ID }}-*.zip
+          files: dpm-${{ env.VERSION_ID }}-*.zip
