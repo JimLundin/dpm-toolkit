@@ -74,5 +74,3 @@ semver = "4.1.1"
 date = 2025-07-04
 revision = 1
 original = { url = "https://www.eba.europa.eu/sites/default/files/2025-07/c5e64c91-0e04-4419-8943-4963271ed983/DPM%202.0%20%20Database_v%204_1_20250625.accdb_.zip", checksum = "sha256:5052ecf687e0b4ce9ee2ed9b8158ffd0f161da57929bb129b2b835688e82fec3" }
-
-[[versions]]
