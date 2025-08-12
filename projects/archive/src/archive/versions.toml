@@ -6,7 +6,7 @@ version = "3.2"
 type = "sample"
 semver = "3.2.0-alpha.1"
 date = 2023-06-13
-original = { url = "https://www.eba.europa.eu/assets/Reporting%20Framework/sample_dpm_2.0_database.zip" }
+original = { url = "https://www.eba.europa.eu/assets/Reporting%20Framework/sample_dpm_2.0_database.zip", checksum = "sha256:4b032ebb59e8c1101dd2be68b66b365b7ef4001323282d85d85d67e1dc84f1a5" }
 
 [[versions]]
 id = "3.5-sample"
@@ -14,7 +14,7 @@ version = "3.5"
 type = "sample"
 semver = "3.5.0-alpha.1"
 date = 2024-07-09
-original = { url = "https://www.eba.europa.eu/sites/default/files/2024-07/39caec2e-4ede-4418-91c5-1190e03b9034/dpm_databse_3.5_dpm_2.0.zip" }
+original = { url = "https://www.eba.europa.eu/sites/default/files/2024-07/39caec2e-4ede-4418-91c5-1190e03b9034/dpm_databse_3.5_dpm_2.0.zip", checksum = "sha256:683ed571fb6a6b9a1d4881a2c0ab3896df2d487a6ce1773f6db1b5b0accc18a2" }
 
 [[versions]]
 id = "4.0-draft"
@@ -22,7 +22,7 @@ version = "4.0"
 type = "draft"
 semver = "4.0.0-beta.1"
 date = 2024-10-28
-original = { url = "https://www.eba.europa.eu/sites/default/files/2024-10/9af4a241-1a4e-4ee4-9eb0-5f61648522e2/dpm_2.0_release_4.0.zip" }
+original = { url = "https://www.eba.europa.eu/sites/default/files/2024-10/9af4a241-1a4e-4ee4-9eb0-5f61648522e2/dpm_2.0_release_4.0.zip", checksum = "sha256:5383693c3d19cf06439b395bb42381eea2c95eb60ae5635ee824fdc0c92071b6" }
 
 [[versions]]
 id = "4.0-release"
@@ -30,7 +30,7 @@ version = "4.0"
 type = "release"
 semver = "4.0.0"
 date = 2024-12-19
-original = { url = "https://www.eba.europa.eu/sites/default/files/2024-12/11b02b99-1486-4a54-815d-289558589773/dpm_2.0_release_4.0.zip" }
+original = { url = "https://www.eba.europa.eu/sites/default/files/2024-12/11b02b99-1486-4a54-815d-289558589773/dpm_2.0_release_4.0.zip", checksum = "sha256:968553d3058a4851c4ad0d937fc5e6b2813e4ce2f127cf842922d7b716c99072" }
 
 [[versions]]
 id = "4.0-errata-4"
@@ -39,7 +39,7 @@ type = "errata"
 semver = "4.0.4"
 date = 2025-03-10
 revision = 4
-original = { url = "https://www.eba.europa.eu/sites/default/files/2025-03/c235b72f-d5fc-4ba3-a79c-23b5ad2a9eea/DPM2.0_release_4.0-2025-03-10.zip" }
+original = { url = "https://www.eba.europa.eu/sites/default/files/2025-03/c235b72f-d5fc-4ba3-a79c-23b5ad2a9eea/DPM2.0_release_4.0-2025-03-10.zip", checksum = "sha256:10a12344a4b262fd2ceb3f0914b99ddc3f5440baca7f3f0e4261c10c9e2d1527" }
 
 [[versions]]
 id = "4.0-errata-5"
@@ -48,7 +48,7 @@ type = "errata"
 semver = "4.0.5"
 date = 2025-03-20
 revision = 5
-original = { url = "https://www.eba.europa.eu/sites/default/files/2025-03/1cd56b9d-5919-4071-91e9-3d8a3ccff9e5/DPM2.0_release_4.0_2025-03-20.zip" }
+original = { url = "https://www.eba.europa.eu/sites/default/files/2025-03/1cd56b9d-5919-4071-91e9-3d8a3ccff9e5/DPM2.0_release_4.0_2025-03-20.zip", checksum = "sha256:e078520be280e65c4af861037b3831cbedcd2d8251247afb53649c0fe49c3fab" }
 
 [[versions]]
 id = "4.1-draft"
@@ -56,7 +56,7 @@ version = "4.1"
 type = "draft"
 semver = "4.1.0-beta.1"
 date = 2025-03-27
-original = { url = "https://www.eba.europa.eu/sites/default/files/2025-03/d931f7ac-0493-42c8-8e7a-3207c5479131/DPM%20Database%202.0%20%28release%204.1%20draft%29.zip" }
+original = { url = "https://www.eba.europa.eu/sites/default/files/2025-03/d931f7ac-0493-42c8-8e7a-3207c5479131/DPM%20Database%202.0%20%28release%204.1%20draft%29.zip", checksum = "sha256:1ee08badae303b67a578ff6f4d6bd40469968e8391f833f6d7fbdb568c742f3a" }
 
 [[versions]]
 id = "4.1-final"
@@ -64,7 +64,7 @@ version = "4.1"
 type = "final"
 semver = "4.1.0"
 date = 2025-05-28
-original = { url = "https://www.eba.europa.eu/sites/default/files/2025-05/b0fb26ab-265c-41f9-9c8d-72b3f8895143/DPM%202.0%20release%204.1.zip" }
+original = { url = "https://www.eba.europa.eu/sites/default/files/2025-05/b0fb26ab-265c-41f9-9c8d-72b3f8895143/DPM%202.0%20release%204.1.zip", checksum = "sha256:78e76caae549b3659e4a9073867f66182c54af0ebe29132b369e4a97ab8cb043" }
 
 [[versions]]
 id = "4.1-errata-1"
@@ -73,4 +73,6 @@ type = "errata"
 semver = "4.1.1"
 date = 2025-07-04
 revision = 1
-original = { url = "https://www.eba.europa.eu/sites/default/files/2025-07/c5e64c91-0e04-4419-8943-4963271ed983/DPM%202.0%20%20Database_v%204_1_20250625.accdb_.zip" }
+original = { url = "https://www.eba.europa.eu/sites/default/files/2025-07/c5e64c91-0e04-4419-8943-4963271ed983/DPM%202.0%20%20Database_v%204_1_20250625.accdb_.zip", checksum = "sha256:5052ecf687e0b4ce9ee2ed9b8158ffd0f161da57929bb129b2b835688e82fec3" }
+
+[[versions]]
