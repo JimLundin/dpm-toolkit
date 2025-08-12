@@ -23,21 +23,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install UV
-        uses: astral-sh/setup-uv@v6
-
-      - name: Set up Python
-        run: uv python install
-
-      - name: Install dependencies
-        run: uv sync
-
       - name: Cache downloaded databases
         id: cache-dbs
         uses: actions/cache@v4
         with:
-          path: "**/*.accdb"
+          path: download-temp/
           key: ${{ inputs.version_id }}-${{ inputs.database_type }}
+
+      - name: Install UV
+        if: steps.cache-dbs.outputs.cache-hit != 'true'
+        uses: astral-sh/setup-uv@v6
+
+      - name: Set up Python
+        if: steps.cache-dbs.outputs.cache-hit != 'true'
+        run: uv python install
+
+      - name: Install dependencies
+        if: steps.cache-dbs.outputs.cache-hit != 'true'
+        run: uv sync
 
       - name: Download database files
         if: steps.cache-dbs.outputs.cache-hit != 'true'
