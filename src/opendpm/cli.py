@@ -372,7 +372,7 @@ def handle_download_command(args: Namespace) -> None:
         # Write archive bytes to a file inside target_folder
         target_folder.mkdir(parents=True, exist_ok=True)
         archive_file = target_folder / source.get("filename", f"{version_id}.archive")
-        archive_file.write_bytes(archive)
+        archive_file.write_bytes(archive.getbuffer())
 
     log_info(f"Downloaded version {version_id} to {target_folder}", args.verbosity)
 

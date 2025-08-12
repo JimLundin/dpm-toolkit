@@ -24,7 +24,6 @@ class Version(TypedDict):
     version: str
     type: Literal["sample", "draft", "final", "release", "errata"]
     revision: NotRequired[int]
-    replaced_by: NotRequired[str]
     original: Source
     archive: NotRequired[Source]
     converted: NotRequired[Source]
