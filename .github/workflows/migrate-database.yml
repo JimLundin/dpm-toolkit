@@ -7,14 +7,14 @@ env:
 on:
   workflow_call:
     inputs:
-      version_id:
-        description: "The version ID to migrate."
+      source_artifact_name:
+        description: "Name of artifact containing source database files"
         required: true
         type: string
     outputs:
       artifact_name:
         description: "The name of the uploaded artifact containing the migrated SQLite database"
-        value: ${{ inputs.version_id }}-sqlite
+        value: ${{ inputs.source_artifact_name }}-sqlite
 
 jobs:
   migrate:
@@ -52,25 +52,19 @@ jobs:
         run: |
           Start-Process -FilePath "${{ env.ACCESS_ENGINE_INSTALLER }}" -ArgumentList "/quiet" -Wait
 
-      - name: Cache downloaded databases
-        id: cache-dbs
-        uses: actions/cache@v4
+      - name: Download source database files
+        uses: actions/download-artifact@v4
         with:
-          path: "**/*.accdb"
-          key: ${{ inputs.version_id }}
-
-      - name: Download database files
-        if: steps.cache-dbs.outputs.cache-hit != 'true'
-        run: |
-          uv run opendpm download -v ${{ inputs.version_id }}
+          name: ${{ inputs.source_artifact_name }}
+          path: database-files/
 
       - name: Convert to SQLite database
         run: |
-          ACCDB_FILE=$(find ${{ inputs.version_id }} -name "*.accdb" -type f | head -1)
-          uv run opendpm migrate --source "$ACCDB_FILE" --target ${{ inputs.version_id }}.sqlite
+          ACCDB_FILE=$(find database-files -name "*.accdb" -type f | head -1)
+          uv run opendpm migrate --source "$ACCDB_FILE" --target converted.sqlite
 
       - name: Upload SQLite database artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ inputs.version_id }}-sqlite
-          path: ${{ inputs.version_id }}.sqlite
+          name: ${{ inputs.source_artifact_name }}-sqlite
+          path: converted.sqlite

@@ -13,10 +13,17 @@ on:
         value: ${{ inputs.version_id }}
 
 jobs:
-  migrate:
-    uses: ./.github/workflows/migrate-database.yml
+  download:
+    uses: ./.github/workflows/download-database.yml
     with:
       version_id: ${{ inputs.version_id }}
+      database_type: "original"
+
+  migrate:
+    needs: download
+    uses: ./.github/workflows/migrate-database.yml
+    with:
+      source_artifact_name: ${{ needs.download.outputs.artifact_name }}
 
   schema:
     needs: migrate

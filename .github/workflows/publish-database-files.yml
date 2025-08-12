@@ -1,0 +1,90 @@
+name: Publish Database Files
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_id:
+        description: "Database version to publish (e.g., 4.1-final)"
+        required: true
+        type: string
+      publish_archive:
+        description: "Publish archive version"
+        required: false
+        type: boolean
+        default: true
+      publish_converted:
+        description: "Publish converted SQLite version"
+        required: false
+        type: boolean
+        default: true
+      prerelease:
+        description: "Mark as prerelease"
+        required: false
+        type: boolean
+        default: false
+
+env:
+  VERSION_ID: ${{ inputs.version_id }}
+
+jobs:
+  download-original:
+    uses: ./.github/workflows/download-database.yml
+    with:
+      version_id: ${{ inputs.version_id }}
+      database_type: "original"
+
+  build-converted:
+    needs: download-original
+    if: inputs.publish_converted
+    uses: ./.github/workflows/migrate-database.yml
+    with:
+      source_artifact_name: ${{ needs.download-original.outputs.artifact_name }}
+
+  create-release:
+    needs: [download-original, build-converted]
+    if: always() && (inputs.publish_archive || inputs.publish_converted) && needs.download-original.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set release tag
+        run: |
+          RELEASE_TAG="db-${{ env.VERSION_ID }}-$(date +'%Y%m%d')"
+          echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
+
+      - name: Download original files for archive
+        if: inputs.publish_archive
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.download-original.outputs.artifact_name }}
+          path: archive-files/
+
+      - name: Download SQLite database for converted
+        if: inputs.publish_converted && needs.build-converted.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build-converted.outputs.artifact_name }}
+          path: converted-files/
+
+      - name: Create archive zip
+        if: inputs.publish_archive
+        run: |
+          cd archive-files
+          zip -r "../dpm-${{ env.VERSION_ID }}-archive.zip" .
+
+      - name: Create SQLite zip
+        if: inputs.publish_converted && needs.build-converted.result == 'success'
+        run: |
+          cd converted-files
+          zip "../dpm-${{ env.VERSION_ID }}-sqlite.zip" *.sqlite
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: "DPM Database Files - ${{ env.VERSION_ID }}"
+          body: "Database files for version ${{ env.VERSION_ID }}"
+          prerelease: ${{ inputs.prerelease }}
+          files: dmp-${{ env.VERSION_ID }}-*.zip
