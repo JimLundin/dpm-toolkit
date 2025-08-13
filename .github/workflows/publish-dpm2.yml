@@ -4,33 +4,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  get-version:
-    runs-on: ubuntu-latest
-    outputs:
-      version_id: ${{ steps.get-version.outputs.version_id }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install UV
-        uses: astral-sh/setup-uv@v6
-
-      - name: Set up Python
-        run: uv python install
-
-      - name: Sync dependencies
-        run: uv sync
-
-      - name: Get latest version
-        id: get-version
-        run: |
-          version_id=$(uv run opendpm list --latest --json | jq -r '.id')
-          echo "version_id=$version_id" >> $GITHUB_OUTPUT
-
   build-database:
-    needs: get-version
     uses: ./.github/workflows/build-database.yml
     with:
-      version_id: ${{ needs.get-version.outputs.version_id }}
+      version_id: "release"
 
   publish:
     needs: build-database
