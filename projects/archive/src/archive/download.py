@@ -29,7 +29,7 @@ def verify_checksum(data: bytes, checksum: str) -> bool:
 
 def download_source(source: Source) -> BytesIO:
     """Download the zip file containing the DPM database."""
-    response = get(source["url"], timeout=30, allow_redirects=False)
+    response = get(source["url"], timeout=30, allow_redirects=True)
     response.raise_for_status()
 
     if checksum := source.get("checksum"):

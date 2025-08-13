@@ -7,6 +7,8 @@ type = "sample"
 semver = "3.2.0-alpha.1"
 date = 2023-06-13
 original = { url = "https://www.eba.europa.eu/assets/Reporting%20Framework/sample_dpm_2.0_database.zip", checksum = "sha256:4b032ebb59e8c1101dd2be68b66b365b7ef4001323282d85d85d67e1dc84f1a5" }
+archive = { url = "https://github.com/JimLundin/opendpm/releases/download/db-3.2-sample/dpm-3.2-sample-archive.zip", checksum = "sha256:ef81c2a93366b702b4143e824f907668d1b017a3e45ee74e01f10e1db3993b9b" }
+converted = { url = "https://github.com/JimLundin/opendpm/releases/download/db-3.2-sample/dpm-3.2-sample-sqlite.zip", checksum = "sha256:7bfae14dc38e1672224b47974bb962bfd8363351fa7884773cf9a12f80dfdc2e" }
 
 [[versions]]
 id = "3.5-sample"
@@ -15,6 +17,8 @@ type = "sample"
 semver = "3.5.0-alpha.1"
 date = 2024-07-09
 original = { url = "https://www.eba.europa.eu/sites/default/files/2024-07/39caec2e-4ede-4418-91c5-1190e03b9034/dpm_databse_3.5_dpm_2.0.zip", checksum = "sha256:683ed571fb6a6b9a1d4881a2c0ab3896df2d487a6ce1773f6db1b5b0accc18a2" }
+archive = { url = "https://github.com/JimLundin/opendpm/releases/download/db-3.5-sample/dpm-3.5-sample-archive.zip", checksum = "sha256:b9e281f7be3f7315beae2f6bfb03b69557ded6906a329c9e338df378f9470cfd" }
+converted = { url = "https://github.com/JimLundin/opendpm/releases/download/db-3.5-sample/dpm-3.5-sample-sqlite.zip", checksum = "sha256:e6bbede8fcb02961fd73650e994755ba1c822c456ed5e33722bc9d38c4b01ef4" }
 
 [[versions]]
 id = "4.0-draft"
