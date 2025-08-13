@@ -37,6 +37,8 @@ type = "release"
 semver = "4.0.0"
 date = 2024-12-19
 original = { url = "https://www.eba.europa.eu/sites/default/files/2024-12/11b02b99-1486-4a54-815d-289558589773/dpm_2.0_release_4.0.zip", checksum = "sha256:968553d3058a4851c4ad0d937fc5e6b2813e4ce2f127cf842922d7b716c99072" }
+archive = { url = "https://github.com/JimLundin/opendpm/releases/download/db-4.0-release/dpm-4.0-release-archive.zip", checksum = "sha256:cd1b7765575f76be9c3db07b6dcd0a1f9a07c913886090ecaa833f6aa34498a5" }
+converted = { url = "https://github.com/JimLundin/opendpm/releases/download/db-4.0-release/dpm-4.0-release-sqlite.zip", checksum = "sha256:e411694398991170095f6f87dd1b5de871823e8646b3d04cdfc354bc22cfdbb1" }
 
 [[versions]]
 id = "4.0-errata-4"
