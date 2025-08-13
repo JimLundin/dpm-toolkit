@@ -59,12 +59,20 @@ opendpm download --version "3.2" --type converted
 
 ### Use in Python
 
-```python
-from sqlalchemy import create_engine
-from dpm import DPM, TableVersionCell
+First install the generated models package:
 
-# Connect to downloaded database
-engine = create_engine("sqlite:///dpm.sqlite")
+```bash
+pip install dpm2
+```
+
+Then use the bundled database and models:
+
+```python
+from dpm2 import get_db
+from dpm2.models import TableVersionCell, Cell
+
+# Get database connection (bundled SQLite database)
+engine = get_db()
 
 # Type-safe database operations with IDE support
 with engine.connect() as conn:
@@ -162,20 +170,24 @@ opendpm schema --source ./output.sqlite --target ./models.py
 ### Database Access
 
 ```python
-from sqlalchemy import create_engine, select
-from dpm import DPM, TableVersionCell, Cell
+from sqlalchemy import select
+from dpm2 import get_db
+from dpm2.models import TableVersionCell, Cell
 
-# Connect to the SQLite database
-engine = create_engine("sqlite:///dpm.sqlite")
+# Get bundled database connection (no setup required)
+engine = get_db()
 
 # Type-safe queries with IDE support
 with engine.connect() as conn:
     # Query with autocompletion and type checking
-    stmt = select(TableVersionCell).where(TableVersionCell.CellContent.isnot(None))
+    stmt = select(TableVersionCell).where(TableVersionCell.cell_content.isnot(None))
     result = conn.execute(stmt)
 
     for row in result:
-        print(f"Cell ID: {row.CellID}, Content: {row.CellContent}")
+        print(f"Cell ID: {row.cell_id}, Content: {row.cell_content}")
+
+# Alternative: Use in-memory database for better performance
+engine = get_db(in_memory=True)
 ```
 
 ### Model Features
@@ -191,20 +203,21 @@ The generated SQLAlchemy models provide:
 ### Example Generated Model
 
 ```python
+# Example from dpm2.models
 class TableVersionCell(DPM):
     """Auto-generated model for the TableVersionCell table."""
     __tablename__ = "TableVersionCell"
 
-    CellID: Mapped[str] = mapped_column(primary_key=True)
-    TableVersionCellID: Mapped[str]
-    CellContent: Mapped[str | None]  # Nullable column
-    IsActive: Mapped[bool]           # Boolean type
-    CreatedDate: Mapped[date]        # Date type
+    cell_id: Mapped[str] = mapped_column(primary_key=True)
+    table_version_cell_id: Mapped[str]
+    cell_content: Mapped[str | None]  # Nullable column
+    is_active: Mapped[bool]           # Boolean type
+    created_date: Mapped[date]        # Date type
 
     # Automatically generated relationships
-    Cell: Mapped[Cell] = relationship(foreign_keys=[CellID])
-    TableVersionHeader: Mapped[TableVersionHeader] = relationship(
-        foreign_keys=[TableVersionHeaderID]
+    cell: Mapped[Cell] = relationship(foreign_keys=[cell_id])
+    table_version_header: Mapped[TableVersionHeader] = relationship(
+        foreign_keys=[table_version_cell_id]
     )
 ```
 
