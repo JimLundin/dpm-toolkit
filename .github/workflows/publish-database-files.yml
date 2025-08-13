@@ -39,7 +39,7 @@ jobs:
 
       - name: Set release tag
         run: |
-          RELEASE_TAG="db-${{ env.VERSION_ID }}-$(date +'%Y%m%d')"
+          RELEASE_TAG="db-${{ env.VERSION_ID }}"
           echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
 
       - name: Download original files for archive
