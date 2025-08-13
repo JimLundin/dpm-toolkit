@@ -6,6 +6,8 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
     steps:
       - uses: actions/checkout@v4
 
@@ -64,7 +66,5 @@ jobs:
         working-directory: projects/dpm2
 
       - name: Publish dpm2 to PyPI
-        run: uv publish
+        run: uv publish --trusted-publishing
         working-directory: projects/dpm2
-        env:
-          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
