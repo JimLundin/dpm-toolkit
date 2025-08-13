@@ -36,11 +36,28 @@ jobs:
           uv version $VERSION --package dpm2
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
-      - name: Download built artifacts
+      - name: Download SQLite database
         uses: actions/download-artifact@v4
         with:
-          name: ${{ steps.build-database.outputs.artifact_name }}
-          path: projects/dpm2/src/dpm2/
+          name: ${{ steps.build-database.outputs.database_artifact_name }}
+          path: database/
+
+      - name: Download generated schema
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ steps.build-database.outputs.schema_artifact_name }}
+          path: schema/
+
+      - name: Package database and schema for dpm2
+        run: |
+          mkdir -p projects/dpm2/src/dpm2
+          echo "Packaging artifacts for dpm2..."
+          # Copy SQLite database with correct name
+          find database -name "*.sqlite" -exec cp {} projects/dpm2/src/dpm2/dpm.sqlite \;
+          # Copy generated schema as models.py
+          find schema -name "*.py" -exec cp {} projects/dpm2/src/dpm2/models.py \;
+          echo "Final dpm2 package contents:"
+          ls -la projects/dpm2/src/dpm2/
 
       - name: Build dpm2 package
         run: uv build
