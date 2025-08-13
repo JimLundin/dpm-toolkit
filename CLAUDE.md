@@ -22,8 +22,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Application Commands
 - `opendpm list` - List available database versions
-- `opendpm download --release --converted` - Download latest stable release
-- `opendpm scrape` - Find new EBA releases
+- `opendpm download --version release --type converted` - Download latest stable release
+- `opendpm update` - Find new EBA releases
+- `opendpm schema --source SOURCE --target TARGET` - Generate Python models from SQLite
 - `opendpm migrate --source SOURCE --target TARGET` - Migrate Access to SQLite (Windows only)
 
 ## Architecture Overview
@@ -39,6 +40,7 @@ OpenDPM is a UV workspace with multiple specialized subprojects:
 - **`archive/`**: Version management, downloads, and release tracking
 - **`migrate/`**: Access-to-SQLite migration engine (Windows-only, requires ODBC drivers)
 - **`scrape/`**: Automated discovery of new EBA releases via web scraping
+- **`schema/`**: Python model generation from SQLite databases
 - **`dpm2/`**: Generated Python packages (future enhancement placeholder)
 
 ### Key Design Patterns
