@@ -35,7 +35,13 @@ OpenDPM makes EBA DPM 2.0 databases accessible across all platforms by convertin
 ### Install OpenDPM
 
 ```bash
+# Basic installation (recommended for most users)
 pip install opendpm
+
+# With optional extras for specific functionality
+pip install opendpm[scrape]    # Web scraping capabilities
+pip install opendpm[migrate]   # Database migration (Windows only)
+pip install opendpm[schema]    # Python model generation
 ```
 
 ### Download Latest Database
@@ -44,11 +50,11 @@ pip install opendpm
 # List available versions
 opendpm list
 
-# Download latest release (SQLite + Python models)
-opendpm download --release --converted
+# Download latest release (SQLite)
+opendpm download --version release --type converted
 
 # Download specific version
-opendpm download --version "3.2" --converted
+opendpm download --version "3.2" --type converted
 ```
 
 ### Use in Python
@@ -74,7 +80,7 @@ Download pre-converted SQLite databases and Python models:
 
 ```bash
 # Download from CLI (recommended)
-opendpm download --release --converted
+opendpm download --version release --type converted
 
 # Or download directly from GitHub releases
 # https://github.com/JimLundin/opendpm/releases/latest/download/dpm-sqlite.zip
@@ -86,10 +92,10 @@ opendpm download --release --converted
 
 ```bash
 # Install with conversion support (Windows only)
-pip install opendpm[convert]
+pip install opendpm[migrate]
 
 # Convert your own Access databases
-opendpm migrate --source /path/to/access/files --target /path/to/output
+opendpm migrate --source /path/to/access/database.accdb --target /path/to/output.sqlite
 ```
 
 ### Non-Windows Users
@@ -104,37 +110,39 @@ opendpm migrate --source /path/to/access/files --target /path/to/output
 
 ```bash
 # List available database versions
-opendpm list [--release|--latest|--version VERSION] [--json]
+opendpm list [--version VERSION] [--json|--yaml|--table]
 
 # Download databases and models
-opendpm download [--release|--latest|--version VERSION] 
-                 [--original|--archive|--converted] 
-                 [--target DIRECTORY]
+opendpm download [--version VERSION] [--type TYPE] [--target DIRECTORY]
+                 [--extract|--no-extract] [--overwrite]
 
 # Find new versions (maintenance)
-opendpm scrape [--json]
+opendpm update [--json|--yaml|--table]
 
 # Convert Access to SQLite (Windows only)
-opendpm migrate --source SOURCE --target TARGET
+opendpm migrate --source SOURCE --target TARGET [--overwrite]
+
+# Generate Python models from SQLite
+opendpm schema --source SOURCE [--target TARGET]
 ```
 
 ### Version Selection
 
-- `--release` - Latest stable release (recommended)
-- `--latest` - Most recent version (including prereleases)
+- `--version release` - Latest stable release (recommended, default)
+- `--version latest` - Most recent version (including prereleases)
 - `--version "X.Y"` - Specific version (e.g., "3.2")
 
 ### Download Types
 
-- `--converted` - SQLite database + Python models (default, recommended)
-- `--original` - Original EBA Access database
-- `--archive` - Processed Access database
+- `--type converted` - SQLite database + Python models (default, recommended)
+- `--type original` - Original EBA Access database
+- `--type archive` - Processed Access database
 
 ### Examples
 
 ```bash
 # Download latest stable release
-opendpm download --release
+opendpm download --version release
 
 # Download specific version to custom directory
 opendpm download --version "3.2" --target ./dpm-data
@@ -143,7 +151,10 @@ opendpm download --version "3.2" --target ./dpm-data
 opendpm list --json
 
 # Convert local Access database (Windows only)
-opendpm migrate --source ./access-files --target ./sqlite-output
+opendpm migrate --source ./database.accdb --target ./output.sqlite
+
+# Generate Python models from SQLite database
+opendpm schema --source ./output.sqlite --target ./models.py
 ```
 
 ## Using the Generated Models
@@ -162,7 +173,7 @@ with engine.connect() as conn:
     # Query with autocompletion and type checking
     stmt = select(TableVersionCell).where(TableVersionCell.CellContent.isnot(None))
     result = conn.execute(stmt)
-    
+
     for row in result:
         print(f"Cell ID: {row.CellID}, Content: {row.CellContent}")
 ```
@@ -189,7 +200,7 @@ class TableVersionCell(DPM):
     CellContent: Mapped[str | None]  # Nullable column
     IsActive: Mapped[bool]           # Boolean type
     CreatedDate: Mapped[date]        # Date type
-    
+
     # Automatically generated relationships
     Cell: Mapped[Cell] = relationship(foreign_keys=[CellID])
     TableVersionHeader: Mapped[TableVersionHeader] = relationship(
@@ -202,18 +213,21 @@ class TableVersionCell(DPM):
 The conversion process enhances the original Access database structure:
 
 ### 1. Type Refinement
+
 - **Smart Type Detection**: Infers better types from column names and data
 - **Date Conversion**: Converts Access date strings to Python date objects
 - **Boolean Normalization**: Transforms Access -1/0 to Python True/False
 - **GUID Recognition**: Identifies UUID columns by naming patterns
 
 ### 2. Constraint Enhancement
+
 - **Nullable Analysis**: Detects which columns can be NULL from actual data
 - **Enum Detection**: Identifies constrained value sets and creates Literal types
 - **Relationship Mapping**: Establishes foreign key relationships
 - **Primary Key Optimization**: Optimizes indexes for SQLite performance
 
 ### 3. Model Generation
+
 - **Type-Safe Classes**: Creates fully annotated SQLAlchemy models
 - **Relationship Objects**: Maps foreign keys to navigable Python relationships
 - **Documentation**: Auto-generates docstrings for all models and tables
@@ -226,7 +240,7 @@ OpenDPM is built as a modular workspace with specialized components:
 ### Project Components
 
 - **[`opendpm`](src/opendpm/)**: Central CLI that coordinates all functionality
-- **[`archive`](projects/archive/)**: Version management, downloads, and release tracking  
+- **[`archive`](projects/archive/)**: Version management, downloads, and release tracking
 - **[`migrate`](projects/migrate/)**: Access-to-SQLite conversion engine (Windows only)
 - **[`scrape`](projects/scrape/)**: Automated discovery of new EBA releases
 - **[`schema`](projects/schema/)**: Python model generation from SQLite databases
@@ -285,9 +299,10 @@ opendpm/
 ├── src/opendpm/           # Main CLI package
 ├── projects/              # Workspace subprojects
 │   ├── archive/          # Version management & downloads
-│   ├── convert/          # Access-to-SQLite conversion
+│   ├── migrate/          # Access-to-SQLite conversion
 │   ├── scrape/           # Web scraping for new versions
-│   └── dpm2/             # Generated Python packages (placeholder)
+│   ├── schema/           # Python model generation
+│   └── dpm2/             # Generated Python models package
 ├── .github/workflows/    # CI/CD automation
 └── pyproject.toml        # Workspace configuration
 ```
@@ -297,10 +312,11 @@ opendpm/
 Each subproject is independently installable:
 
 ```bash
-# Install specific subproject
+# Install specific subprojects
 uv pip install -e projects/archive
-uv pip install -e projects/convert  # Windows only
+uv pip install -e projects/migrate  # Windows only
 uv pip install -e projects/scrape
+uv pip install -e projects/schema
 ```
 
 ### Code Quality
