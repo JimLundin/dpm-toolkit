@@ -8,9 +8,12 @@ on:
         required: true
         type: string
     outputs:
-      artifact_name:
-        description: "The name of the uploaded artifact containing the built database and schema"
-        value: ${{ inputs.version_id }}
+      database_artifact_name:
+        description: "The name of the uploaded artifact containing the SQLite database"  
+        value: ${{ jobs.migrate.outputs.artifact_name }}
+      schema_artifact_name:
+        description: "The name of the uploaded artifact containing the generated schema"
+        value: ${{ jobs.schema.outputs.artifact_name }}
 
 jobs:
   download:
