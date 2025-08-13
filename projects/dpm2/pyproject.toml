@@ -11,4 +11,4 @@ requires = ["uv_build"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
-data = ["**/*.sqlite", "**/*.py"]
+data = { data = ["**/*.sqlite", "**/*.py"] }
