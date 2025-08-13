@@ -2,6 +2,8 @@
 
 Open-source tools and models for working with EBA DPM 2.0 (Data Point Model) databases.
 
+**📚 Documentation:** [Architecture](#architecture-overview) | [CLI Reference](#cli-reference) | [Contributing](CONTRIBUTING.md) | [Projects](#project-components)
+
 ## Disclaimer
 
 This is an unofficial tool and is not affiliated with or endorsed by the European Banking Authority (EBA). The original AccessDB source is available at the [EBA DPM Website](https://www.eba.europa.eu/risk-and-data-analysis/reporting-frameworks/dpm-data-dictionary).
@@ -223,11 +225,12 @@ OpenDPM is built as a modular workspace with specialized components:
 
 ### Project Components
 
-- **`opendpm`**: Central CLI that coordinates all functionality
-- **`archive`**: Version management, downloads, and release tracking
-- **`convert`**: Access-to-SQLite conversion engine (Windows only)
-- **`scrape`**: Automated discovery of new EBA releases
-- **`dpm2`**: Generated Python packages (future enhancement)
+- **[`opendpm`](src/opendpm/)**: Central CLI that coordinates all functionality
+- **[`archive`](projects/archive/)**: Version management, downloads, and release tracking  
+- **[`migrate`](projects/migrate/)**: Access-to-SQLite conversion engine (Windows only)
+- **[`scrape`](projects/scrape/)**: Automated discovery of new EBA releases
+- **[`schema`](projects/schema/)**: Python model generation from SQLite databases
+- **[`dpm2`](projects/dpm2/)**: Generated Python models package
 
 ### Automated Pipeline
 
