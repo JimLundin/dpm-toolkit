@@ -4,7 +4,7 @@ version = "0.0.0"
 description = "Open-source tools and models for working with DPM databases"
 authors = [{ name = "Jim Lundin", email = "jimeriklundin@gmail.com" }]
 readme = "README.md"
-license = {file = "LICENSE"}
+license = { file = "LICENSE" }
 requires-python = ">= 3.13"
 
 dependencies = ["archive", "pyyaml>=6.0.2"]
@@ -16,6 +16,7 @@ dpm-toolkit = "dpm_toolkit.cli:main"
 scrape = ["scrape"]
 migrate = ["migrate"]
 schema = ["schema"]
+compare = ["compare"]
 
 [tool.ruff]
 unsafe-fixes = true
@@ -52,3 +53,4 @@ archive = { workspace = true }
 migrate = { workspace = true }
 scrape = { workspace = true }
 schema = { workspace = true }
+compare = { workspace = true }

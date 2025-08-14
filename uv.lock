@@ -5,6 +5,7 @@ requires-python = ">=3.13"
 [manifest]
 members = [
     "archive",
+    "compare",
     "dpm-toolkit",
     "dpm2",
     "migrate",
@@ -68,6 +69,17 @@ wheels = [
 ]
 
 [[package]]
+name = "compare"
+version = "0.0.0"
+source = { editable = "projects/compare" }
+dependencies = [
+    { name = "sqlalchemy" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "sqlalchemy", specifier = ">=2.0.37" }]
+
+[[package]]
 name = "dpm-toolkit"
 version = "0.0.0"
 source = { editable = "." }
@@ -77,6 +89,9 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+compare = [
+    { name = "compare" },
+]
 migrate = [
     { name = "migrate" },
 ]
@@ -99,12 +114,13 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "archive", editable = "projects/archive" },
+    { name = "compare", marker = "extra == 'compare'", editable = "projects/compare" },
     { name = "migrate", marker = "extra == 'migrate'", virtual = "projects/migrate" },
     { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "schema", marker = "extra == 'schema'", virtual = "projects/schema" },
     { name = "scrape", marker = "extra == 'scrape'", virtual = "projects/scrape" },
 ]
-provides-extras = ["scrape", "migrate", "schema"]
+provides-extras = ["scrape", "migrate", "schema", "compare"]
 
 [package.metadata.requires-dev]
 dev = [

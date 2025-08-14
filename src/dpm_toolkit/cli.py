@@ -1,6 +1,7 @@
 """Command line interface for DPM Toolkit."""
 
 import json
+import logging
 from argparse import ArgumentParser, Namespace
 from collections.abc import Sequence
 from datetime import date
@@ -82,6 +83,9 @@ def output_data(
 def log_info(message: str, verbosity: Verbosity = Verbosity.INFO) -> None:
     """Print info message if not quiet."""
     if verbosity == Verbosity.QUIET:
+        return
+    if verbosity == Verbosity.DEBUG:
+        print(f"[DEBUG] {message}")
         return
     if verbosity == Verbosity.INFO:
         print(message)
@@ -274,6 +278,32 @@ def create_parser() -> ArgumentParser:
         help="Path to save SQLAlchemy schema file to (default: %(default)s)",
     )
 
+    compare_parser = subparsers.add_parser(
+        "compare",
+        help="Compare two SQLite databases",
+        description="Compare schema and data between two SQLite database versions",
+    )
+    compare_parser.add_argument(
+        "--source",
+        "-s",
+        type=Path,
+        required=True,
+        help="Path to source (older) SQLite database",
+    )
+    compare_parser.add_argument(
+        "--target",
+        "-t",
+        type=Path,
+        required=True,
+        help="Path to target (newer) SQLite database",
+    )
+    compare_parser.add_argument(
+        "--type",
+        choices=["schema", "data", "both"],
+        default="both",
+        help="Type of comparison to perform (default: %(default)s)",
+    )
+
     return parser
 
 
@@ -416,6 +446,39 @@ def handle_schema_command(args: Namespace) -> None:
     generate_schema(args.source, args.target)
 
 
+def handle_compare_command(args: Namespace) -> None:
+    """Handle the 'compare' subcommand."""
+    try:
+        from compare import compare_databases
+    except ImportError:
+        log_info(
+            "Error: Database comparison requires the 'compare' extra. Install with: uv sync --extra compare"
+        )
+        return
+
+    result = compare_databases(args.source, args.target, args.type)
+
+    log_info(f"Database Comparison ({args.type})")
+    log_info(f"Source: {args.source}")
+    log_info(f"Target: {args.target}")
+
+    if "schema_changes" in result:
+        if result["schema_changes"]:
+            log_info("Schema Changes:")
+            for change in result["schema_changes"]:
+                log_info(f"  • {change}")
+        else:
+            print("Schema Changes: None")
+
+    if "data_changes" in result:
+        if result["data_changes"]:
+            log_info("Data Changes:")
+            for change in result["data_changes"]:
+                log_info(f"  • {change}")
+        else:
+            log_info("Data Changes: None")
+
+
 def main() -> None:
     """Entry point for the CLI."""
     parser = create_parser()
@@ -431,6 +494,8 @@ def main() -> None:
         handle_migrate_command(args)
     elif args.command == "schema":
         handle_schema_command(args)
+    elif args.command == "compare":
+        handle_compare_command(args)
     else:
         parser.print_help()
 
