@@ -4,13 +4,23 @@ from sqlalchemy import Engine, MetaData
 
 from compare.diff import diff_dicts, format_diffs
 
+# Type definitions for schema structure
+ColumnSchema = dict[str, str | bool | None]
+IndexSchema = dict[str, list[str] | bool]
+ForeignKeySchema = dict[str, str]
+TableSchema = dict[
+    str,
+    dict[str, ColumnSchema] | dict[str, IndexSchema] | dict[str, ForeignKeySchema],
+]
 
-def _extract_table_schema(metadata: MetaData) -> dict[str, dict[str, str]]:
-    """Extract detailed schema information from metadata."""
-    schema: dict[str, dict[str, str]] = {}
+
+def _extract_table_schema(metadata: MetaData) -> dict[str, TableSchema]:
+    """Extract comprehensive schema information from metadata."""
+    schema: dict[str, TableSchema] = {}
 
     for table_name, table in metadata.tables.items():
-        columns: dict[str, dict[str, bool | str | None]] = {}
+        # Extract column details
+        columns: dict[str, ColumnSchema] = {}
         for col_name, column in table.columns.items():
             columns[col_name] = {
                 "type": str(column.type),
@@ -19,16 +29,17 @@ def _extract_table_schema(metadata: MetaData) -> dict[str, dict[str, str]]:
                 "default": str(column.default) if column.default else None,
             }
 
-        # Get indexes
-        indexes: dict[str | None, dict[str, list[str] | bool]] = {}
+        # Extract indexes
+        indexes: dict[str, IndexSchema] = {}
         for index in table.indexes:
-            indexes[index.name] = {
-                "columns": [col.name for col in index.columns],
-                "unique": index.unique,
-            }
+            if index.name:
+                indexes[index.name] = {
+                    "columns": [col.name for col in index.columns],
+                    "unique": index.unique,
+                }
 
-        # Get foreign keys
-        foreign_keys: dict[str, dict[str, str]] = {}
+        # Extract foreign keys
+        foreign_keys: dict[str, ForeignKeySchema] = {}
         for fk in table.foreign_keys:
             fk_name = f"{fk.parent.name}->{fk.column}"
             foreign_keys[fk_name] = {
@@ -46,21 +57,21 @@ def _extract_table_schema(metadata: MetaData) -> dict[str, dict[str, str]]:
 
 
 def compare_schema(source_engine: Engine, target_engine: Engine) -> list[str]:
-    """Compare database schemas and return detailed list of changes."""
-    # Connect to databases
+    """Compare database schemas comprehensively."""
+    # Reflect both databases
     source_meta = MetaData()
     target_meta = MetaData()
     source_meta.reflect(bind=source_engine)
     target_meta.reflect(bind=target_engine)
 
-    # Extract detailed schema information
+    # Extract complete schema information
     source_schema = _extract_table_schema(source_meta)
     target_schema = _extract_table_schema(target_meta)
 
-    # Use generic differ
+    # Compare using generic diff logic
     diffs = diff_dicts(source_schema, target_schema)
 
-    # Convert to formatted strings
+    # Format results
     if not diffs:
         return ["Schema Changes: None"]
 
