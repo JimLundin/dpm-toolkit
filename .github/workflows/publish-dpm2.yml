@@ -62,4 +62,3 @@ jobs:
 
       - name: Publish dpm2 to PyPI
         run: uv publish
-        working-directory: projects/dpm2
