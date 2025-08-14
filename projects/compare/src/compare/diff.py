@@ -13,23 +13,38 @@ class ChangeType(StrEnum):
     MODIFIED = auto()
 
 
+type Value = str | dict[str, Any] | None
+
+
 @dataclass
 class Diff:
     """Represents a single difference between two items."""
 
     type: ChangeType
     path: str  # dot-separated path to the difference
-    old_value: Any = None
-    new_value: Any = None
+    old_value: Value = None
+    new_value: Value = None
+
+    def _format_value(self, value: Value) -> str:
+        """Format a value for display in diff output."""
+        if value is None:
+            return "None"
+        if not isinstance(value, dict):
+            return str(value)
+            # Format dictionary as key=value pairs for readability
+        pairs = [f"{k}={v}" for k, v in value.items()]
+        return "{" + ", ".join(pairs) + "}"
 
     def __str__(self) -> str:
         """Return a human-readable string representation of the diff item."""
         if self.type == ChangeType.ADDED:
-            return f"+ {self.path}: {self.new_value}"
+            return f"+ {self.path}: {self._format_value(self.new_value)}"
         if self.type == ChangeType.REMOVED:
-            return f"- {self.path}: {self.old_value}"
+            return f"- {self.path}: {self._format_value(self.old_value)}"
         if self.type == ChangeType.MODIFIED:
-            return f"~ {self.path}: {self.old_value} -> {self.new_value}"
+            old_formatted = self._format_value(self.old_value)
+            new_formatted = self._format_value(self.new_value)
+            return f"~ {self.path}: {old_formatted} -> {new_formatted}"
         return f"{self.type} {self.path}"
 
 

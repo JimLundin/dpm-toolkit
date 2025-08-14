@@ -100,7 +100,7 @@ def _compare_table_data(
         Diff(
             ChangeType.ADDED,
             f"{table_name}.row[{key}]",
-            new_value="new row",
+            new_value=target_rows[key],
         )
         for key in target_rows.keys() - source_rows.keys()
     )
@@ -110,7 +110,7 @@ def _compare_table_data(
         Diff(
             ChangeType.REMOVED,
             f"{table_name}.row[{key}]",
-            old_value="deleted row",
+            old_value=source_rows[key],
         )
         for key in source_rows.keys() - target_rows.keys()
     )
