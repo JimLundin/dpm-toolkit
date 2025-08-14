@@ -1,7 +1,7 @@
 [project]
 name = "dpm2"
 version = "0.0.0"
-description = "Generated Python models for EBA DPM 2.0 databases with full type safety"
+description = "SQLite db and generated Python models for EBA DPM 2.0 databases with full type safety"
 authors = [{ name = "Jim Lundin", email = "jimeriklundin@gmail.com" }]
 requires-python = ">=3.13"
 dependencies = ["sqlalchemy>=2.0.37"]
@@ -9,6 +9,3 @@ dependencies = ["sqlalchemy>=2.0.37"]
 [build-system]
 requires = ["uv_build"]
 build-backend = "uv_build"
-
-[tool.uv.build-backend]
-data = { data = "**/*.sqlite" }
