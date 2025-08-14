@@ -2,6 +2,7 @@
 
 from importlib.resources import as_file, files
 from importlib.resources.abc import Traversable
+from pathlib import Path
 from sqlite3 import connect
 
 from sqlalchemy import Connection, Engine, create_engine, text
@@ -20,30 +21,27 @@ def set_readonly(connection: Connection, _record: ConnectionPoolEntry) -> None:
     connection.execute(text("PRAGMA readonly = true"))
 
 
-def disk_engine() -> Engine:
+def disk_engine(db_path: Path) -> Engine:
     """Get an engine to the dpm db."""
-    source_resource = get_source_db_resource()
-    with as_file(source_resource) as source_path:
-        engine = create_engine(
-            f"sqlite:///{source_path}?mode=ro",
-            connect_args={"uri": True},
-        )
+    engine = create_engine(f"sqlite:///{db_path}?mode=ro", connect_args={"uri": True})
     listen(engine, "connect", set_readonly)
     return engine
 
 
-def in_memory_engine() -> Engine:
+def in_memory_engine(db_path: Path) -> Engine:
     """Get an engine to the dpm db."""
-    source_resource = get_source_db_resource()
     memory_db = connect(":memory:")
-    with (
-        as_file(source_resource) as source_path,
-        connect(source_path) as source_db,
-    ):
+    with connect(db_path) as source_db:
         source_db.backup(memory_db)
     return create_engine("sqlite://", creator=lambda: memory_db)
 
 
-def get_db(*, in_memory: bool = False) -> Engine:
+def get_db(*, in_memory: bool = True) -> Engine:
     """Get an engine to the dpm db."""
-    return in_memory_engine() if in_memory else disk_engine()
+    db_resource = get_source_db_resource()
+    with as_file(db_resource) as db_path:
+        if not db_path.exists():
+            msg = f"Database file not found: {db_path}"
+            raise FileNotFoundError(msg)
+
+        return in_memory_engine(db_path) if in_memory else disk_engine(db_path)
