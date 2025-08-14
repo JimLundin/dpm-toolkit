@@ -49,4 +49,4 @@ class TableVersionCell(DPM):
     Cell: Mapped[Cell] = relationship(foreign_keys=[CellID])
 ```
 
-This is an internal OpenDPM component - generated models are distributed via the `dpm2` package.
+This is an internal DPM Toolkit component - generated models are distributed via the `dpm2` package.

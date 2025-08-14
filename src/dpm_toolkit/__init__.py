@@ -1,8 +1,8 @@
-"""Provides a command-line interface for OpenDPM."""
+"""Provides a command-line interface for DPM Toolkit."""
 
 import logging
 
-from opendpm.cli import main
+from dpm_toolkit.cli import main
 
 logging.basicConfig(
     level=logging.INFO,

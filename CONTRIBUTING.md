@@ -1,13 +1,13 @@
-# Contributing to OpenDPM
+# Contributing to DPM Toolkit
 
-Thanks for your interest in contributing! This document provides basic guidelines for contributing to OpenDPM.
+Thanks for your interest in contributing! This document provides basic guidelines for contributing to DPM Toolkit.
 
 ## Development Setup
 
 ```bash
 # Clone and setup
-git clone https://github.com/JimLundin/opendpm.git
-cd opendpm
+git clone https://github.com/JimLundin/dpm-toolkit.git
+cd dpm-toolkit
 
 # Install UV package manager
 pip install uv
@@ -35,9 +35,9 @@ pyright src/
 
 ## Project Structure
 
-OpenDPM is a UV workspace with these components:
+DPM Toolkit is a UV workspace with these components:
 
-- **`src/opendpm/`** - Main CLI package
+- **`src/dpm_toolkit/`** - Main CLI package
 - **`projects/archive/`** - Version management and downloads  
 - **`projects/migrate/`** - Database conversion (Windows only)
 - **`projects/scrape/`** - Web scraping for new versions

@@ -1,4 +1,4 @@
-# OpenDPM
+# DMP Toolkit
 
 Open-source tools and models for working with EBA DPM 2.0 (Data Point Model) databases.
 
@@ -8,9 +8,9 @@ Open-source tools and models for working with EBA DPM 2.0 (Data Point Model) dat
 
 This is an unofficial tool and is not affiliated with or endorsed by the European Banking Authority (EBA). The original AccessDB source is available at the [EBA DPM Website](https://www.eba.europa.eu/risk-and-data-analysis/reporting-frameworks/dpm-data-dictionary).
 
-## What is OpenDPM?
+## What is DPM Toolkit?
 
-OpenDPM makes EBA DPM 2.0 databases accessible across all platforms by converting Windows-only Access databases to SQLite and generating type-safe Python models.
+DPM Toolkit makes EBA DPM 2.0 databases accessible across all platforms by converting Windows-only Access databases to SQLite and generating type-safe Python models.
 
 ### Key Benefits
 
@@ -20,7 +20,7 @@ OpenDPM makes EBA DPM 2.0 databases accessible across all platforms by convertin
 - **Multiple Options**: Download pre-built artifacts or convert databases yourself
 - **Zero Setup**: Ready-to-use databases and Python models
 
-### Why Use OpenDPM?
+### Why Use DPM Toolkit?
 
 **For Data Analysts**: Skip the hassle of Windows-only Access databases. Get clean SQLite files that work everywhere.
 
@@ -32,29 +32,29 @@ OpenDPM makes EBA DPM 2.0 databases accessible across all platforms by convertin
 
 ## Quick Start
 
-### Install OpenDPM
+### Install DPM Toolkit
 
 ```bash
 # Basic installation (recommended for most users)
-pip install opendpm
+pip install dpm-toolkit
 
 # With optional extras for specific functionality
-pip install opendpm[scrape]    # Web scraping capabilities
-pip install opendpm[migrate]   # Database migration (Windows only)
-pip install opendpm[schema]    # Python model generation
+pip install dpm-toolkit[scrape]    # Web scraping capabilities
+pip install dpm-toolkit[migrate]   # Database migration (Windows only)
+pip install dpm-toolkit[schema]    # Python model generation
 ```
 
 ### Download Latest Database
 
 ```bash
 # List available versions
-opendpm list
+dpm-toolkit list
 
 # Download latest release (SQLite)
-opendpm download --version release --type converted
+dpm-toolkit download --version release --type converted
 
 # Download specific version
-opendpm download --version "3.2" --type converted
+dpm-toolkit download --version "3.2" --type converted
 ```
 
 ### Use in Python
@@ -88,10 +88,10 @@ Download pre-converted SQLite databases and Python models:
 
 ```bash
 # Download from CLI (recommended)
-opendpm download --version release --type converted
+dpm-toolkit download --version release --type converted
 
 # Or download directly from GitHub releases
-# https://github.com/JimLundin/opendpm/releases/latest/download/dpm-sqlite.zip
+# https://github.com/JimLundin/dpm-toolkit/releases/latest/download/dpm-sqlite.zip
 ```
 
 ### Windows Only - Self Conversion
@@ -100,10 +100,10 @@ opendpm download --version release --type converted
 
 ```bash
 # Install with conversion support (Windows only)
-pip install opendpm[migrate]
+pip install dpm-toolkit[migrate]
 
 # Convert your own Access databases
-opendpm migrate --source /path/to/access/database.accdb --target /path/to/output.sqlite
+dpm-toolkit migrate --source /path/to/access/database.accdb --target /path/to/output.sqlite
 ```
 
 ### Non-Windows Users
@@ -118,20 +118,20 @@ opendpm migrate --source /path/to/access/database.accdb --target /path/to/output
 
 ```bash
 # List available database versions
-opendpm list [--version VERSION] [--json|--yaml|--table]
+dpm-toolkit list [--version VERSION] [--json|--yaml|--table]
 
 # Download databases and models
-opendpm download [--version VERSION] [--type TYPE] [--target DIRECTORY]
+dpm-toolkit download [--version VERSION] [--type TYPE] [--target DIRECTORY]
                  [--extract|--no-extract] [--overwrite]
 
 # Find new versions (maintenance)
-opendpm update [--json|--yaml|--table]
+dpm-toolkit update [--json|--yaml|--table]
 
 # Convert Access to SQLite (Windows only)
-opendpm migrate --source SOURCE --target TARGET [--overwrite]
+dpm-toolkit migrate --source SOURCE --target TARGET [--overwrite]
 
 # Generate Python models from SQLite
-opendpm schema --source SOURCE [--target TARGET]
+dpm-toolkit schema --source SOURCE [--target TARGET]
 ```
 
 ### Version Selection
@@ -150,19 +150,19 @@ opendpm schema --source SOURCE [--target TARGET]
 
 ```bash
 # Download latest stable release
-opendpm download --version release
+dpm-toolkit download --version release
 
 # Download specific version to custom directory
-opendpm download --version "3.2" --target ./dpm-data
+dpm-toolkit download --version "3.2" --target ./dpm-data
 
 # List all versions in JSON format
-opendpm list --json
+dpm-toolkit list --json
 
 # Convert local Access database (Windows only)
-opendpm migrate --source ./database.accdb --target ./output.sqlite
+dpm-toolkit migrate --source ./database.accdb --target ./output.sqlite
 
 # Generate Python models from SQLite database
-opendpm schema --source ./output.sqlite --target ./models.py
+dpm-toolkit schema --source ./output.sqlite --target ./models.py
 ```
 
 ## Using the Generated Models
@@ -248,11 +248,11 @@ The conversion process enhances the original Access database structure:
 
 ## Architecture Overview
 
-OpenDPM is built as a modular workspace with specialized components:
+DPM Toolkit is built as a modular workspace with specialized components:
 
 ### Project Components
 
-- **[`opendpm`](src/opendpm/)**: Central CLI that coordinates all functionality
+- **[`dpm-toolkit`](src/dpm-toolkit/)**: Central CLI that coordinates all functionality
 - **[`archive`](projects/archive/)**: Version management, downloads, and release tracking
 - **[`migrate`](projects/migrate/)**: Access-to-SQLite conversion engine (Windows only)
 - **[`scrape`](projects/scrape/)**: Automated discovery of new EBA releases
@@ -290,8 +290,8 @@ OpenDPM is built as a modular workspace with specialized components:
 
 ```bash
 # Clone the repository
-git clone https://github.com/JimLundin/opendpm.git
-cd opendpm
+git clone https://github.com/JimLundin/dpm-toolkit.git
+cd dpm-toolkit
 
 # Install UV package manager
 pip install uv
@@ -305,11 +305,11 @@ uv pip install -e .
 
 ### Project Structure
 
-OpenDPM uses a UV workspace with multiple subprojects:
+DPM Toolkit uses a UV workspace with multiple subprojects:
 
 ```
-opendpm/
-├── src/opendpm/           # Main CLI package
+dpm-toolkit/
+├── src/dpm-toolkit/           # Main CLI package
 ├── projects/              # Workspace subprojects
 │   ├── archive/          # Version management & downloads
 │   ├── migrate/          # Access-to-SQLite conversion

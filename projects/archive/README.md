@@ -1,6 +1,6 @@
 # Archive
 
-Version management, downloads, and release tracking for OpenDPM.
+Version management, downloads, and release tracking for DPM Toolkit.
 
 ## Purpose
 
@@ -36,4 +36,4 @@ download_source("https://example.com/file.zip", "/path/to/destination")
 
 - `requests` - HTTP downloads
 
-This is an internal OpenDPM component - install the main `opendpm` package instead of using this directly.
+This is an internal DPM Toolkit component - install the main `dpm-toolkit` package instead of using this directly.

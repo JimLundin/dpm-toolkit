@@ -42,4 +42,4 @@ migrate_to_sqlite(
 - `sqlalchemy` - Database toolkit
 - `sqlalchemy-access` - Access database support (Windows only)
 
-This is an internal OpenDPM component - use via `opendpm migrate` command instead of directly.
+This is an internal DPM Toolkit component - use via `dpm-toolkit migrate` command instead of directly.

@@ -1,12 +1,12 @@
 # Publishing Workflows with UV
 
-This document outlines the publishing workflows for the OpenDPM workspace using UV commands.
+This document outlines the publishing workflows for the DPM Toolkit workspace using UV commands.
 
 ## Overview
 
-The OpenDPM workspace contains two packages that require publishing:
+The DPM Toolkit workspace contains two packages that require publishing:
 
-1. **opendpm** - Main CLI tool (published to PyPI)
+1. **dpm-toolkit** - Main CLI tool (published to PyPI)
 2. **dpm2** - Generated Python package from conversion artifacts (requires regeneration before publishing)
 
 The other workspace projects (`archive`, `migrate`, `scrape`) are internal dependencies and should not be published separately.
@@ -19,13 +19,13 @@ The other workspace projects (`archive`, `migrate`, `scrape`) are internal depen
 
 ## Publishing Workflows
 
-### 1. Publishing the Main CLI Tool (opendpm)
+### 1. Publishing the Main CLI Tool (dpm-toolkit)
 
 #### Manual Publishing
 
 ```bash
 # 1. Ensure you're in the workspace root
-cd /path/to/opendpm
+cd /path/to/dpm-toolkit
 
 # 2. Update version in pyproject.toml if needed
 # Edit the version field in the root pyproject.toml
@@ -45,10 +45,10 @@ uv publish
 
 #### Automated GitHub Actions Workflow
 
-The workflow is available at `.github/workflows/publish-opendpm.yml` and will:
+The workflow is available at `.github/workflows/publish-dpm-toolkit.yml` and will:
 - Trigger automatically on GitHub releases
 - Can be manually triggered from the Actions tab
-- Build and publish the opendpm CLI to PyPI using UV commands
+- Build and publish the dpm-toolkit CLI to PyPI using UV commands
 
 ### 2. Publishing the DPM2 Package
 
@@ -59,10 +59,10 @@ The workflow is available at `.github/workflows/publish-opendpm.yml` and will:
 ```bash
 # 1. Ensure you're on Windows (required for conversion)
 # 2. Navigate to workspace root
-cd /path/to/opendpm
+cd /path/to/dpm-toolkit
 
 # 3. Regenerate dpm2 package using the CLI
-uv run opendpm migrate --output projects/dpm2/src/dpm2/
+uv run dpm-toolkit migrate --output projects/dpm2/src/dpm2/
 
 # 4. Update version in projects/dpm2/pyproject.toml if needed
 
@@ -95,7 +95,7 @@ The workflow is available at `.github/workflows/publish-dpm2.yml` and will:
 ### Version Management
 
 Update versions manually in the respective `pyproject.toml` files:
-- **opendpm**: Edit version in root `pyproject.toml`
+- **dpm-toolkit**: Edit version in root `pyproject.toml`
 - **dpm2**: Edit version in `projects/dpm2/pyproject.toml`
 
 Ensure version numbers are incremented before each publish to avoid conflicts.
@@ -112,7 +112,7 @@ uv pip install -e .
 uv pip install -e projects/dpm2/
 
 # Test built wheel
-uv pip install dist/opendpm-*.whl
+uv pip install dist/dpm_toolkit-*.whl
 ```
 
 ### Publish to Test PyPI First
@@ -122,7 +122,7 @@ uv pip install dist/opendpm-*.whl
 uv publish --repository testpypi
 
 # Test installation from Test PyPI
-uv pip install --index-url https://test.pypi.org/simple/ opendpm
+uv pip install --index-url https://test.pypi.org/simple/ dpm-toolkit
 ```
 
 ## Troubleshooting
@@ -162,7 +162,7 @@ uv --help
 
 ## Release Checklist
 
-### For opendpm CLI:
+### For dpm-toolkit CLI:
 - [ ] Update version in root `pyproject.toml`
 - [ ] Update CHANGELOG.md
 - [ ] Run tests

@@ -70,7 +70,7 @@ class Model:
         typing_imports = self._generate_typing_imports()
         imports = self._generate_imports()
         header = [
-            '"""SQLAlchemy models generated from DPM by the OpenDPM project."""',
+            '"""SQLAlchemy models generated from DPM by the DPM Toolkit project."""',
             imports,
             typing_imports,
             base_class,

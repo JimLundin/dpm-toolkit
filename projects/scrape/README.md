@@ -37,4 +37,4 @@ for framework in frameworks:
 - `beautifulsoup4` - HTML parsing
 - `requests` - HTTP requests
 
-This is an internal OpenDPM component - use via `opendpm scrape` command or automated CI/CD workflows.
+This is an internal DPM Toolkit component - use via `dpm-toolkit scrape` command or automated CI/CD workflows.

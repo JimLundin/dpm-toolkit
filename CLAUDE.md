@@ -21,17 +21,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `uv run pytest` - Run tests (when available)
 
 ### Application Commands
-- `opendpm list` - List available database versions
-- `opendpm download --version release --type converted` - Download latest stable release
-- `opendpm update` - Find new EBA releases
-- `opendpm schema --source SOURCE --target TARGET` - Generate Python models from SQLite
-- `opendpm migrate --source SOURCE --target TARGET` - Migrate Access to SQLite (Windows only)
+- `dpm-toolkit list` - List available database versions
+- `dpm-toolkit download --version release --type converted` - Download latest stable release
+- `dpm-toolkit update` - Find new EBA releases
+- `dpm-toolkit schema --source SOURCE --target TARGET` - Generate Python models from SQLite
+- `dpm-toolkit migrate --source SOURCE --target TARGET` - Migrate Access to SQLite (Windows only)
 
 ## Architecture Overview
 
-OpenDPM is a UV workspace with multiple specialized subprojects:
+DPM Toolkit is a UV workspace with multiple specialized subprojects:
 
-### Main Package (`src/opendpm/`)
+### Main Package (`src/dpm-toolkit/`)
 - **CLI Interface**: `cli.py` contains the main command-line interface using argparse
 - **Entry Point**: `__main__.py` provides the package entry point
 - **Core Functionality**: Coordinates between subprojects via imports
