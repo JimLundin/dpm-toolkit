@@ -6,12 +6,8 @@ from compare.diff import diff_dicts, format_diffs
 
 # Type definitions for schema structure
 ColumnSchema = dict[str, str | bool | None]
-IndexSchema = dict[str, list[str] | bool]
 ForeignKeySchema = dict[str, str]
-TableSchema = dict[
-    str,
-    dict[str, ColumnSchema] | dict[str, IndexSchema] | dict[str, ForeignKeySchema],
-]
+TableSchema = dict[str, dict[str, ColumnSchema] | dict[str, ForeignKeySchema]]
 
 
 def _extract_table_schema(metadata: MetaData) -> dict[str, TableSchema]:
@@ -29,15 +25,6 @@ def _extract_table_schema(metadata: MetaData) -> dict[str, TableSchema]:
                 "default": str(column.default) if column.default else None,
             }
 
-        # Extract indexes
-        indexes: dict[str, IndexSchema] = {}
-        for index in table.indexes:
-            if index.name:
-                indexes[index.name] = {
-                    "columns": [col.name for col in index.columns],
-                    "unique": index.unique,
-                }
-
         # Extract foreign keys
         foreign_keys: dict[str, ForeignKeySchema] = {}
         for fk in table.foreign_keys:
@@ -49,7 +36,6 @@ def _extract_table_schema(metadata: MetaData) -> dict[str, TableSchema]:
 
         schema[table_name] = {
             "columns": columns,
-            "indexes": indexes,
             "foreign_keys": foreign_keys,
         }
 
