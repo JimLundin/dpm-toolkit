@@ -376,7 +376,6 @@ def handle_download_command(args: Namespace) -> None:
 
     version_id = version["id"]
     log_info(f"Downloading version {version_id} ({args.type})", args.verbosity)
-    log_info(f"Version details: {version}", args.verbosity)
 
     source = handle_source(args, version)
     if not source:
@@ -463,20 +462,12 @@ def handle_compare_command(args: Namespace) -> None:
     log_info(f"Target: {args.target}")
 
     if "schema_changes" in result:
-        if result["schema_changes"]:
-            log_info("Schema Changes:")
-            for change in result["schema_changes"]:
-                log_info(f"  • {change}")
-        else:
-            print("Schema Changes: None")
+        for line in result["schema_changes"]:
+            log_info(line)
 
     if "data_changes" in result:
-        if result["data_changes"]:
-            log_info("Data Changes:")
-            for change in result["data_changes"]:
-                log_info(f"  • {change}")
-        else:
-            log_info("Data Changes: None")
+        for line in result["data_changes"]:
+            log_info(line)
 
 
 def main() -> None:
