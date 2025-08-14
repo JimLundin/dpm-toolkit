@@ -3,6 +3,8 @@ name = "dpm2"
 version = "0.0.0"
 description = "SQLite db and generated Python models for EBA DPM 2.0 databases with full type safety"
 authors = [{ name = "Jim Lundin", email = "jimeriklundin@gmail.com" }]
+readme = "README.md"
+license = {file = "LICENSE"}
 requires-python = ">=3.13"
 dependencies = ["sqlalchemy>=2.0.37"]
 

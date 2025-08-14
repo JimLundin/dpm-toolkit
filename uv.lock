@@ -5,9 +5,9 @@ requires-python = ">=3.13"
 [manifest]
 members = [
     "archive",
+    "dpm-toolkit",
     "dpm2",
     "migrate",
-    "opendpm",
     "schema",
     "scrape",
 ]
@@ -65,6 +65,54 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/cd/e5/131d2fb1b0dddafc37be4f3a2fa79aa4c037368be9423061dccadfd90091/charset_normalizer-3.4.1-cp313-cp313-win32.whl", hash = "sha256:eb8178fe3dba6450a3e024e95ac49ed3400e506fd4e9e5c32d30adda88cbd407", size = 95391, upload-time = "2024-12-24T18:11:24.139Z" },
     { url = "https://files.pythonhosted.org/packages/27/f2/4f9a69cc7712b9b5ad8fdb87039fd89abba997ad5cbe690d1835d40405b0/charset_normalizer-3.4.1-cp313-cp313-win_amd64.whl", hash = "sha256:b1ac5992a838106edb89654e0aebfc24f5848ae2547d22c2c3f66454daa11971", size = 102702, upload-time = "2024-12-24T18:11:26.535Z" },
     { url = "https://files.pythonhosted.org/packages/0e/f6/65ecc6878a89bb1c23a086ea335ad4bf21a588990c3f535a227b9eea9108/charset_normalizer-3.4.1-py3-none-any.whl", hash = "sha256:d98b1668f06378c6dbefec3b92299716b931cd4e6061f3c875a71ced1780ab85", size = 49767, upload-time = "2024-12-24T18:12:32.852Z" },
+]
+
+[[package]]
+name = "dpm-toolkit"
+version = "0.0.0"
+source = { editable = "." }
+dependencies = [
+    { name = "archive" },
+    { name = "pyyaml" },
+]
+
+[package.optional-dependencies]
+migrate = [
+    { name = "migrate" },
+]
+schema = [
+    { name = "schema" },
+]
+scrape = [
+    { name = "scrape" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "mypy" },
+    { name = "ruff" },
+    { name = "ty" },
+    { name = "types-beautifulsoup4" },
+    { name = "types-requests" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "archive", editable = "projects/archive" },
+    { name = "migrate", marker = "extra == 'migrate'", virtual = "projects/migrate" },
+    { name = "pyyaml", specifier = ">=6.0.2" },
+    { name = "schema", marker = "extra == 'schema'", virtual = "projects/schema" },
+    { name = "scrape", marker = "extra == 'scrape'", virtual = "projects/scrape" },
+]
+provides-extras = ["scrape", "migrate", "schema"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "mypy", specifier = ">=1.15.0" },
+    { name = "ruff", specifier = ">=0.11.4" },
+    { name = "ty", specifier = ">=0.0.1a15" },
+    { name = "types-beautifulsoup4", specifier = ">=4.12.0.20250204" },
+    { name = "types-requests", specifier = ">=2.32.0.20250328" },
 ]
 
 [[package]]
@@ -152,54 +200,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/98/a4/1ab47638b92648243faf97a5aeb6ea83059cc3624972ab6b8d2316078d3f/mypy_extensions-1.0.0.tar.gz", hash = "sha256:75dbf8955dc00442a438fc4d0666508a9a97b6bd41aa2f0ffe9d2f2725af0782", size = 4433, upload-time = "2023-02-04T12:11:27.157Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2a/e2/5d3f6ada4297caebe1a2add3b126fe800c96f56dbe5d1988a2cbe0b267aa/mypy_extensions-1.0.0-py3-none-any.whl", hash = "sha256:4392f6c0eb8a5668a69e23d168ffa70f0be9ccfd32b5cc2d26a34ae5b844552d", size = 4695, upload-time = "2023-02-04T12:11:25.002Z" },
-]
-
-[[package]]
-name = "opendpm"
-version = "0.0.0"
-source = { editable = "." }
-dependencies = [
-    { name = "archive" },
-    { name = "pyyaml" },
-]
-
-[package.optional-dependencies]
-migrate = [
-    { name = "migrate" },
-]
-schema = [
-    { name = "schema" },
-]
-scrape = [
-    { name = "scrape" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "mypy" },
-    { name = "ruff" },
-    { name = "ty" },
-    { name = "types-beautifulsoup4" },
-    { name = "types-requests" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "archive", editable = "projects/archive" },
-    { name = "migrate", marker = "extra == 'migrate'", virtual = "projects/migrate" },
-    { name = "pyyaml", specifier = ">=6.0.2" },
-    { name = "schema", marker = "extra == 'schema'", virtual = "projects/schema" },
-    { name = "scrape", marker = "extra == 'scrape'", virtual = "projects/scrape" },
-]
-provides-extras = ["scrape", "migrate", "schema"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "mypy", specifier = ">=1.15.0" },
-    { name = "ruff", specifier = ">=0.11.4" },
-    { name = "ty", specifier = ">=0.0.1a15" },
-    { name = "types-beautifulsoup4", specifier = ">=4.12.0.20250204" },
-    { name = "types-requests", specifier = ">=2.32.0.20250328" },
 ]
 
 [[package]]

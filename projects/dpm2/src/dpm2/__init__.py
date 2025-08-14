@@ -1,7 +1,7 @@
 """DPM2 Data Package Module.
 
 This package contains data artifacts for DPM databases that are generated
-during the release process using conversion logic from the OpenDPM project.
+during the release process using conversion logic from the DPM Toolkit project.
 
 Example usage:
     from dpm2 import get_db()

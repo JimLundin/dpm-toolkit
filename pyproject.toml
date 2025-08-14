@@ -1,15 +1,16 @@
 [project]
-name = "opendpm"
+name = "dpm-toolkit"
 version = "0.0.0"
 description = "Open-source tools and models for working with DPM databases"
 authors = [{ name = "Jim Lundin", email = "jimeriklundin@gmail.com" }]
 readme = "README.md"
+license = {file = "LICENSE"}
 requires-python = ">= 3.13"
 
 dependencies = ["archive", "pyyaml>=6.0.2"]
 
 [project.scripts]
-opendpm = "opendpm.cli:main"
+dpm-toolkit = "dpm_toolkit.cli:main"
 
 [project.optional-dependencies]
 scrape = ["scrape"]

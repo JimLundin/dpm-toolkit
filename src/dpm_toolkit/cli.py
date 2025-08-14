@@ -1,4 +1,4 @@
-"""Command line interface for OpenDPM."""
+"""Command line interface for DPM Toolkit."""
 
 import json
 from argparse import ArgumentParser, Namespace
@@ -175,7 +175,7 @@ def add_version_argument(subparser: ArgumentParser) -> None:
 
 def create_parser() -> ArgumentParser:
     """Create the command line argument parser."""
-    parser = ArgumentParser(description="OpenDPM CLI tool")
+    parser = ArgumentParser(description="DPM Toolkit CLI tool")
 
     subparsers = parser.add_subparsers(dest="command", help="Commands")
 

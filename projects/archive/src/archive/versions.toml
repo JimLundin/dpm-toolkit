@@ -7,8 +7,8 @@ type = "sample"
 semver = "3.2.0-alpha.1"
 date = 2023-06-13
 original = { url = "https://www.eba.europa.eu/assets/Reporting%20Framework/sample_dpm_2.0_database.zip", checksum = "sha256:4b032ebb59e8c1101dd2be68b66b365b7ef4001323282d85d85d67e1dc84f1a5" }
-archive = { url = "https://github.com/JimLundin/opendpm/releases/download/db-3.2-sample/dpm-3.2-sample-archive.zip", checksum = "sha256:ef81c2a93366b702b4143e824f907668d1b017a3e45ee74e01f10e1db3993b9b" }
-converted = { url = "https://github.com/JimLundin/opendpm/releases/download/db-3.2-sample/dpm-3.2-sample-sqlite.zip", checksum = "sha256:7bfae14dc38e1672224b47974bb962bfd8363351fa7884773cf9a12f80dfdc2e" }
+archive = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-3.2-sample/dpm-3.2-sample-archive.zip", checksum = "sha256:ef81c2a93366b702b4143e824f907668d1b017a3e45ee74e01f10e1db3993b9b" }
+converted = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-3.2-sample/dpm-3.2-sample-sqlite.zip", checksum = "sha256:7bfae14dc38e1672224b47974bb962bfd8363351fa7884773cf9a12f80dfdc2e" }
 
 [[versions]]
 id = "3.5-sample"
@@ -17,8 +17,8 @@ type = "sample"
 semver = "3.5.0-alpha.1"
 date = 2024-07-09
 original = { url = "https://www.eba.europa.eu/sites/default/files/2024-07/39caec2e-4ede-4418-91c5-1190e03b9034/dpm_databse_3.5_dpm_2.0.zip", checksum = "sha256:683ed571fb6a6b9a1d4881a2c0ab3896df2d487a6ce1773f6db1b5b0accc18a2" }
-archive = { url = "https://github.com/JimLundin/opendpm/releases/download/db-3.5-sample/dpm-3.5-sample-archive.zip", checksum = "sha256:b9e281f7be3f7315beae2f6bfb03b69557ded6906a329c9e338df378f9470cfd" }
-converted = { url = "https://github.com/JimLundin/opendpm/releases/download/db-3.5-sample/dpm-3.5-sample-sqlite.zip", checksum = "sha256:e6bbede8fcb02961fd73650e994755ba1c822c456ed5e33722bc9d38c4b01ef4" }
+archive = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-3.5-sample/dpm-3.5-sample-archive.zip", checksum = "sha256:b9e281f7be3f7315beae2f6bfb03b69557ded6906a329c9e338df378f9470cfd" }
+converted = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-3.5-sample/dpm-3.5-sample-sqlite.zip", checksum = "sha256:e6bbede8fcb02961fd73650e994755ba1c822c456ed5e33722bc9d38c4b01ef4" }
 
 [[versions]]
 id = "4.0-draft"
@@ -27,8 +27,8 @@ type = "draft"
 semver = "4.0.0-beta.1"
 date = 2024-10-28
 original = { url = "https://www.eba.europa.eu/sites/default/files/2024-10/9af4a241-1a4e-4ee4-9eb0-5f61648522e2/dpm_2.0_release_4.0.zip", checksum = "sha256:5383693c3d19cf06439b395bb42381eea2c95eb60ae5635ee824fdc0c92071b6" }
-archive = { url = "https://github.com/JimLundin/opendpm/releases/download/db-4.0-draft/dpm-4.0-draft-archive.zip", checksum = "sha256:afcb1ca94660943afc23e1b62db4746a74589c3f0fe644f75ce4e06b11039fc7" }
-converted = { url = "https://github.com/JimLundin/opendpm/releases/download/db-4.0-draft/dpm-4.0-draft-sqlite.zip", checksum = "sha256:edd9ef220c14e571efcd521d88d2c63c44804b2dff31ce511b07fcffada1a193" }
+archive = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-4.0-draft/dpm-4.0-draft-archive.zip", checksum = "sha256:afcb1ca94660943afc23e1b62db4746a74589c3f0fe644f75ce4e06b11039fc7" }
+converted = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-4.0-draft/dpm-4.0-draft-sqlite.zip", checksum = "sha256:edd9ef220c14e571efcd521d88d2c63c44804b2dff31ce511b07fcffada1a193" }
 
 [[versions]]
 id = "4.0-release"
@@ -37,8 +37,8 @@ type = "release"
 semver = "4.0.0"
 date = 2024-12-19
 original = { url = "https://www.eba.europa.eu/sites/default/files/2024-12/11b02b99-1486-4a54-815d-289558589773/dpm_2.0_release_4.0.zip", checksum = "sha256:968553d3058a4851c4ad0d937fc5e6b2813e4ce2f127cf842922d7b716c99072" }
-archive = { url = "https://github.com/JimLundin/opendpm/releases/download/db-4.0-release/dpm-4.0-release-archive.zip", checksum = "sha256:cd1b7765575f76be9c3db07b6dcd0a1f9a07c913886090ecaa833f6aa34498a5" }
-converted = { url = "https://github.com/JimLundin/opendpm/releases/download/db-4.0-release/dpm-4.0-release-sqlite.zip", checksum = "sha256:e411694398991170095f6f87dd1b5de871823e8646b3d04cdfc354bc22cfdbb1" }
+archive = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-4.0-release/dpm-4.0-release-archive.zip", checksum = "sha256:cd1b7765575f76be9c3db07b6dcd0a1f9a07c913886090ecaa833f6aa34498a5" }
+converted = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-4.0-release/dpm-4.0-release-sqlite.zip", checksum = "sha256:e411694398991170095f6f87dd1b5de871823e8646b3d04cdfc354bc22cfdbb1" }
 
 [[versions]]
 id = "4.0-errata-4"
@@ -48,8 +48,8 @@ semver = "4.0.4"
 date = 2025-03-10
 revision = 4
 original = { url = "https://www.eba.europa.eu/sites/default/files/2025-03/c235b72f-d5fc-4ba3-a79c-23b5ad2a9eea/DPM2.0_release_4.0-2025-03-10.zip", checksum = "sha256:10a12344a4b262fd2ceb3f0914b99ddc3f5440baca7f3f0e4261c10c9e2d1527" }
-archive = { url = "https://github.com/JimLundin/opendpm/releases/download/db-4.0-errata-4/dpm-4.0-errata-4-archive.zip", checksum = "sha256:8e4ceec7bba4552361025fe3f84d108ae4f9f6b402dae07b2526bceb50123434" }
-converted = { url = "https://github.com/JimLundin/opendpm/releases/download/db-4.0-errata-4/dpm-4.0-errata-4-sqlite.zip", checksum = "sha256:18f590a5f82986fabf4f0a1565e47435d3ce32c0c70b06758724fef103e7e3b8" }
+archive = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-4.0-errata-4/dpm-4.0-errata-4-archive.zip", checksum = "sha256:8e4ceec7bba4552361025fe3f84d108ae4f9f6b402dae07b2526bceb50123434" }
+converted = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-4.0-errata-4/dpm-4.0-errata-4-sqlite.zip", checksum = "sha256:18f590a5f82986fabf4f0a1565e47435d3ce32c0c70b06758724fef103e7e3b8" }
 
 [[versions]]
 id = "4.0-errata-5"
@@ -59,8 +59,8 @@ semver = "4.0.5"
 date = 2025-03-20
 revision = 5
 original = { url = "https://www.eba.europa.eu/sites/default/files/2025-03/1cd56b9d-5919-4071-91e9-3d8a3ccff9e5/DPM2.0_release_4.0_2025-03-20.zip", checksum = "sha256:e078520be280e65c4af861037b3831cbedcd2d8251247afb53649c0fe49c3fab" }
-archive = { url = "https://github.com/JimLundin/opendpm/releases/download/db-4.0-errata-5/dpm-4.0-errata-5-archive.zip", checksum = "sha256:b87f23eb88614f926be475c4ce6cf8785519f49a236dd0357c5a13324a017250" }
-converted = { url = "https://github.com/JimLundin/opendpm/releases/download/db-4.0-errata-5/dpm-4.0-errata-5-sqlite.zip", checksum = "sha256:7c45d3ce82777fc0e37a9bb753e1698dd7c58dacfebc8123bbb7875a1204d268" }
+archive = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-4.0-errata-5/dpm-4.0-errata-5-archive.zip", checksum = "sha256:b87f23eb88614f926be475c4ce6cf8785519f49a236dd0357c5a13324a017250" }
+converted = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-4.0-errata-5/dpm-4.0-errata-5-sqlite.zip", checksum = "sha256:7c45d3ce82777fc0e37a9bb753e1698dd7c58dacfebc8123bbb7875a1204d268" }
 
 [[versions]]
 id = "4.1-draft"
@@ -69,8 +69,8 @@ type = "draft"
 semver = "4.1.0-beta.1"
 date = 2025-03-27
 original = { url = "https://www.eba.europa.eu/sites/default/files/2025-03/d931f7ac-0493-42c8-8e7a-3207c5479131/DPM%20Database%202.0%20%28release%204.1%20draft%29.zip", checksum = "sha256:1ee08badae303b67a578ff6f4d6bd40469968e8391f833f6d7fbdb568c742f3a" }
-archive = { url = "https://github.com/JimLundin/opendpm/releases/download/db-4.1-draft/dpm-4.1-draft-archive.zip", checksum = "sha256:8d6115e6d2079067c77b2d0ba2654f59cc2087606cc65ce86e17b672e3d543b9" }
-converted = { url = "https://github.com/JimLundin/opendpm/releases/download/db-4.1-draft/dpm-4.1-draft-sqlite.zip", checksum = "sha256:74a897f004a28f871cf423343ab46757be0694f55583554d51f785af58b4f2ab" }
+archive = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-4.1-draft/dpm-4.1-draft-archive.zip", checksum = "sha256:8d6115e6d2079067c77b2d0ba2654f59cc2087606cc65ce86e17b672e3d543b9" }
+converted = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-4.1-draft/dpm-4.1-draft-sqlite.zip", checksum = "sha256:74a897f004a28f871cf423343ab46757be0694f55583554d51f785af58b4f2ab" }
 
 [[versions]]
 id = "4.1-final"
@@ -79,8 +79,8 @@ type = "final"
 semver = "4.1.0"
 date = 2025-05-28
 original = { url = "https://www.eba.europa.eu/sites/default/files/2025-05/b0fb26ab-265c-41f9-9c8d-72b3f8895143/DPM%202.0%20release%204.1.zip", checksum = "sha256:78e76caae549b3659e4a9073867f66182c54af0ebe29132b369e4a97ab8cb043" }
-archive = { url = "https://github.com/JimLundin/opendpm/releases/download/db-4.1-final/dpm-4.1-final-archive.zip", checksum = "sha256:ce8032c46f85dae64c4f49f69e1f4932fe09f70dd722b5a040eebef072c7c3ed" }
-converted = { url = "https://github.com/JimLundin/opendpm/releases/download/db-4.1-final/dpm-4.1-final-sqlite.zip", checksum = "sha256:07d98cf4a43c9c1906f97adec616705664ccc172af8ea82d631bf3e73945efbd" }
+archive = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-4.1-final/dpm-4.1-final-archive.zip", checksum = "sha256:ce8032c46f85dae64c4f49f69e1f4932fe09f70dd722b5a040eebef072c7c3ed" }
+converted = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-4.1-final/dpm-4.1-final-sqlite.zip", checksum = "sha256:07d98cf4a43c9c1906f97adec616705664ccc172af8ea82d631bf3e73945efbd" }
 
 [[versions]]
 id = "4.1-errata-1"
@@ -90,5 +90,5 @@ semver = "4.1.1"
 date = 2025-07-04
 revision = 1
 original = { url = "https://www.eba.europa.eu/sites/default/files/2025-07/c5e64c91-0e04-4419-8943-4963271ed983/DPM%202.0%20%20Database_v%204_1_20250625.accdb_.zip", checksum = "sha256:5052ecf687e0b4ce9ee2ed9b8158ffd0f161da57929bb129b2b835688e82fec3" }
-archive = { url = "https://github.com/JimLundin/opendpm/releases/download/db-4.1-errata-1/dpm-4.1-errata-1-archive.zip", checksum = "sha256:d06cfa01135e946ba68fa16a059bd54197b292d9d13bf308745edc643d043b32" }
-converted = { url = "https://github.com/JimLundin/opendpm/releases/download/db-4.1-errata-1/dpm-4.1-errata-1-sqlite.zip", checksum = "sha256:3de5bc256322b24689694c15a352435f483ef8d29548fb249a0257e48545ed76" }
+archive = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-4.1-errata-1/dpm-4.1-errata-1-archive.zip", checksum = "sha256:d06cfa01135e946ba68fa16a059bd54197b292d9d13bf308745edc643d043b32" }
+converted = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-4.1-errata-1/dpm-4.1-errata-1-sqlite.zip", checksum = "sha256:3de5bc256322b24689694c15a352435f483ef8d29548fb249a0257e48545ed76" }
