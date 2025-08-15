@@ -79,7 +79,6 @@
                 <thead>
                     <tr>
                         <th>Change</th>
-                        <th>Key</th>
                         {% for col in all_columns %}
                             <th>{{ col }}</th>
                         {% endfor %}
@@ -89,11 +88,6 @@
                     {% for change in table.data %}
                         <tr class="change-{{ change | get_change_type }}">
                             <td><span class="change-badge change-{{ change | get_change_type }}">{{ change | get_change_type }}</span></td>
-                            <td>
-                                {% for key, value in change.key.items() %}
-                                    {{ key }}={{ value | format_value }}{% if not loop.last %}, {% endif %}
-                                {% endfor %}
-                            </td>
                             {% for col in all_columns %}
                                 {% if change | get_change_type == 'added' %}
                                     <td>{{ change.new.get(col, 'NULL') }}</td>
