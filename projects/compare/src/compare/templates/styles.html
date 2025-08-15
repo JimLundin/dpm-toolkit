@@ -65,26 +65,121 @@
     .change-item {
         background: white;
         margin: 10px 0;
-        padding: 15px;
         border-radius: 4px;
-        border-left: 4px solid #28a745;
+        border: 1px solid #e1e5e9;
+        overflow: hidden;
     }
     .change-item.added {
-        border-left-color: #28a745;
+        border-left: 4px solid #28a745;
     }
     .change-item.removed {
-        border-left-color: #dc3545;
+        border-left: 4px solid #dc3545;
     }
     .change-item.modified {
-        border-left-color: #ffc107;
+        border-left: 4px solid #ffc107;
     }
-    .details {
-        margin-top: 10px;
-        font-family: monospace;
+    
+    .change-header {
+        background: #f8f9fa;
+        padding: 12px 15px;
+        border-bottom: 1px solid #e1e5e9;
+        font-weight: 600;
+        color: #2c3e50;
+        display: flex;
+        align-items: center;
+    }
+    
+    .change-header .change-type {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 12px;
         font-size: 12px;
-        background: #f1f3f4;
-        padding: 10px;
-        border-radius: 4px;
+        font-weight: 500;
+        text-transform: uppercase;
+        margin-right: 10px;
+    }
+    
+    .change-header .change-type.added {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .change-header .change-type.removed {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .change-header .change-type.modified {
+        background: #fff3cd;
+        color: #856404;
+    }
+    
+    .change-content {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        min-height: 100px;
+    }
+    
+    .change-side {
+        padding: 15px;
+        position: relative;
+    }
+    
+    .change-side:first-child {
+        border-right: 1px solid #e1e5e9;
+        background: #fafbfc;
+    }
+    
+    .change-side:last-child {
+        background: #f0f8ff;
+    }
+    
+    .side-header {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: #6c757d;
+        margin-bottom: 8px;
+        letter-spacing: 0.5px;
+    }
+    
+    .side-content {
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+        font-size: 13px;
+        line-height: 1.4;
+        color: #2c3e50;
+        word-break: break-all;
+    }
+    
+    .removed-indicator {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        color: #dc3545;
+        font-size: 12px;
+        font-weight: 500;
+    }
+    
+    .added-indicator {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        color: #28a745;
+        font-size: 12px;
+        font-weight: 500;
+    }
+    
+    .single-side {
+        grid-column: 1 / -1;
+        border-right: none !important;
+    }
+    
+    .single-side.added {
+        background: #f0f8f0;
+    }
+    
+    .single-side.removed {
+        background: #fdf2f2;
     }
     .diff-old {
         color: #dc3545;

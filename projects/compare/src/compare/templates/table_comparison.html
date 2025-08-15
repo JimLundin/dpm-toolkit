@@ -11,18 +11,39 @@
             <h4>Schema Changes ({{ table.schema | length }} total)</h4>
             {% for change in table.schema %}
                 <div class="change-item {{ change | get_change_type }}">
-                    {{ change | get_change_type | upper }}: Column {{ change.name }}
-                    <div class="details">
-                        {% if change | get_change_type == 'added' %}
-                            <strong>New column:</strong> {{ change.new | tojson }}
-                        {% elif change | get_change_type == 'removed' %}
-                            <strong>Removed column:</strong> {{ change.old | tojson }}
-                        {% else %}
-                            <strong>Modified column:</strong><br>
-                            <span class="diff-old">Old: {{ change.old | tojson }}</span><br>
-                            <span class="diff-new">New: {{ change.new | tojson }}</span>
-                        {% endif %}
+                    <div class="change-header">
+                        <span class="change-type {{ change | get_change_type }}">{{ change | get_change_type }}</span>
+                        Column: {{ change.name }}
                     </div>
+                    
+                    {% if change | get_change_type == 'added' %}
+                        <div class="change-content">
+                            <div class="change-side single-side added">
+                                <div class="side-header">New Column Definition</div>
+                                <div class="side-content">{{ change.new | tojson(indent=2) }}</div>
+                                <div class="added-indicator">+ Added</div>
+                            </div>
+                        </div>
+                    {% elif change | get_change_type == 'removed' %}
+                        <div class="change-content">
+                            <div class="change-side single-side removed">
+                                <div class="side-header">Removed Column Definition</div>
+                                <div class="side-content">{{ change.old | tojson(indent=2) }}</div>
+                                <div class="removed-indicator">- Removed</div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="change-content">
+                            <div class="change-side">
+                                <div class="side-header">Source (Old)</div>
+                                <div class="side-content">{{ change.old | tojson(indent=2) }}</div>
+                            </div>
+                            <div class="change-side">
+                                <div class="side-header">Target (New)</div>
+                                <div class="side-content">{{ change.new | tojson(indent=2) }}</div>
+                            </div>
+                        </div>
+                    {% endif %}
                 </div>
             {% endfor %}
         {% endif %}
@@ -31,21 +52,42 @@
             <h4>Data Changes ({{ table.data | length }} total)</h4>
             {% for change in table.data %}
                 <div class="change-item {{ change | get_change_type }}">
-                    <strong>{{ change | get_change_type | upper }}</strong> Row: 
-                    {% for key, value in change.key.items() %}
-                        {{ key }}={{ value | format_value }}{% if not loop.last %}, {% endif %}
-                    {% endfor %}
-                    <div class="details">
-                        {% if change | get_change_type == 'added' %}
-                            <strong>New values:</strong> {{ change.new | tojson }}
-                        {% elif change | get_change_type == 'removed' %}
-                            <strong>Removed values:</strong> {{ change.old | tojson }}
-                        {% else %}
-                            <strong>Modified values:</strong><br>
-                            <span class="diff-old">Old: {{ change.old | tojson }}</span><br>
-                            <span class="diff-new">New: {{ change.new | tojson }}</span>
-                        {% endif %}
+                    <div class="change-header">
+                        <span class="change-type {{ change | get_change_type }}">{{ change | get_change_type }}</span>
+                        Row: 
+                        {% for key, value in change.key.items() %}
+                            {{ key }}={{ value | format_value }}{% if not loop.last %}, {% endif %}
+                        {% endfor %}
                     </div>
+                    
+                    {% if change | get_change_type == 'added' %}
+                        <div class="change-content">
+                            <div class="change-side single-side added">
+                                <div class="side-header">New Row Data</div>
+                                <div class="side-content">{{ change.new | tojson(indent=2) }}</div>
+                                <div class="added-indicator">+ Added</div>
+                            </div>
+                        </div>
+                    {% elif change | get_change_type == 'removed' %}
+                        <div class="change-content">
+                            <div class="change-side single-side removed">
+                                <div class="side-header">Removed Row Data</div>
+                                <div class="side-content">{{ change.old | tojson(indent=2) }}</div>
+                                <div class="removed-indicator">- Removed</div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="change-content">
+                            <div class="change-side">
+                                <div class="side-header">Source (Old)</div>
+                                <div class="side-content">{{ change.old | tojson(indent=2) }}</div>
+                            </div>
+                            <div class="change-side">
+                                <div class="side-header">Target (New)</div>
+                                <div class="side-content">{{ change.new | tojson(indent=2) }}</div>
+                            </div>
+                        </div>
+                    {% endif %}
                 </div>
             {% endfor %}
         {% endif %}
