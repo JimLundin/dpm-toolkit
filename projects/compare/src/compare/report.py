@@ -99,8 +99,13 @@ class HtmlReportGenerator:
                 return "boolean-value"
             return ""
 
-        def needs_tooltip(value: object, max_length: int = 30) -> bool:
-            """Check if a value needs a tooltip (content longer than max_length)."""
+        def needs_tooltip(value: object, max_length: int = 35) -> bool:
+            """Check if a value needs a tooltip (content longer than CSS truncation threshold).
+
+            CSS max-width is 200px with 14px font. Being conservative with ~22 chars
+            to account for varying character widths and ensure we only add tooltips
+            when content will actually be truncated.
+            """
             if value is None:
                 return False
             str_value = str(value)
@@ -117,7 +122,6 @@ class HtmlReportGenerator:
             if isinstance(value, bool):
                 return str(value), "boolean-value"
             return str(value), ""
-
 
         # Register filters
         self.env.filters["get_change_type"] = get_change_type
