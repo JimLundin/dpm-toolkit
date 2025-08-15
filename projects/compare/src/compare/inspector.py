@@ -3,7 +3,7 @@
 import sqlite3
 from pathlib import Path
 
-from .types import ColumnInfo, ValueType
+from compare.types import ColumnInfo, ValueType
 
 
 class DatabaseInspector:
@@ -74,4 +74,4 @@ class DatabaseInspector:
         with self.get_connection() as conn:
             cursor = conn.execute(f"SELECT COUNT(*) FROM `{name}`")  # noqa: S608
             result = cursor.fetchone()
-            return int(result[0]) or 0
+            return int(result[0])

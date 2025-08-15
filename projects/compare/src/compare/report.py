@@ -1,10 +1,16 @@
 """HTML report generation from comparison results using Jinja2 templates."""
 
+from collections.abc import Collection
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
 
-from .types import Comparison
+from compare.types import (
+    Change,
+    ChangeType,
+    Comparison,
+    TableComparison,
+)
 
 
 class HtmlReportGenerator:
@@ -37,7 +43,7 @@ class HtmlReportGenerator:
     def _add_custom_filters(self) -> None:
         """Add custom Jinja2 filters for report generation."""
 
-        def get_change_type(change: dict[str, object]) -> str:
+        def get_change_type(change: dict[str, Change]) -> ChangeType:
             """Determine the type of change (added, removed, modified)."""
             if "new" in change and "old" not in change:
                 return "added"
@@ -45,21 +51,17 @@ class HtmlReportGenerator:
                 return "removed"
             return "modified"
 
-        def count_changes(changes: list[object] | None) -> int:
+        def count_changes(changes: Collection[Change]) -> int:
             """Count the number of changes in a list."""
-            return len(changes) if changes else 0
+            return len(changes) or 0
 
-        def has_changes(table_comparison: dict[str, object]) -> bool:
+        def has_changes(table_comparison: TableComparison) -> bool:
             """Check if a table has any changes."""
-            schema = table_comparison.get("schema")
-            data = table_comparison.get("data")
+            schema = table_comparison["schema"]
+            data = table_comparison["data"]
 
-            schema_count = count_changes(
-                schema if isinstance(schema, list) or schema is None else None
-            )
-            data_count = count_changes(
-                data if isinstance(data, list) or data is None else None
-            )
+            schema_count = count_changes(schema)
+            data_count = count_changes(data)
             return schema_count > 0 or data_count > 0
 
         def format_value(value: object) -> str:

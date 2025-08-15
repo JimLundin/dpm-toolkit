@@ -1,9 +1,11 @@
 """Type definitions for database comparison."""
 
 from collections.abc import Collection, Mapping
-from typing import ReadOnly, TypedDict
+from typing import Literal, ReadOnly, TypedDict
 
 ValueType = str | int | float | bool | None
+
+type ChangeType = Literal["added", "removed", "modified"]
 
 
 class Row(TypedDict):
@@ -79,3 +81,6 @@ class Comparison(TypedDict):
     source: ReadOnly[str]
     target: ReadOnly[str]
     changes: ReadOnly[Collection[TableComparison]]
+
+
+type Change = ColumnChange | RowChange
