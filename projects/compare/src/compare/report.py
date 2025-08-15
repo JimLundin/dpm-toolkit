@@ -111,43 +111,6 @@ class HtmlReportGenerator:
                 return str(value), "boolean-value"
             return str(value), ""
 
-        def row_to_table(row_data: dict[str, object]) -> str:
-            """Convert row data to HTML table."""
-            if not row_data:
-                return "<p>No data</p>"
-
-            html = ['<table class="data-table">']
-            html.append("<thead><tr>")
-
-            # Add headers
-            html.extend(f"<th>{key}</th>" for key in row_data)
-            html.append("</tr></thead>")
-
-            # Add data row
-            html.append("<tbody><tr>")
-            for value in row_data.values():
-                formatted_value, css_class = format_table_value(value)
-                html.append(f'<td class="{css_class}">{formatted_value}</td>')
-            html.append("</tr></tbody>")
-
-            html.append("</table>")
-            return "".join(html)
-
-        def schema_to_table(schema_data: dict[str, object]) -> str:
-            """Convert schema data to HTML table."""
-            if not schema_data:
-                return "<p>No schema data</p>"
-
-            html = ['<table class="schema-table">']
-            html.append("<thead><tr><th>Property</th><th>Value</th></tr></thead>")
-            html.append("<tbody>")
-
-            for key, value in schema_data.items():
-                formatted_value, _ = format_table_value(value)
-                html.append(f"<tr><td>{key}</td><td>{formatted_value}</td></tr>")
-
-            html.append("</tbody></table>")
-            return "".join(html)
 
         # Register filters
         self.env.filters["get_change_type"] = get_change_type
@@ -157,8 +120,6 @@ class HtmlReportGenerator:
         self.env.filters["format_cell_value"] = format_cell_value
         self.env.filters["format_cell_with_tooltip"] = format_cell_with_tooltip
         self.env.filters["get_value_class"] = get_value_class
-        self.env.filters["row_to_table"] = row_to_table
-        self.env.filters["schema_to_table"] = schema_to_table
 
     def generate_report(
         self,

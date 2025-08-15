@@ -25,17 +25,18 @@
                 </thead>
                 <tbody>
                     {% for change in table.schema %}
-                        <tr class="change-{{ change | get_change_type }}">
-                            <td><span class="change-badge change-{{ change | get_change_type }}">{{ change | get_change_type }}</span></td>
+                        {% set change_type = change | get_change_type %}
+                        <tr class="change-{{ change_type }}">
+                            <td><span class="change-badge change-{{ change_type }}">{{ change_type }}</span></td>
                             <td class="truncate" title="{{ change.name }}">{{ change.name }}</td>
-                            {% if change | get_change_type == 'added' %}
+                            {% if change_type == 'added' %}
                                 <td class="truncate">-</td>
                                 <td class="truncate" title="{{ change.new.type }}">{{ change.new.type }}</td>
                                 <td class="truncate">-</td>
                                 <td class="truncate" title="{{ change.new.nullable }}">{{ change.new.nullable }}</td>
                                 <td class="truncate">-</td>
                                 <td class="truncate" title="{{ change.new.default or 'NULL' }}">{{ change.new.default | format_cell_with_tooltip | safe }}</td>
-                            {% elif change | get_change_type == 'removed' %}
+                            {% elif change_type == 'removed' %}
                                 <td class="truncate" title="{{ change.old.type }}">{{ change.old.type }}</td>
                                 <td class="truncate">-</td>
                                 <td class="truncate" title="{{ change.old.nullable }}">{{ change.old.nullable }}</td>
@@ -89,13 +90,16 @@
                 </thead>
                 <tbody>
                     {% for change in table.data %}
-                        <tr class="change-{{ change | get_change_type }}">
-                            <td><span class="change-badge change-{{ change | get_change_type }}">{{ change | get_change_type }}</span></td>
+                        {% set change_type = change | get_change_type %}
+                        <tr class="change-{{ change_type }}">
+                            <td><span class="change-badge change-{{ change_type }}">{{ change_type }}</span></td>
                             {% for col in all_columns %}
-                                {% if change | get_change_type == 'added' %}
-                                    <td class="truncate" title="{{ change.new.get(col) or 'NULL' }}">{{ change.new.get(col) | format_cell_with_tooltip | safe }}</td>
-                                {% elif change | get_change_type == 'removed' %}
-                                    <td class="truncate" title="{{ change.old.get(col) or 'NULL' }}">{{ change.old.get(col) | format_cell_with_tooltip | safe }}</td>
+                                {% if change_type == 'added' %}
+                                    {% set val = change.new.get(col) %}
+                                    <td class="truncate" title="{{ val or 'NULL' }}">{{ val | format_cell_with_tooltip | safe }}</td>
+                                {% elif change_type == 'removed' %}
+                                    {% set val = change.old.get(col) %}
+                                    <td class="truncate" title="{{ val or 'NULL' }}">{{ val | format_cell_with_tooltip | safe }}</td>
                                 {% else %}
                                     {% set old_val = change.old.get(col) %}
                                     {% set new_val = change.new.get(col) %}
