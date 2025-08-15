@@ -7,7 +7,7 @@
         background-color: #f5f5f5;
     }
     .container {
-        max-width: 1200px;
+        max-width: 1600px;
         margin: 0 auto;
         background: white;
         padding: 30px;
@@ -181,11 +181,100 @@
     .single-side.removed {
         background: #fdf2f2;
     }
-    .diff-old {
-        color: #dc3545;
+    
+    .data-table, .schema-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 15px 0;
+        font-size: 14px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
-    .diff-new {
-        color: #28a745;
+    
+    .data-table th, .schema-table th {
+        background: #f8f9fa;
+        padding: 12px 16px;
+        text-align: left;
+        border: 1px solid #dee2e6;
+        font-weight: 600;
+        color: #495057;
+        font-size: 13px;
+    }
+    
+    .data-table td, .schema-table td {
+        padding: 10px 16px;
+        border: 1px solid #dee2e6;
+        vertical-align: top;
+        line-height: 1.4;
+    }
+    
+    .data-table tr:nth-child(even), .schema-table tr:nth-child(even) {
+        background: #f8f9fa;
+    }
+    
+    .data-table tr:hover, .schema-table tr:hover {
+        background: #e3f2fd;
+    }
+    
+    .modified-cell {
+        background: #fff3cd !important;
+        font-family: monospace;
+    }
+    
+    .old-value {
+        color: #dc3545;
+        background: #f8d7da;
+        padding: 2px 6px;
+        border-radius: 3px;
+        margin-right: 4px;
+    }
+    
+    .new-value {
+        color: #155724;
+        background: #d4edda;
+        padding: 2px 6px;
+        border-radius: 3px;
+        margin-left: 4px;
+    }
+    
+    .arrow {
+        color: #6c757d;
+        font-weight: bold;
+        margin: 0 4px;
+    }
+    
+    .change-badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .change-badge.change-added {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .change-badge.change-removed {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .change-badge.change-modified {
+        background: #fff3cd;
+        color: #856404;
+    }
+    
+    .change-added {
+        background: rgba(212, 237, 218, 0.3) !important;
+    }
+    
+    .change-removed {
+        background: rgba(248, 215, 218, 0.3) !important;
+    }
+    
+    .change-modified {
+        background: rgba(255, 243, 205, 0.3) !important;
     }
     .expandable {
         cursor: pointer;
