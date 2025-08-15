@@ -258,32 +258,46 @@
     .modified-cell {
         background: #fff3cd !important;
         font-family: monospace;
-        font-size: 13px;
+        font-size: 12px;
+        white-space: nowrap;
+        min-width: 120px;
     }
     
     .old-value {
         color: #dc3545;
         background: #f8d7da;
-        padding: 2px 6px;
-        border-radius: 3px;
-        margin-right: 4px;
-        font-size: 12px;
+        padding: 1px 4px;
+        border-radius: 2px;
+        margin-right: 2px;
+        font-size: 11px;
+        display: inline-block;
+        max-width: 80px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        vertical-align: middle;
     }
     
     .new-value {
         color: #155724;
         background: #d4edda;
-        padding: 2px 6px;
-        border-radius: 3px;
-        margin-left: 4px;
-        font-size: 12px;
+        padding: 1px 4px;
+        border-radius: 2px;
+        margin-left: 2px;
+        font-size: 11px;
+        display: inline-block;
+        max-width: 80px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        vertical-align: middle;
     }
     
     .arrow {
         color: #6c757d;
         font-weight: bold;
-        margin: 0 4px;
-        font-size: 12px;
+        margin: 0 1px;
+        font-size: 10px;
+        display: inline-block;
+        vertical-align: middle;
     }
     
     .change-badge {

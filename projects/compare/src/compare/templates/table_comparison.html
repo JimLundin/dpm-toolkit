@@ -101,9 +101,9 @@
                                     {% set new_val = change.new.get(col) %}
                                     {% if old_val != new_val %}
                                         <td class="modified-cell">
-                                            <span class="old-value">{{ old_val | format_cell_value | safe }}</span>
+                                            <span class="old-value" title="{{ old_val or 'NULL' }}">{{ old_val | format_cell_value | safe }}</span>
                                             <span class="arrow">→</span>
-                                            <span class="new-value">{{ new_val | format_cell_value | safe }}</span>
+                                            <span class="new-value" title="{{ new_val or 'NULL' }}">{{ new_val | format_cell_value | safe }}</span>
                                         </td>
                                     {% else %}
                                         <td class="truncate" title="{{ new_val or 'NULL' }}">{{ new_val | format_cell_with_tooltip | safe }}</td>
