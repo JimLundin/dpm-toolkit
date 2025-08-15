@@ -1,7 +1,6 @@
 """Command line interface for DPM Toolkit."""
 
 import json
-import logging
 from argparse import ArgumentParser, Namespace
 from collections.abc import Sequence
 from datetime import date
@@ -298,10 +297,16 @@ def create_parser() -> ArgumentParser:
         help="Path to target (newer) SQLite database",
     )
     compare_parser.add_argument(
-        "--type",
-        choices=["schema", "data", "both"],
-        default="both",
-        help="Type of comparison to perform (default: %(default)s)",
+        "--format",
+        choices=["json", "html"],
+        default="json",
+        help="Output format: json (default) or html",
+    )
+    compare_parser.add_argument(
+        "--output",
+        "-o",
+        type=Path,
+        help="Output file path (optional, prints to stdout if not specified)",
     )
 
     return parser
@@ -447,27 +452,6 @@ def handle_schema_command(args: Namespace) -> None:
 
 def handle_compare_command(args: Namespace) -> None:
     """Handle the 'compare' subcommand."""
-    try:
-        from compare import compare_databases
-    except ImportError:
-        log_info(
-            "Error: Database comparison requires the 'compare' extra. Install with: uv sync --extra compare"
-        )
-        return
-
-    result = compare_databases(args.source, args.target, args.type)
-
-    log_info(f"Database Comparison ({args.type})")
-    log_info(f"Source: {args.source}")
-    log_info(f"Target: {args.target}")
-
-    if "schema_changes" in result:
-        for line in result["schema_changes"]:
-            log_info(line)
-
-    if "data_changes" in result:
-        for line in result["data_changes"]:
-            log_info(line)
 
 
 def main() -> None:
