@@ -1,0 +1,57 @@
+<div class="table-comparison">
+    {% set schema_count = table.schema | count_changes %}
+    {% set data_count = table.data | count_changes %}
+    {% set total_changes = schema_count + data_count %}
+    
+    <h3 class="expandable" onclick="toggleCollapsible(this)">
+        {{ table.name }} ({{ total_changes }} changes)
+    </h3>
+    <div class="collapsible-content">
+        {% if table.schema %}
+            <h4>Schema Changes</h4>
+            {% for change in table.schema %}
+                <div class="change-item {{ change | get_change_type }}">
+                    {{ change | get_change_type | upper }}: Column {{ change.name }}
+                    <div class="details">
+                        {% if change | get_change_type == 'added' %}
+                            <strong>New column:</strong> {{ change.new | tojson }}
+                        {% elif change | get_change_type == 'removed' %}
+                            <strong>Removed column:</strong> {{ change.old | tojson }}
+                        {% else %}
+                            <strong>Modified column:</strong><br>
+                            <span class="diff-old">Old: {{ change.old | tojson }}</span><br>
+                            <span class="diff-new">New: {{ change.new | tojson }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% if table.data %}
+            <h4>Data Changes</h4>
+            {% for change in table.data[:20] %}
+                <div class="change-item {{ change | get_change_type }}">
+                    <strong>{{ change | get_change_type | upper }}</strong> Row: 
+                    {% for key, value in change.key.items() %}
+                        {{ key }}={{ value | format_value }}{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                    <div class="details">
+                        {% if change | get_change_type == 'added' %}
+                            <strong>New values:</strong> {{ change.new | tojson }}
+                        {% elif change | get_change_type == 'removed' %}
+                            <strong>Removed values:</strong> {{ change.old | tojson }}
+                        {% else %}
+                            <strong>Modified values:</strong><br>
+                            <span class="diff-old">Old: {{ change.old | tojson }}</span><br>
+                            <span class="diff-new">New: {{ change.new | tojson }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+            
+            {% if table.data | length > 20 %}
+                <p><em>... and {{ table.data | length - 20 }} more data changes</em></p>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>

@@ -36,7 +36,7 @@ class DatabaseInspector:
     def get_table_columns(self, name: str) -> list[ColumnInfo]:
         """Get complete column information for a table."""
         with self.get_connection() as conn:
-            cursor = conn.execute(f"PRAGMA table_info({name})")
+            cursor = conn.execute(f"PRAGMA table_info(`{name}`)")
 
             return [
                 ColumnInfo(
@@ -51,7 +51,7 @@ class DatabaseInspector:
     def get_primary_key_columns(self, name: str) -> list[str]:
         """Get primary key column names for a table."""
         with self.get_connection() as conn:
-            cursor = conn.execute(f"PRAGMA table_info({name})")
+            cursor = conn.execute(f"PRAGMA table_info(`{name}`)")
 
             return [row["name"] for row in cursor.fetchall() if row["pk"]]
 

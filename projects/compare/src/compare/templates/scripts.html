@@ -1,0 +1,18 @@
+<script>
+    function toggleCollapsible(element) {
+        const content = element.nextElementSibling;
+        element.classList.toggle('expanded');
+        content.classList.toggle('show');
+    }
+
+    // Auto-expand sections with changes on load
+    document.addEventListener('DOMContentLoaded', function() {
+        // Optionally auto-expand first few sections
+        const expandables = document.querySelectorAll('.expandable');
+        expandables.forEach((element, index) => {
+            if (index < 3) { // Expand first 3 sections
+                toggleCollapsible(element);
+            }
+        });
+    });
+</script>

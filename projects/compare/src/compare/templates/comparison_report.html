@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="header">
+    <h1>Database Comparison Report</h1>
+    <div class="metadata">
+        <div><strong>Source:</strong> {{ comparison.source }}</div>
+        <div><strong>Target:</strong> {{ comparison.target }}</div>
+    </div>
+</div>
+
+<div class="summary">
+    {% set total_tables = comparison.changes | length %}
+    {% set tables_with_changes = [] %}
+    {% for table in comparison.changes %}
+        {% if table | has_changes %}
+            {% set _ = tables_with_changes.append(table) %}
+        {% endif %}
+    {% endfor %}
+    
+    {% set total_schema_changes = 0 %}
+    {% set total_data_changes = 0 %}
+    {% for table in comparison.changes %}
+        {% set total_schema_changes = total_schema_changes + (table.schema | count_changes) %}
+        {% set total_data_changes = total_data_changes + (table.data | count_changes) %}
+    {% endfor %}
+    
+    <div class="summary-card">
+        <h3>Tables Compared</h3>
+        <div class="number">{{ total_tables }}</div>
+    </div>
+    <div class="summary-card">
+        <h3>Tables with Changes</h3>
+        <div class="number">{{ tables_with_changes | length }}</div>
+    </div>
+    <div class="summary-card">
+        <h3>Schema Changes</h3>
+        <div class="number">{{ total_schema_changes }}</div>
+    </div>
+    <div class="summary-card">
+        <h3>Data Changes</h3>
+        <div class="number">{{ total_data_changes }}</div>
+    </div>
+</div>
+
+<div class="section">
+    <h2>Table Comparisons</h2>
+    <div class="table-comparisons">
+        {% for table in comparison.changes %}
+            {% if table | has_changes %}
+                {% include 'table_comparison.html' %}
+            {% endif %}
+        {% else %}
+            <div class="no-changes">No changes detected</div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
