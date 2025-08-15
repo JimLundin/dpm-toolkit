@@ -72,6 +72,21 @@ class HtmlReportGenerator:
                 return f'"{value}"'
             return str(value)
         
+        def format_cell_value(value: object) -> str:
+            """Format a value for table cell display."""
+            if value is None:
+                return '<span class="null-value">NULL</span>'
+            return str(value)
+        
+        def format_cell_with_tooltip(value: object) -> str:
+            """Format a value with tooltip for truncated display."""
+            if value is None:
+                return '<span class="null-value">NULL</span>'
+            str_value = str(value)
+            if len(str_value) > 30:  # Show tooltip for long values
+                return f'<span title="{str_value}">{str_value}</span>'
+            return str_value
+        
         def get_value_class(value: object) -> str:
             """Get CSS class for value type."""
             if value is None:
@@ -140,6 +155,8 @@ class HtmlReportGenerator:
         self.env.filters["count_changes"] = count_changes
         self.env.filters["has_changes"] = has_changes
         self.env.filters["format_value"] = format_value
+        self.env.filters["format_cell_value"] = format_cell_value
+        self.env.filters["format_cell_with_tooltip"] = format_cell_with_tooltip
         self.env.filters["get_value_class"] = get_value_class
         self.env.filters["row_to_table"] = row_to_table
         self.env.filters["schema_to_table"] = schema_to_table

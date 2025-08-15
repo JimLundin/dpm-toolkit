@@ -9,7 +9,8 @@
     <div class="collapsible-content">
         {% if (table.schema | length) > 0 %}
             <h4>Schema Changes ({{ table.schema | length }} total)</h4>
-            <table class="schema-table">
+            <div class="table-container">
+                <table class="schema-table">
                 <thead>
                     <tr>
                         <th>Change</th>
@@ -26,33 +27,34 @@
                     {% for change in table.schema %}
                         <tr class="change-{{ change | get_change_type }}">
                             <td><span class="change-badge change-{{ change | get_change_type }}">{{ change | get_change_type }}</span></td>
-                            <td>{{ change.name }}</td>
+                            <td class="truncate" title="{{ change.name }}">{{ change.name }}</td>
                             {% if change | get_change_type == 'added' %}
-                                <td>-</td>
-                                <td>{{ change.new.type }}</td>
-                                <td>-</td>
-                                <td>{{ change.new.nullable }}</td>
-                                <td>-</td>
-                                <td>{{ change.new.default or 'NULL' }}</td>
+                                <td class="truncate">-</td>
+                                <td class="truncate" title="{{ change.new.type }}">{{ change.new.type }}</td>
+                                <td class="truncate">-</td>
+                                <td class="truncate" title="{{ change.new.nullable }}">{{ change.new.nullable }}</td>
+                                <td class="truncate">-</td>
+                                <td class="truncate" title="{{ change.new.default or 'NULL' }}">{{ change.new.default | format_cell_with_tooltip | safe }}</td>
                             {% elif change | get_change_type == 'removed' %}
-                                <td>{{ change.old.type }}</td>
-                                <td>-</td>
-                                <td>{{ change.old.nullable }}</td>
-                                <td>-</td>
-                                <td>{{ change.old.default or 'NULL' }}</td>
-                                <td>-</td>
+                                <td class="truncate" title="{{ change.old.type }}">{{ change.old.type }}</td>
+                                <td class="truncate">-</td>
+                                <td class="truncate" title="{{ change.old.nullable }}">{{ change.old.nullable }}</td>
+                                <td class="truncate">-</td>
+                                <td class="truncate" title="{{ change.old.default or 'NULL' }}">{{ change.old.default | format_cell_with_tooltip | safe }}</td>
+                                <td class="truncate">-</td>
                             {% else %}
-                                <td>{{ change.old.type }}</td>
-                                <td>{{ change.new.type }}</td>
-                                <td>{{ change.old.nullable }}</td>
-                                <td>{{ change.new.nullable }}</td>
-                                <td>{{ change.old.default or 'NULL' }}</td>
-                                <td>{{ change.new.default or 'NULL' }}</td>
+                                <td class="truncate" title="{{ change.old.type }}">{{ change.old.type }}</td>
+                                <td class="truncate" title="{{ change.new.type }}">{{ change.new.type }}</td>
+                                <td class="truncate" title="{{ change.old.nullable }}">{{ change.old.nullable }}</td>
+                                <td class="truncate" title="{{ change.new.nullable }}">{{ change.new.nullable }}</td>
+                                <td class="truncate" title="{{ change.old.default or 'NULL' }}">{{ change.old.default | format_cell_with_tooltip | safe }}</td>
+                                <td class="truncate" title="{{ change.new.default or 'NULL' }}">{{ change.new.default | format_cell_with_tooltip | safe }}</td>
                             {% endif %}
                         </tr>
                     {% endfor %}
                 </tbody>
-            </table>
+                </table>
+            </div>
         {% endif %}
 
         {% if (table.data | length) > 0 %}
@@ -75,7 +77,8 @@
                 {% endif %}
             {% endfor %}
             
-            <table class="data-table">
+            <div class="table-container">
+                <table class="data-table">
                 <thead>
                     <tr>
                         <th>Change</th>
@@ -90,27 +93,28 @@
                             <td><span class="change-badge change-{{ change | get_change_type }}">{{ change | get_change_type }}</span></td>
                             {% for col in all_columns %}
                                 {% if change | get_change_type == 'added' %}
-                                    <td>{{ change.new.get(col, 'NULL') }}</td>
+                                    <td class="truncate" title="{{ change.new.get(col) or 'NULL' }}">{{ change.new.get(col) | format_cell_with_tooltip | safe }}</td>
                                 {% elif change | get_change_type == 'removed' %}
-                                    <td>{{ change.old.get(col, 'NULL') }}</td>
+                                    <td class="truncate" title="{{ change.old.get(col) or 'NULL' }}">{{ change.old.get(col) | format_cell_with_tooltip | safe }}</td>
                                 {% else %}
                                     {% set old_val = change.old.get(col) %}
                                     {% set new_val = change.new.get(col) %}
                                     {% if old_val != new_val %}
                                         <td class="modified-cell">
-                                            <span class="old-value">{{ old_val or 'NULL' }}</span>
+                                            <span class="old-value">{{ old_val | format_cell_value | safe }}</span>
                                             <span class="arrow">→</span>
-                                            <span class="new-value">{{ new_val or 'NULL' }}</span>
+                                            <span class="new-value">{{ new_val | format_cell_value | safe }}</span>
                                         </td>
                                     {% else %}
-                                        <td>{{ new_val or 'NULL' }}</td>
+                                        <td class="truncate" title="{{ new_val or 'NULL' }}">{{ new_val | format_cell_with_tooltip | safe }}</td>
                                     {% endif %}
                                 {% endif %}
                             {% endfor %}
                         </tr>
                     {% endfor %}
                 </tbody>
-            </table>
+                </table>
+            </div>
         {% endif %}
     </div>
 </div>
