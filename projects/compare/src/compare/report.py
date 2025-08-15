@@ -51,6 +51,14 @@ class HtmlReportGenerator:
                 return "removed"
             return "modified"
 
+        def get_change_type_short(change: dict[str, Change]) -> str:
+            """Get shortened change type for CSS classes (a/r/m)."""
+            if "new" in change and "old" not in change:
+                return "a"
+            if "old" in change and "new" not in change:
+                return "r"
+            return "m"
+
         def count_changes(changes: Collection[Change]) -> int:
             """Count the number of changes in a list."""
             return len(changes) or 0
@@ -125,6 +133,7 @@ class HtmlReportGenerator:
 
         # Register filters
         self.env.filters["get_change_type"] = get_change_type
+        self.env.filters["get_change_type_short"] = get_change_type_short
         self.env.filters["count_changes"] = count_changes
         self.env.filters["has_changes"] = has_changes
         self.env.filters["format_value"] = format_value

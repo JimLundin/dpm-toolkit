@@ -25,9 +25,10 @@
                 </thead>
                 <tbody>
                     {% for change in table.schema %}
+                        {% set change_type_short = change | get_change_type_short %}
                         {% set change_type = change | get_change_type %}
-                        <tr class="change-{{ change_type }}">
-                            <td><span class="change-badge change-{{ change_type }}">{{ change_type }}</span></td>
+                        <tr class="c{{ change_type_short }}">
+                            <td><span class="cb {{ change_type_short }}">{{ change_type }}</span></td>
                             <td{% if change.name | needs_tooltip %} title="{{ change.name }}"{% endif %}>{{ change.name }}</td>
                             {% if change_type == 'added' %}
                                 <td>-</td>
@@ -90,9 +91,10 @@
                 </thead>
                 <tbody>
                     {% for change in table.data %}
+                        {% set change_type_short = change | get_change_type_short %}
                         {% set change_type = change | get_change_type %}
-                        <tr class="change-{{ change_type }}">
-                            <td><span class="change-badge change-{{ change_type }}">{{ change_type }}</span></td>
+                        <tr class="c{{ change_type_short }}">
+                            <td><span class="cb {{ change_type_short }}">{{ change_type }}</span></td>
                             {% for col in all_columns %}
                                 {% if change_type == 'added' %}
                                     {% set val = change.new.get(col) %}
@@ -104,10 +106,10 @@
                                     {% set old_val = change.old.get(col) %}
                                     {% set new_val = change.new.get(col) %}
                                     {% if old_val != new_val %}
-                                        <td class="modified-cell">
-                                            <span class="old-value" title="{{ old_val or 'NULL' }}">{{ old_val | format_cell_value | safe }}</span>
-                                            <span class="arrow">→</span>
-                                            <span class="new-value" title="{{ new_val or 'NULL' }}">{{ new_val | format_cell_value | safe }}</span>
+                                        <td class="mc">
+                                            <span class="ov"{% if old_val | needs_tooltip %} title="{{ old_val or 'NULL' }}"{% endif %}>{{ old_val | format_cell_value | safe }}</span>
+                                            <span class="ar">→</span>
+                                            <span class="nv"{% if new_val | needs_tooltip %} title="{{ new_val or 'NULL' }}"{% endif %}>{{ new_val | format_cell_value | safe }}</span>
                                         </td>
                                     {% else %}
                                         <td{% if new_val | needs_tooltip %} title="{{ new_val or 'NULL' }}"{% endif %}>{{ new_val | format_cell_value | safe }}</td>
