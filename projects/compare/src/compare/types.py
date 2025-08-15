@@ -1,30 +1,31 @@
 """Type definitions for database comparison."""
 
+from collections.abc import Mapping, Sequence
 from typing import TypedDict
 
-type ValueType = str | int | float | bool | None
+ValueType = str | int | float | bool | None
 
 
-class RowAdded(TypedDict):
+class Row(TypedDict):
+    """Base type for row changes in database comparison."""
+
+    key: Mapping[str, ValueType]
+
+
+class RowAdded(Row):
     """Information about a newly added row."""
 
-    primary_key: dict[str, ValueType]
-    new_values: dict[str, ValueType]
+    new: Mapping[str, ValueType]
 
 
-class RowRemoved(TypedDict):
+class RowRemoved(Row):
     """Information about a removed row."""
 
-    primary_key: dict[str, ValueType]
-    old_values: dict[str, ValueType] | None
+    old: Mapping[str, ValueType]
 
 
-class RowModified(TypedDict):
+class RowModified(RowAdded, RowRemoved):
     """Information about a modified row."""
-
-    primary_key: dict[str, ValueType]
-    old_values: dict[str, ValueType] | None
-    new_values: dict[str, ValueType] | None
 
 
 type RowChange = RowAdded | RowRemoved | RowModified
@@ -36,29 +37,29 @@ class ColumnInfo(TypedDict):
     name: str
     type: str
     nullable: bool
-    default_value: str | None
+    default: ValueType
 
 
-class ColumnAdded(TypedDict):
+class Column(TypedDict):
+    """Base type for column changes in database comparison."""
+
+    name: str
+
+
+class ColumnAdded(Column):
     """Information about a newly added column."""
 
-    column_name: str
-    new_definition: ColumnInfo
+    new: ColumnInfo
 
 
-class ColumnRemoved(TypedDict):
+class ColumnRemoved(Column):
     """Information about a removed column."""
 
-    column_name: str
-    old_definition: ColumnInfo | None
+    old: ColumnInfo
 
 
-class ColumnModified(TypedDict):
+class ColumnModified(ColumnAdded, ColumnRemoved):
     """Information about a modified column."""
-
-    column_name: str
-    old_definition: ColumnInfo | None
-    new_definition: ColumnInfo | None
 
 
 type ColumnChange = ColumnAdded | ColumnRemoved | ColumnModified
@@ -67,14 +68,14 @@ type ColumnChange = ColumnAdded | ColumnRemoved | ColumnModified
 class TableComparison(TypedDict):
     """Complete comparison result for a table."""
 
-    table_name: str
-    schema_comparison: list[ColumnChange] | None
-    data_comparison: list[RowChange] | None
+    name: str
+    schema: Sequence[ColumnChange] | None
+    data: Sequence[RowChange] | None
 
 
 class Comparison(TypedDict):
     """Complete database comparison result."""
 
-    source_database: str
-    target_database: str
+    source: str
+    target: str
     changes: list[TableComparison]
