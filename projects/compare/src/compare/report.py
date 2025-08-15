@@ -99,6 +99,13 @@ class HtmlReportGenerator:
                 return "boolean-value"
             return ""
 
+        def needs_tooltip(value: object, max_length: int = 30) -> bool:
+            """Check if a value needs a tooltip (content longer than max_length)."""
+            if value is None:
+                return False
+            str_value = str(value)
+            return len(str_value) > max_length
+
         def format_table_value(value: object) -> tuple[str, str]:
             """Format a value for table display with CSS class."""
             if value is None:
@@ -120,6 +127,7 @@ class HtmlReportGenerator:
         self.env.filters["format_cell_value"] = format_cell_value
         self.env.filters["format_cell_with_tooltip"] = format_cell_with_tooltip
         self.env.filters["get_value_class"] = get_value_class
+        self.env.filters["needs_tooltip"] = needs_tooltip
 
     def generate_report(
         self,

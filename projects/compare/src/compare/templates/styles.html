@@ -93,6 +93,12 @@
         border: 1px solid #dee2e6;
         vertical-align: top;
         line-height: 1.4;
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        position: relative;
+        cursor: help;
     }
     
     .data-table tr:nth-child(even), .schema-table tr:nth-child(even) {
@@ -103,16 +109,7 @@
         background: #e3f2fd;
     }
     
-    .truncate {
-        max-width: 200px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        position: relative;
-        cursor: help;
-    }
-    
-    .truncate:hover::after {
+    .data-table td:hover::after, .schema-table td:hover::after {
         content: attr(title);
         position: absolute;
         top: -5px;
@@ -140,8 +137,11 @@
         background: #fff3cd !important;
         font-family: monospace;
         font-size: 12px;
-        white-space: nowrap;
+        white-space: nowrap !important;
         min-width: 120px;
+        max-width: none !important;
+        overflow: visible !important;
+        text-overflow: unset !important;
     }
     
     .old-value {
