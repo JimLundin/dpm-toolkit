@@ -1,14 +1,14 @@
 <div class="table-comparison">
-    {% set schema_count = table.schema | count_changes %}
-    {% set data_count = table.data | count_changes %}
+    {% set schema_count = table.schema | length %}
+    {% set data_count = table.data | length %}
     {% set total_changes = schema_count + data_count %}
     
     <h3 class="expandable" onclick="toggleCollapsible(this)">
         {{ table.name }} ({{ total_changes }} changes)
     </h3>
     <div class="collapsible-content">
-        {% if table.schema %}
-            <h4>Schema Changes</h4>
+        {% if (table.schema | length) > 0 %}
+            <h4>Schema Changes ({{ table.schema | length }} total)</h4>
             {% for change in table.schema %}
                 <div class="change-item {{ change | get_change_type }}">
                     {{ change | get_change_type | upper }}: Column {{ change.name }}
@@ -27,9 +27,9 @@
             {% endfor %}
         {% endif %}
 
-        {% if table.data %}
-            <h4>Data Changes</h4>
-            {% for change in table.data[:20] %}
+        {% if (table.data | length) > 0 %}
+            <h4>Data Changes ({{ table.data | length }} total)</h4>
+            {% for change in table.data %}
                 <div class="change-item {{ change | get_change_type }}">
                     <strong>{{ change | get_change_type | upper }}</strong> Row: 
                     {% for key, value in change.key.items() %}
@@ -48,10 +48,6 @@
                     </div>
                 </div>
             {% endfor %}
-            
-            {% if table.data | length > 20 %}
-                <p><em>... and {{ table.data | length - 20 }} more data changes</em></p>
-            {% endif %}
         {% endif %}
     </div>
 </div>

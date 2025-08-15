@@ -145,8 +145,4 @@ class DatabaseComparator:
         # Compare data
         data_changes = self.compare_data(name)
 
-        return TableComparison(
-            name=name,
-            schema=schema_changes or None,
-            data=data_changes or None,
-        )
+        return TableComparison(name=name, schema=schema_changes, data=data_changes)

@@ -69,8 +69,8 @@ class TableComparison(TypedDict):
     """Complete comparison result for a table."""
 
     name: ReadOnly[str]
-    schema: ReadOnly[Collection[ColumnChange] | None]
-    data: ReadOnly[Collection[RowChange] | None]
+    schema: ReadOnly[Collection[ColumnChange]]
+    data: ReadOnly[Collection[RowChange]]
 
 
 class Comparison(TypedDict):

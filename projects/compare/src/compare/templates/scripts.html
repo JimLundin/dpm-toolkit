@@ -5,14 +5,9 @@
         content.classList.toggle('show');
     }
 
-    // Auto-expand sections with changes on load
+    // Start with all sections collapsed
     document.addEventListener('DOMContentLoaded', function() {
-        // Optionally auto-expand first few sections
-        const expandables = document.querySelectorAll('.expandable');
-        expandables.forEach((element, index) => {
-            if (index < 3) { // Expand first 3 sections
-                toggleCollapsible(element);
-            }
-        });
+        // All sections start collapsed by default - no auto-expansion
+        console.log('Database comparison report loaded with all sections collapsed');
     });
 </script>

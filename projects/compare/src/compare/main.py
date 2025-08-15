@@ -54,21 +54,17 @@ def compare_databases(source_path: str | Path, target_path: str | Path) -> Compa
 
         # Create row additions for all data in the new table
 
-        schema_changes = [
+        schema_added = [
             ColumnAdded(name=col["name"], new=col) for col in target_columns
         ]
 
-        data_changes = [
+        data_added = [
             RowAdded(key={col: row.get(col) for col in pk_columns}, new=row)
             for row in target_data
         ]
 
         all_changes.append(
-            TableComparison(
-                name=table_name,
-                schema=schema_changes or None,
-                data=data_changes or None,
-            ),
+            TableComparison(name=table_name, schema=schema_added, data=data_added),
         )
 
     # Add tables that were removed (only exist in source)
@@ -79,21 +75,17 @@ def compare_databases(source_path: str | Path, target_path: str | Path) -> Compa
 
         # Create row removals for all data in the removed table
 
-        removed_schema_changes = [
+        schema_removed = [
             ColumnRemoved(name=col["name"], old=col) for col in source_columns
         ]
 
-        removed_data_changes = [
+        data_removed = [
             RowRemoved(key={col: row.get(col) for col in pk_columns}, old=row)
             for row in source_data
         ]
 
         all_changes.append(
-            TableComparison(
-                name=table_name,
-                schema=(removed_schema_changes or None),
-                data=removed_data_changes or None,
-            ),
+            TableComparison(name=table_name, schema=schema_removed, data=data_removed),
         )
 
     # Build complete result

@@ -13,16 +13,15 @@
     {% set total_tables = comparison.changes | length %}
     {% set tables_with_changes = [] %}
     {% for table in comparison.changes %}
-        {% if table | has_changes %}
+        {% if (table.schema | length) > 0 or (table.data | length) > 0 %}
             {% set _ = tables_with_changes.append(table) %}
         {% endif %}
     {% endfor %}
     
-    {% set total_schema_changes = 0 %}
-    {% set total_data_changes = 0 %}
+    {% set ns = namespace(total_schema_changes=0, total_data_changes=0) %}
     {% for table in comparison.changes %}
-        {% set total_schema_changes = total_schema_changes + (table.schema | count_changes) %}
-        {% set total_data_changes = total_data_changes + (table.data | count_changes) %}
+        {% set ns.total_schema_changes = ns.total_schema_changes + (table.schema | length) %}
+        {% set ns.total_data_changes = ns.total_data_changes + (table.data | length) %}
     {% endfor %}
     
     <div class="summary-card">
@@ -35,11 +34,11 @@
     </div>
     <div class="summary-card">
         <h3>Schema Changes</h3>
-        <div class="number">{{ total_schema_changes }}</div>
+        <div class="number">{{ ns.total_schema_changes }}</div>
     </div>
     <div class="summary-card">
         <h3>Data Changes</h3>
-        <div class="number">{{ total_data_changes }}</div>
+        <div class="number">{{ ns.total_data_changes }}</div>
     </div>
 </div>
 
@@ -47,7 +46,7 @@
     <h2>Table Comparisons</h2>
     <div class="table-comparisons">
         {% for table in comparison.changes %}
-            {% if table | has_changes %}
+            {% if (table.schema | length) > 0 or (table.data | length) > 0 %}
                 {% include 'table_comparison.html' %}
             {% endif %}
         {% else %}
