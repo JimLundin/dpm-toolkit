@@ -1,7 +1,7 @@
 """Type definitions for database comparison."""
 
-from collections.abc import Mapping, Sequence
-from typing import TypedDict
+from collections.abc import Collection, Mapping
+from typing import ReadOnly, TypedDict
 
 ValueType = str | int | float | bool | None
 
@@ -9,19 +9,19 @@ ValueType = str | int | float | bool | None
 class Row(TypedDict):
     """Base type for row changes in database comparison."""
 
-    key: Mapping[str, ValueType]
+    key: ReadOnly[Mapping[str, ValueType]]
 
 
 class RowAdded(Row):
     """Information about a newly added row."""
 
-    new: Mapping[str, ValueType]
+    new: ReadOnly[Mapping[str, ValueType]]
 
 
 class RowRemoved(Row):
     """Information about a removed row."""
 
-    old: Mapping[str, ValueType]
+    old: ReadOnly[Mapping[str, ValueType]]
 
 
 class RowModified(RowAdded, RowRemoved):
@@ -34,28 +34,28 @@ type RowChange = RowAdded | RowRemoved | RowModified
 class ColumnInfo(TypedDict):
     """Complete column information from database schema."""
 
-    name: str
-    type: str
-    nullable: bool
-    default: ValueType
+    name: ReadOnly[str]
+    type: ReadOnly[str]
+    nullable: ReadOnly[bool]
+    default: ReadOnly[ValueType]
 
 
 class Column(TypedDict):
     """Base type for column changes in database comparison."""
 
-    name: str
+    name: ReadOnly[str]
 
 
 class ColumnAdded(Column):
     """Information about a newly added column."""
 
-    new: ColumnInfo
+    new: ReadOnly[ColumnInfo]
 
 
 class ColumnRemoved(Column):
     """Information about a removed column."""
 
-    old: ColumnInfo
+    old: ReadOnly[ColumnInfo]
 
 
 class ColumnModified(ColumnAdded, ColumnRemoved):
@@ -68,14 +68,14 @@ type ColumnChange = ColumnAdded | ColumnRemoved | ColumnModified
 class TableComparison(TypedDict):
     """Complete comparison result for a table."""
 
-    name: str
-    schema: Sequence[ColumnChange] | None
-    data: Sequence[RowChange] | None
+    name: ReadOnly[str]
+    schema: ReadOnly[Collection[ColumnChange] | None]
+    data: ReadOnly[Collection[RowChange] | None]
 
 
 class Comparison(TypedDict):
     """Complete database comparison result."""
 
-    source: str
-    target: str
-    changes: list[TableComparison]
+    source: ReadOnly[str]
+    target: ReadOnly[str]
+    changes: ReadOnly[Collection[TableComparison]]
