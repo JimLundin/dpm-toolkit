@@ -1,7 +1,7 @@
 """Database inspection functionality using sqlite3."""
 
-import sqlite3
 from pathlib import Path
+from sqlite3 import Connection, Row, connect
 
 from compare.types import ColumnInfo, ValueType
 
@@ -11,15 +11,20 @@ class DatabaseInspector:
 
     def __init__(self, db: Path) -> None:
         """Initialize inspector for a database file."""
+        self.conn: Connection | None = None
         self.path = db
         if not self.path.exists():
             msg = f"Database file not found: {db}"
             raise FileNotFoundError(msg)
 
-    def get_connection(self) -> sqlite3.Connection:
+    def get_connection(self) -> Connection:
         """Get a connection to the database."""
-        conn = sqlite3.connect(self.path)
-        conn.row_factory = sqlite3.Row  # Enable column access by name
+        if self.conn is not None:
+            return self.conn
+        # Create a new connection and set row factory to Row for named access
+        conn = connect(self.path)
+        conn.row_factory = Row  # Enable column access by name
+        self.conn = conn
         return conn
 
     def get_tables(self) -> list[str]:
@@ -60,7 +65,6 @@ class DatabaseInspector:
         with self.get_connection() as conn:
             # Order by primary key columns for consistent ordering
             pk_cols = self.get_primary_key_columns(name)
-            print(f"Primary key columns for {name}: {pk_cols}")
 
             order = ", ".join(f"`{col}`" for col in pk_cols) if pk_cols else "rowid"
 
