@@ -6,8 +6,8 @@ from sqlite3 import Row
 
 from jinja2 import Environment, FileSystemLoader
 
-from compare.comparator import DatabaseComparator
-from compare.inspector import DatabaseInspector
+from compare.comparator import Comparator
+from compare.inspector import Inspector
 from compare.types import (
     ColumnAdded,
     ColumnRemoved,
@@ -20,7 +20,7 @@ from compare.types import (
 TEMPLATE_DIR = Path(__file__).parent / "templates"
 
 
-def generate_report(result: str, output_path: str | Path) -> None:
+def generate_report(result: str, output_path: Path) -> None:
     """Generate HTML report from comparison result."""
     env = Environment(
         loader=FileSystemLoader(TEMPLATE_DIR),
@@ -30,7 +30,7 @@ def generate_report(result: str, output_path: str | Path) -> None:
     )
     template = env.get_template("report.html")
     html_content = template.render(comparison_json=result)
-    Path(output_path).write_text(html_content, encoding="utf-8")
+    output_path.write_text(html_content, encoding="utf-8")
 
 
 def encoder(obj: object) -> dict[str, str]:
@@ -41,11 +41,8 @@ def encoder(obj: object) -> dict[str, str]:
     raise TypeError(msg)
 
 
-def compare_databases(source_path: str | Path, target_path: str | Path) -> Comparison:
+def compare_databases(source_path: Path, target_path: Path) -> Comparison:
     """Compare two SQLite databases completely and return full results."""
-    source_path = Path(source_path)
-    target_path = Path(target_path)
-
     # Validate database files exist
     if not source_path.exists():
         msg = f"Source database not found: {source_path}"
@@ -55,62 +52,43 @@ def compare_databases(source_path: str | Path, target_path: str | Path) -> Compa
         raise FileNotFoundError(msg)
 
     # Create inspectors
-    source_inspector = DatabaseInspector(source_path)
-    target_inspector = DatabaseInspector(target_path)
+    source = Inspector(source_path)
+    target = Inspector(target_path)
 
     # Create comparator
-    comparator = DatabaseComparator(source_inspector, target_inspector)
+    comparator = Comparator(source, target)
 
     # Get all tables
-    tables_added, tables_removed, tables_common = comparator.get_all_tables()
-
-    # Compare all tables (common, added, removed)
-    all_changes: list[TableComparison] = []
+    tables_added, tables_removed, tables_common = comparator.tables()
 
     # Compare common tables (schema and data)
-    for table_name in tables_common:
-        table_comparison = comparator.compare_table(table_name)
-        all_changes.append(table_comparison)
+    changes = [comparator.compare_table(table_name) for table_name in tables_common]
 
     # Add tables that were added (only exist in target)
-    for table_name in tables_added:
-        target_columns = target_inspector.get_table_columns(table_name)
-        target_data = target_inspector.get_all_table_data(table_name)
-
-        # Create row additions for all data in the new table
-
-        schema_added = [
-            ColumnAdded(name=col["name"], new=col) for col in target_columns
-        ]
-
-        data_added = [RowAdded(new=row) for row in target_data]
-
-        all_changes.append(
-            TableComparison(name=table_name, schema=schema_added, data=data_added),
+    changes.extend(
+        TableComparison(
+            name=table_name,
+            schema=(ColumnAdded(new=col) for col in target.columns(table_name)),
+            data=(RowAdded(new=row) for row in target.data(table_name)),
         )
+        for table_name in tables_added
+    )
 
     # Add tables that were removed (only exist in source)
-    for table_name in tables_removed:
-        source_columns = source_inspector.get_table_columns(table_name)
-        source_data = source_inspector.get_all_table_data(table_name)
-
-        # Create row removals for all data in the removed table
-
-        schema_removed = [
-            ColumnRemoved(name=col["name"], old=col) for col in source_columns
-        ]
-
-        data_removed = [RowRemoved(old=row) for row in source_data]
-
-        all_changes.append(
-            TableComparison(name=table_name, schema=schema_removed, data=data_removed),
+    changes.extend(
+        TableComparison(
+            name=table_name,
+            schema=(ColumnRemoved(old=col) for col in source.columns(table_name)),
+            data=(RowRemoved(old=row) for row in source.data(table_name)),
         )
+        for table_name in tables_removed
+    )
 
     # Build complete result
     return Comparison(
         source=str(source_path),
         target=str(target_path),
-        changes=all_changes,
+        changes=changes,
     )
 
 
@@ -119,12 +97,11 @@ def comparison_to_json(result: Comparison, indent: int = 2) -> str:
     return json.dumps(result, default=encoder, indent=indent, ensure_ascii=False)
 
 
-def save_comparison_json(result: Comparison, output_path: str | Path) -> None:
+def save_comparison_json(result: Comparison, output: Path) -> None:
     """Save comparison result as JSON file."""
-    output_path = Path(output_path)
     json_content = comparison_to_json(result)
 
-    output_path.write_text(json_content, encoding="utf-8")
+    output.write_text(json_content, encoding="utf-8")
 
 
 def load_comparison_json(json_path: str | Path) -> Comparison:

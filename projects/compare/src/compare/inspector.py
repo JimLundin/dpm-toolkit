@@ -1,74 +1,65 @@
 """Database inspection functionality using sqlite3."""
 
+from collections.abc import Generator, Iterator
 from pathlib import Path
-from sqlite3 import Connection, Row, connect
+from sqlite3 import Row, connect
 
 from compare.types import ColumnInfo, ValueType
 
 
-class DatabaseInspector:
+class Inspector:
     """Inspects SQLite databases to extract complete schema and data information."""
 
     def __init__(self, db: Path) -> None:
         """Initialize inspector for a database file."""
-        self.conn: Connection | None = None
-        self.path = db
-        if not self.path.exists():
-            msg = f"Database file not found: {db}"
-            raise FileNotFoundError(msg)
+        self.conn = connect(db)
+        self.conn.row_factory = Row  # Enable named access to columns
 
-    def get_connection(self) -> Connection:
-        """Get a connection to the database."""
-        if self.conn is not None:
-            return self.conn
-        # Create a new connection and set row factory to Row for named access
-        conn = connect(self.path)
-        conn.row_factory = Row  # Enable column access by name
-        self.conn = conn
-        return conn
-
-    def get_tables(self) -> list[str]:
+    def tables(self) -> Generator[str]:
         """Get all table names in the database."""
-        with self.get_connection() as conn:
+        with self.conn as conn:
             cursor = conn.execute(
                 "SELECT name "
                 "FROM sqlite_master "
                 "WHERE type='table' AND name NOT LIKE 'sqlite_%' "
                 "ORDER BY name",
             )
-            return [row[0] for row in cursor]
+            return (row[0] for row in cursor)
 
-    def get_table_columns(self, name: str) -> list[ColumnInfo]:
+    def columns(self, name: str) -> Generator[ColumnInfo]:
         """Get complete column information for a table."""
-        with self.get_connection() as conn:
+        with self.conn as conn:
             cursor = conn.execute("SELECT * FROM pragma_table_info(?)", (name,))
 
-            return [
+            return (
                 ColumnInfo(
                     name=row["name"],
                     type=row["type"],
                     nullable=not bool(row["notnull"]),
                     default=row["dflt_value"],
+                    primary_key=bool(row["pk"]),
                 )
                 for row in cursor
-            ]
+            )
 
-    def get_primary_key_columns(self, name: str) -> list[str]:
+    def get_primary_key_columns(self, name: str) -> Generator[str]:
         """Get primary key column names for a table."""
-        with self.get_connection() as conn:
-            cursor = conn.execute("SELECT * FROM pragma_table_info(?)", (name,))
+        with self.conn as conn:
+            cursor = conn.execute(
+                "SELECT name FROM pragma_table_info(?) WHERE pk",
+                (name,),
+            )
 
-            return [row["name"] for row in cursor if row["pk"]]
+            return (row[0] for row in cursor)
 
-    def get_all_table_data(self, name: str) -> list[dict[str, ValueType]]:
+    def data(self, name: str) -> Iterator[dict[str, ValueType]]:
         """Get all data from a table as list of dictionaries."""
-        with self.get_connection() as conn:
+        with self.conn as conn:
             # Order by primary key columns for consistent ordering
             pk_cols = self.get_primary_key_columns(name)
 
-            order = ", ".join(f"`{col}`" for col in pk_cols) if pk_cols else "rowid"
+            order = ", ".join(f"`{col}`" for col in pk_cols) or "rowid"
 
-            cursor = conn.execute(
+            return conn.execute(
                 f"SELECT * FROM `{name}` ORDER BY {order}",  # noqa: S608
             )
-            return list(cursor)
