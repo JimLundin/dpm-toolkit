@@ -80,10 +80,10 @@ class DatabaseComparator:
     ) -> str:
         """Create a unique key for a row based on primary key columns."""
         if pk_columns:
-            key_parts = [str(row.get(pk, "NULL")) for pk in pk_columns]
+            key_parts = [str(row[pk]) for pk in pk_columns]
         else:
             # Use all columns if no primary key
-            key_parts = [f"{k}:{v}" for k, v in sorted(row.items())]
+            key_parts = [f"{k}:{row[k]}" for k in sorted(row.keys())]
         return "|".join(key_parts)
 
     def compare_data(self, table_name: str) -> list[RowChange]:

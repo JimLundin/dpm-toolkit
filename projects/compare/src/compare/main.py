@@ -2,6 +2,9 @@
 
 import json
 from pathlib import Path
+from sqlite3 import Row
+
+from jinja2 import Environment, FileSystemLoader
 
 from compare.comparator import DatabaseComparator
 from compare.inspector import DatabaseInspector
@@ -13,6 +16,29 @@ from compare.types import (
     RowRemoved,
     TableComparison,
 )
+
+TEMPLATE_DIR = Path(__file__).parent / "templates"
+
+
+def generate_report(result: str, output_path: str | Path) -> None:
+    """Generate HTML report from comparison result."""
+    env = Environment(
+        loader=FileSystemLoader(TEMPLATE_DIR),
+        autoescape=True,
+        trim_blocks=True,
+        lstrip_blocks=True,
+    )
+    template = env.get_template("report.html")
+    html_content = template.render(comparison_json=result)
+    Path(output_path).write_text(html_content, encoding="utf-8")
+
+
+def encoder(obj: object) -> dict[str, str]:
+    """Convert sqlite3.Row to a regular dict for JSON serialization."""
+    if isinstance(obj, Row):
+        return dict(obj)
+    msg = f"Object of type {type(obj)} is not JSON serializable"
+    raise TypeError(msg)
 
 
 def compare_databases(source_path: str | Path, target_path: str | Path) -> Comparison:
@@ -90,7 +116,7 @@ def compare_databases(source_path: str | Path, target_path: str | Path) -> Compa
 
 def comparison_to_json(result: Comparison, indent: int = 2) -> str:
     """Convert comparison result to JSON string."""
-    return json.dumps(result, indent=indent, ensure_ascii=False)
+    return json.dumps(result, default=encoder, indent=indent, ensure_ascii=False)
 
 
 def save_comparison_json(result: Comparison, output_path: str | Path) -> None:

@@ -475,24 +475,22 @@ def handle_compare_command(args: Namespace) -> None:
 
     # Perform the comparison
     result = compare_databases(source_path, target_path)
-
-    # Generate JSON output
-    json_output = comparison_to_json(result)
+    result_json = comparison_to_json(result)
 
     # Handle output based on format
     if args.format == "html":
         output_path = args.output or Path("comparison_report.html")
-        generate_report(result, output_path)
+        generate_report(result_json, output_path)
         log_info(f"HTML report saved to: {output_path}")
     elif hasattr(args, "output") and args.output:
         # Save JSON to file
         output_path = Path(args.output)
-        output_path.write_text(json_output, encoding="utf-8")
+        output_path.write_text(result_json, encoding="utf-8")
         log_info(f"JSON report saved to: {output_path}")
     else:
         # Print JSON to stdout
         log_info("\nComparison Results:")
-        log_info(json_output)
+        log_info(result_json)
 
 
 def main() -> None:
