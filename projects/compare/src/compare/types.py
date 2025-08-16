@@ -8,19 +8,13 @@ ValueType = str | int | float | bool | None
 type ChangeType = Literal["added", "removed", "modified"]
 
 
-class Row(TypedDict):
-    """Base type for row changes in database comparison."""
-
-    key: ReadOnly[Mapping[str, ValueType]]
-
-
-class RowAdded(Row):
+class RowAdded(TypedDict):
     """Information about a newly added row."""
 
     new: ReadOnly[Mapping[str, ValueType]]
 
 
-class RowRemoved(Row):
+class RowRemoved(TypedDict):
     """Information about a removed row."""
 
     old: ReadOnly[Mapping[str, ValueType]]
