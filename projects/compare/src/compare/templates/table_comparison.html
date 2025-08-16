@@ -19,10 +19,7 @@
                     {% set ns.modified = ns.modified + 1 %}
                 {% endif %}
             {% endfor %}
-            <h4>Schema Changes 
-                {% if ns.added > 0 %}<span class="cb a">Added</span> {{ ns.added }}{% endif %}
-                {% if ns.removed > 0 %}<span class="cb r">Removed</span> {{ ns.removed }}{% endif %}
-                {% if ns.modified > 0 %}<span class="cb m">Modified</span> {{ ns.modified }}{% endif %}
+            <h4>Schema Changes{% if ns.added > 0 %} <span class="cb a">Added</span> {{ ns.added }}{% endif %}{% if ns.removed > 0 %} <span class="cb r">Removed</span> {{ ns.removed }}{% endif %}{% if ns.modified > 0 %} <span class="cb m">Modified</span> {{ ns.modified }}{% endif %}
             </h4>
             <div class="table-container">
                 <table class="schema-table">
@@ -84,10 +81,7 @@
                     {% set ns.modified = ns.modified + 1 %}
                 {% endif %}
             {% endfor %}
-            <h4>Data Changes 
-                {% if ns.added > 0 %}<span class="cb a">Added</span> {{ ns.added }}{% endif %}
-                {% if ns.removed > 0 %}<span class="cb r">Removed</span> {{ ns.removed }}{% endif %}
-                {% if ns.modified > 0 %}<span class="cb m">Modified</span> {{ ns.modified }}{% endif %}
+            <h4>Data Changes{% if ns.added > 0 %} <span class="cb a">Added</span> {{ ns.added }}{% endif %}{% if ns.removed > 0 %} <span class="cb r">Removed</span> {{ ns.removed }}{% endif %}{% if ns.modified > 0 %} <span class="cb m">Modified</span> {{ ns.modified }}{% endif %}
             </h4>
             {% set all_columns = [] %}
             {% for change in table.data %}
@@ -133,9 +127,9 @@
                                     {% set new_val = change.new.get(col) %}
                                     {% if old_val != new_val %}
                                         <td class="mc">
-                                            <span class="ov"{% if old_val | needs_tooltip %} title="{{ old_val or 'NULL' }}"{% endif %}>{{ old_val | format_cell_value | safe }}</span>
+                                            {% if old_val is not none and old_val != "" %}<span class="ov"{% if old_val | needs_tooltip %} title="{{ old_val }}"{% endif %}>{{ old_val | format_cell_value | safe }}</span>{% else %}<span class="ov" title="NULL">NULL</span>{% endif %}
                                             <span class="ar">→</span>
-                                            <span class="nv"{% if new_val | needs_tooltip %} title="{{ new_val or 'NULL' }}"{% endif %}>{{ new_val | format_cell_value | safe }}</span>
+                                            {% if new_val is not none and new_val != "" %}<span class="nv"{% if new_val | needs_tooltip %} title="{{ new_val }}"{% endif %}>{{ new_val | format_cell_value | safe }}</span>{% else %}<span class="nv" title="NULL">NULL</span>{% endif %}
                                         </td>
                                     {% else %}
                                         <td{% if new_val | needs_tooltip %} title="{{ new_val or 'NULL' }}"{% endif %}>{{ new_val | format_cell_value | safe }}</td>
