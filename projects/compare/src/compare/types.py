@@ -1,6 +1,6 @@
 """Type definitions for database comparison."""
 
-from collections.abc import Collection, Mapping
+from collections.abc import Iterable
 from typing import Literal, ReadOnly, TypedDict
 
 ValueType = str | int | float | bool | None
@@ -11,13 +11,13 @@ type ChangeType = Literal["added", "removed", "modified"]
 class RowAdded(TypedDict):
     """Information about a newly added row."""
 
-    new: ReadOnly[Mapping[str, ValueType]]
+    new: ReadOnly[tuple[ValueType, ...]]
 
 
 class RowRemoved(TypedDict):
     """Information about a removed row."""
 
-    old: ReadOnly[Mapping[str, ValueType]]
+    old: ReadOnly[tuple[ValueType, ...]]
 
 
 class RowModified(RowAdded, RowRemoved):
@@ -34,21 +34,16 @@ class ColumnInfo(TypedDict):
     type: ReadOnly[str]
     nullable: ReadOnly[bool]
     default: ReadOnly[ValueType]
+    primary_key: ReadOnly[bool]
 
 
-class Column(TypedDict):
-    """Base type for column changes in database comparison."""
-
-    name: ReadOnly[str]
-
-
-class ColumnAdded(Column):
+class ColumnAdded(TypedDict):
     """Information about a newly added column."""
 
     new: ReadOnly[ColumnInfo]
 
 
-class ColumnRemoved(Column):
+class ColumnRemoved(TypedDict):
     """Information about a removed column."""
 
     old: ReadOnly[ColumnInfo]
@@ -65,8 +60,8 @@ class TableComparison(TypedDict):
     """Complete comparison result for a table."""
 
     name: ReadOnly[str]
-    schema: ReadOnly[Collection[ColumnChange]]
-    data: ReadOnly[Collection[RowChange]]
+    schema: ReadOnly[Iterable[ColumnChange]]
+    data: ReadOnly[Iterable[RowChange]]
 
 
 class Comparison(TypedDict):
@@ -74,7 +69,7 @@ class Comparison(TypedDict):
 
     source: ReadOnly[str]
     target: ReadOnly[str]
-    changes: ReadOnly[Collection[TableComparison]]
+    changes: ReadOnly[Iterable[TableComparison]]
 
 
 type Change = ColumnChange | RowChange
