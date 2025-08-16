@@ -66,39 +66,72 @@ class DatabaseReportRenderer {
     }
 
     toggleTable(tableName) {
-        const header = document.querySelector(`h3[onclick*="'${tableName}'"]`);
-        const content = document.getElementById(`content-${tableName}`);
-        
-        header.classList.toggle('expanded');
-        content.classList.toggle('show');
+        try {
+            const header = document.querySelector(`h3[onclick*="'${tableName}'"]`);
+            const content = document.getElementById(`content-${tableName}`);
+            
+            if (!header || !content) {
+                console.error(`Could not find table elements for: ${tableName}`);
+                return;
+            }
+            
+            header.classList.toggle('expanded');
+            content.classList.toggle('show');
 
-        if (content.classList.contains('show') && 
-            content.innerHTML.includes('Loading...')) {
-            this.loadTableContent(tableName);
+            if (content.classList.contains('show') && 
+                content.innerHTML.includes('Loading...')) {
+                this.loadTableContent(tableName);
+            }
+        } catch (error) {
+            console.error(`Error toggling table ${tableName}:`, error);
         }
     }
 
     loadTableContent(tableName) {
-        const table = this.data.changes.find(t => t.name === tableName);
-        const content = document.getElementById(`content-${tableName}`);
-        
-        let html = '';
+        try {
+            const table = this.data.changes.find(t => t.name === tableName);
+            const content = document.getElementById(`content-${tableName}`);
+            
+            if (!table) {
+                console.error(`Table not found in data: ${tableName}`);
+                content.innerHTML = '<div class="error">Table data not found</div>';
+                return;
+            }
+            
+            if (!content) {
+                console.error(`Content element not found: content-${tableName}`);
+                return;
+            }
+            
+            let html = '';
 
-        // Schema changes
-        if (table.schema.length > 0) {
-            html += this.renderSchemaSection(table);
-        }
+            // Schema changes
+            if (table.schema && table.schema.length > 0) {
+                html += this.renderSchemaSection(table);
+            }
 
-        // Data changes with virtual scrolling
-        if (table.data.length > 0) {
-            html += this.renderDataSection(table);
-        }
+            // Data changes with virtual scrolling
+            if (table.data && table.data.length > 0) {
+                html += this.renderDataSection(table);
+            }
 
-        content.innerHTML = html;
+            content.innerHTML = html;
 
-        // Initialize virtual scrolling for data tables
-        if (table.data.length > this.maxVisibleRows) {
-            this.initVirtualScrolling(tableName, table.data);
+            // Initialize rendering for data tables
+            if (table.data && table.data.length > 0) {
+                if (table.data.length > this.maxVisibleRows) {
+                    this.initVirtualScrolling(tableName, table.data);
+                } else {
+                    // For smaller datasets, render all rows directly
+                    this.renderAllDataRows(tableName, table.data);
+                }
+            }
+        } catch (error) {
+            console.error(`Error loading table content for ${tableName}:`, error);
+            const content = document.getElementById(`content-${tableName}`);
+            if (content) {
+                content.innerHTML = `<div class="error">Error loading table: ${error.message}</div>`;
+            }
         }
     }
 
@@ -220,23 +253,66 @@ class DatabaseReportRenderer {
         return html;
     }
 
+    renderAllDataRows(tableName, dataChanges) {
+        try {
+            const tbody = document.getElementById(`data-tbody-${tableName}`);
+            if (!tbody) {
+                console.error(`Data tbody not found: data-tbody-${tableName}`);
+                return;
+            }
+            
+            const allColumns = this.getAllColumns(dataChanges);
+            
+            // Clear any existing content
+            tbody.innerHTML = '';
+            
+            // Render all rows directly (no virtual scrolling)
+            dataChanges.forEach(change => {
+                const row = document.createElement('tr');
+                const changeType = this.getChangeType(change);
+                row.className = changeType === 'added' ? 'ca' : 
+                               changeType === 'removed' ? 'cr' : 'cm';
+                row.innerHTML = this.renderDataRowContent(change, allColumns);
+                tbody.appendChild(row);
+            });
+        } catch (error) {
+            console.error(`Error rendering data rows for ${tableName}:`, error);
+        }
+    }
+
     initVirtualScrolling(tableName, dataChanges) {
-        const tbody = document.getElementById(`data-tbody-${tableName}`);
-        const container = tbody.closest('.tct');
-        const allColumns = this.getAllColumns(dataChanges);
-        
-        // Set initial height
-        tbody.style.height = `${dataChanges.length * this.rowHeight}px`;
-        
-        // Render initial visible rows
-        this.renderVisibleRows(
-            tableName, dataChanges, allColumns, 0, this.maxVisibleRows
-        );
-        
-        // Add scroll listener
-        container.addEventListener('scroll', () => {
-            this.handleScroll(tableName, dataChanges, allColumns, container);
-        });
+        try {
+            const tbody = document.getElementById(`data-tbody-${tableName}`);
+            if (!tbody) {
+                console.error(`Virtual scrolling tbody not found: data-tbody-${tableName}`);
+                return;
+            }
+            
+            const container = tbody.closest('.tct');
+            if (!container) {
+                console.error(`Virtual scrolling container not found for: ${tableName}`);
+                return;
+            }
+            
+            const allColumns = this.getAllColumns(dataChanges);
+            
+            // Set initial height
+            tbody.style.height = `${dataChanges.length * this.rowHeight}px`;
+            
+            // Render initial visible rows
+            this.renderVisibleRows(
+                tableName, dataChanges, allColumns, 0, this.maxVisibleRows
+            );
+            
+            // Add scroll listener
+            container.addEventListener('scroll', () => {
+                this.handleScroll(tableName, dataChanges, allColumns, container);
+            });
+        } catch (error) {
+            console.error(`Error initializing virtual scrolling for ${tableName}:`, error);
+            // Fallback to rendering all rows
+            this.renderAllDataRows(tableName, dataChanges);
+        }
     }
 
     handleScroll(tableName, dataChanges, allColumns, container) {

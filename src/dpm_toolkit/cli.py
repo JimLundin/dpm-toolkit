@@ -453,7 +453,7 @@ def handle_schema_command(args: Namespace) -> None:
 def handle_compare_command(args: Namespace) -> None:
     """Handle the 'compare' subcommand."""
     try:
-        from compare import JsonHtmlReportGenerator, compare_databases, comparison_to_json
+        from compare import compare_databases, comparison_to_json, generate_report
     except ImportError as e:
         print(f"Compare functionality not available: {e}")
         return
@@ -473,33 +473,26 @@ def handle_compare_command(args: Namespace) -> None:
     print(f"  Source: {source_path}")
     print(f"  Target: {target_path}")
 
-    try:
-        # Perform the comparison
-        result = compare_databases(source_path, target_path)
+    # Perform the comparison
+    result = compare_databases(source_path, target_path)
 
-        # Generate JSON output
-        json_output = comparison_to_json(result)
+    # Generate JSON output
+    json_output = comparison_to_json(result)
 
-        # Handle output based on format
-        if args.format == "html":
-            # Generate JavaScript-based HTML report
-            output_path = args.output or Path("comparison_report.html")
-            generator = JsonHtmlReportGenerator()
-            generator.generate_report(result, output_path)
-            print(f"HTML report saved to: {output_path}")
-        elif hasattr(args, "output") and args.output:
-            # Save JSON to file
-            output_path = Path(args.output)
-            output_path.write_text(json_output, encoding="utf-8")
-            print(f"JSON report saved to: {output_path}")
-        else:
-            # Print JSON to stdout
-            print("\nComparison Results:")
-            print(json_output)
-
-    except Exception as e:
-        print(f"Error during comparison: {e}")
-        return
+    # Handle output based on format
+    if args.format == "html":
+        output_path = args.output or Path("comparison_report.html")
+        generate_report(result, output_path)
+        log_info(f"HTML report saved to: {output_path}")
+    elif hasattr(args, "output") and args.output:
+        # Save JSON to file
+        output_path = Path(args.output)
+        output_path.write_text(json_output, encoding="utf-8")
+        log_info(f"JSON report saved to: {output_path}")
+    else:
+        # Print JSON to stdout
+        log_info("\nComparison Results:")
+        log_info(json_output)
 
 
 def main() -> None:

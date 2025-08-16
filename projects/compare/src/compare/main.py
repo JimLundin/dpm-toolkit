@@ -3,9 +3,9 @@
 import json
 from pathlib import Path
 
-from .comparator import DatabaseComparator
-from .inspector import DatabaseInspector
-from .types import (
+from compare.comparator import DatabaseComparator
+from compare.inspector import DatabaseInspector
+from compare.types import (
     ColumnAdded,
     ColumnRemoved,
     Comparison,

@@ -2,8 +2,8 @@
 
 from collections.abc import Collection, Mapping
 
-from .inspector import DatabaseInspector
-from .types import (
+from compare.inspector import DatabaseInspector
+from compare.types import (
     ColumnAdded,
     ColumnChange,
     ColumnInfo,

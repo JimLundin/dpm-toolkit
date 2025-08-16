@@ -6,14 +6,14 @@ from .main import (
     load_comparison_json,
     save_comparison_json,
 )
-from .report import JsonHtmlReportGenerator
+from .report import generate_report
 from .types import Comparison
 
 __all__ = [
     "Comparison",
-    "JsonHtmlReportGenerator",
     "compare_databases",
     "comparison_to_json",
+    "generate_report",
     "load_comparison_json",
     "save_comparison_json",
 ]
