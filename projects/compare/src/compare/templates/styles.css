@@ -40,9 +40,10 @@
 
     .sc {
         background: #f8f9fa;
-        padding: 20px;
+        padding: 15px 20px;
         border-radius: 6px;
         border-left: 4px solid #007bff;
+        text-align: center;
     }
 
     .sc h3 {
@@ -51,7 +52,7 @@
     }
 
     .sc .n {
-        font-size: 24px;
+        font-size: 28px;
         font-weight: bold;
         color: #007bff;
     }
@@ -79,7 +80,7 @@
         border: 1px solid #dee2e6;
         border-radius: 6px;
         position: relative;
-        max-height: 400px;
+        max-height: 500px;
         overflow-y: auto;
     }
 
@@ -108,11 +109,11 @@
 
     .dt td,
     .st td {
-        padding: 10px 16px;
+        padding: 8px 12px;
         border: 1px solid #dee2e6;
         vertical-align: top;
         line-height: 1.4;
-        max-width: 200px;
+        max-width: 300px;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -269,14 +270,6 @@
         display: table-row;
     }
 
-    .search-box {
-        margin: 10px 0;
-        padding: 8px 12px;
-        border: 1px solid #dee2e6;
-        border-radius: 4px;
-        font-size: 14px;
-        width: 300px;
-    }
 
     h4 .cb {
         margin-left: 8px;

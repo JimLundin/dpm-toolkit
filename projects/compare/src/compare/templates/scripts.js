@@ -34,6 +34,9 @@ class DatabaseReportRenderer {
             t => t.schema.length > 0 || t.data.length > 0
         );
         
+        // Clear loading message
+        container.innerHTML = '';
+        
         if (tables.length === 0) {
             container.innerHTML = '<div class="nc">No changes detected</div>';
             return;
@@ -153,12 +156,9 @@ class DatabaseReportRenderer {
                     <thead>
                         <tr>
                             <th>Column</th>
-                            <th>Old Type</th>
-                            <th>New Type</th>
-                            <th>Old Nullable</th>
-                            <th>New Nullable</th>
-                            <th>Old Default</th>
-                            <th>New Default</th>
+                            <th>Type</th>
+                            <th>Nullable</th>
+                            <th>Default</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -186,30 +186,44 @@ class DatabaseReportRenderer {
         html += `<td title="${change.name}">${change.name}</td>`;
 
         if (changeType === 'added') {
-            html += `<td>-</td>`;
             html += `<td title="${change.new.type}">${change.new.type}</td>`;
-            html += `<td>-</td>`;
             html += `<td>${change.new.nullable}</td>`;
-            html += `<td>-</td>`;
             html += `<td>${this.formatValue(change.new.default)}</td>`;
         } else if (changeType === 'removed') {
             html += `<td title="${change.old.type}">${change.old.type}</td>`;
-            html += `<td>-</td>`;
             html += `<td>${change.old.nullable}</td>`;
-            html += `<td>-</td>`;
             html += `<td>${this.formatValue(change.old.default)}</td>`;
-            html += `<td>-</td>`;
         } else {
-            html += `<td title="${change.old.type}">${change.old.type}</td>`;
-            html += `<td title="${change.new.type}">${change.new.type}</td>`;
-            html += `<td>${change.old.nullable}</td>`;
-            html += `<td>${change.new.nullable}</td>`;
-            html += `<td>${this.formatValue(change.old.default)}</td>`;
-            html += `<td>${this.formatValue(change.new.default)}</td>`;
+            // Modified - show old→new changes in same style as data changes
+            html += this.renderSchemaFieldChange(change.old.type, change.new.type);
+            html += this.renderSchemaFieldChange(change.old.nullable, change.new.nullable);
+            html += this.renderSchemaFieldChange(change.old.default, change.new.default);
         }
 
         html += `</tr>`;
         return html;
+    }
+
+    renderSchemaFieldChange(oldValue, newValue) {
+        // Format values for comparison
+        const formattedOld = this.formatValue(oldValue);
+        const formattedNew = this.formatValue(newValue);
+        
+        if (formattedOld !== formattedNew) {
+            return `<td class="mc">
+                <span class="ov" title="${oldValue || 'NULL'}">
+                    ${formattedOld}
+                </span>
+                <span class="ar">→</span>
+                <span class="nv" title="${newValue || 'NULL'}">
+                    ${formattedNew}
+                </span>
+            </td>`;
+        } else {
+            return `<td title="${newValue || 'NULL'}">
+                ${formattedNew}
+            </td>`;
+        }
     }
 
     renderDataSection(table) {
@@ -228,13 +242,7 @@ class DatabaseReportRenderer {
             </h4>
         `;
 
-        if (changes.length > this.maxVisibleRows) {
-            html += `<div class="search-box-container">
-                <input type="text" class="search-box" 
-                       placeholder="Search data changes..." 
-                       onkeyup="window.renderer.filterDataRows('${table.name}', this.value)">
-            </div>`;
-        }
+        // Remove non-functional search bar
 
         html += `
             <div class="tct">
@@ -395,11 +403,6 @@ class DatabaseReportRenderer {
         return html;
     }
 
-    filterDataRows(tableName, searchTerm) {
-        // Implementation for search filtering would go here
-        // For now, we'll keep it simple and not implement filtering
-        console.log(`Filtering ${tableName} with term: ${searchTerm}`);
-    }
 
     getAllColumns(changes) {
         const columns = new Set();
