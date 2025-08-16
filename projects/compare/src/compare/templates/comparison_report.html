@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="header">
+<div class="h">
     <h1>Database Comparison Report</h1>
-    <div class="metadata">
+    <div class="md">
         <div><strong>Source:</strong> {{ comparison.source }}</div>
         <div><strong>Target:</strong> {{ comparison.target }}</div>
     </div>
 </div>
 
-<div class="summary">
+<div class="s">
     {% set total_tables = comparison.changes | length %}
     {% set tables_with_changes = [] %}
     {% for table in comparison.changes %}
@@ -24,33 +24,33 @@
         {% set ns.total_data_changes = ns.total_data_changes + (table.data | length) %}
     {% endfor %}
     
-    <div class="summary-card">
+    <div class="sc">
         <h3>Tables Compared</h3>
-        <div class="number">{{ total_tables }}</div>
+        <div class="n">{{ total_tables }}</div>
     </div>
-    <div class="summary-card">
+    <div class="sc">
         <h3>Tables with Changes</h3>
-        <div class="number">{{ tables_with_changes | length }}</div>
+        <div class="n">{{ tables_with_changes | length }}</div>
     </div>
-    <div class="summary-card">
+    <div class="sc">
         <h3>Schema Changes</h3>
-        <div class="number">{{ ns.total_schema_changes }}</div>
+        <div class="n">{{ ns.total_schema_changes }}</div>
     </div>
-    <div class="summary-card">
+    <div class="sc">
         <h3>Data Changes</h3>
-        <div class="number">{{ ns.total_data_changes }}</div>
+        <div class="n">{{ ns.total_data_changes }}</div>
     </div>
 </div>
 
-<div class="section">
+<div class="se">
     <h2>Table Comparisons</h2>
-    <div class="table-comparisons">
+    <div class="tcs">
         {% for table in comparison.changes %}
             {% if (table.schema | length) > 0 or (table.data | length) > 0 %}
                 {% include 'table_comparison.html' %}
             {% endif %}
         {% else %}
-            <div class="no-changes">No changes detected</div>
+            <div class="nc">No changes detected</div>
         {% endfor %}
     </div>
 </div>

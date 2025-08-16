@@ -1,12 +1,12 @@
-<div class="table-comparison">
+<div class="tc">
     {% set schema_count = table.schema | length %}
     {% set data_count = table.data | length %}
     {% set total_changes = schema_count + data_count %}
     
-    <h3 class="expandable" onclick="toggleCollapsible(this)">
+    <h3 class="ex" onclick="toggleCollapsible(this)">
         {{ table.name }} ({{ total_changes }} changes)
     </h3>
-    <div class="collapsible-content">
+    <div class="cc">
         {% if (table.schema | length) > 0 %}
             {% set ns = namespace(added=0, removed=0, modified=0) %}
             {% for change in table.schema %}
@@ -21,8 +21,8 @@
             {% endfor %}
             <h4>Schema Changes{% if ns.added > 0 %} <span class="cb a">Added</span> {{ ns.added }}{% endif %}{% if ns.removed > 0 %} <span class="cb r">Removed</span> {{ ns.removed }}{% endif %}{% if ns.modified > 0 %} <span class="cb m">Modified</span> {{ ns.modified }}{% endif %}
             </h4>
-            <div class="table-container">
-                <table class="schema-table">
+            <div class="tct">
+                <table class="st">
                 <thead>
                     <tr>
                         <th>Column</th>
@@ -101,8 +101,8 @@
                 {% endif %}
             {% endfor %}
             
-            <div class="table-container">
-                <table class="data-table">
+            <div class="tct">
+                <table class="dt">
                 <thead>
                     <tr>
                         {% for col in all_columns %}
