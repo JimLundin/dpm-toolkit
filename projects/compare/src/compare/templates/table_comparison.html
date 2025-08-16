@@ -8,12 +8,26 @@
     </h3>
     <div class="collapsible-content">
         {% if (table.schema | length) > 0 %}
-            <h4>Schema Changes ({{ table.schema | length }} total)</h4>
+            {% set ns = namespace(added=0, removed=0, modified=0) %}
+            {% for change in table.schema %}
+                {% set change_type = change | get_change_type %}
+                {% if change_type == 'added' %}
+                    {% set ns.added = ns.added + 1 %}
+                {% elif change_type == 'removed' %}
+                    {% set ns.removed = ns.removed + 1 %}
+                {% else %}
+                    {% set ns.modified = ns.modified + 1 %}
+                {% endif %}
+            {% endfor %}
+            <h4>Schema Changes 
+                {% if ns.added > 0 %}<span class="cb a">Added</span> {{ ns.added }}{% endif %}
+                {% if ns.removed > 0 %}<span class="cb r">Removed</span> {{ ns.removed }}{% endif %}
+                {% if ns.modified > 0 %}<span class="cb m">Modified</span> {{ ns.modified }}{% endif %}
+            </h4>
             <div class="table-container">
                 <table class="schema-table">
                 <thead>
                     <tr>
-                        <th>Change</th>
                         <th>Column</th>
                         <th>Old Type</th>
                         <th>New Type</th>
@@ -28,7 +42,6 @@
                         {% set change_type_short = change | get_change_type_short %}
                         {% set change_type = change | get_change_type %}
                         <tr class="c{{ change_type_short }}">
-                            <td><span class="cb {{ change_type_short }}">{{ change_type }}</span></td>
                             <td{% if change.name | needs_tooltip %} title="{{ change.name }}"{% endif %}>{{ change.name }}</td>
                             {% if change_type == 'added' %}
                                 <td>-</td>
@@ -60,7 +73,22 @@
         {% endif %}
 
         {% if (table.data | length) > 0 %}
-            <h4>Data Changes ({{ table.data | length }} total)</h4>
+            {% set ns = namespace(added=0, removed=0, modified=0) %}
+            {% for change in table.data %}
+                {% set change_type = change | get_change_type %}
+                {% if change_type == 'added' %}
+                    {% set ns.added = ns.added + 1 %}
+                {% elif change_type == 'removed' %}
+                    {% set ns.removed = ns.removed + 1 %}
+                {% else %}
+                    {% set ns.modified = ns.modified + 1 %}
+                {% endif %}
+            {% endfor %}
+            <h4>Data Changes 
+                {% if ns.added > 0 %}<span class="cb a">Added</span> {{ ns.added }}{% endif %}
+                {% if ns.removed > 0 %}<span class="cb r">Removed</span> {{ ns.removed }}{% endif %}
+                {% if ns.modified > 0 %}<span class="cb m">Modified</span> {{ ns.modified }}{% endif %}
+            </h4>
             {% set all_columns = [] %}
             {% for change in table.data %}
                 {% if change | get_change_type == 'added' or change | get_change_type == 'modified' %}
@@ -83,7 +111,6 @@
                 <table class="data-table">
                 <thead>
                     <tr>
-                        <th>Change</th>
                         {% for col in all_columns %}
                             <th>{{ col }}</th>
                         {% endfor %}
@@ -94,7 +121,6 @@
                         {% set change_type_short = change | get_change_type_short %}
                         {% set change_type = change | get_change_type %}
                         <tr class="c{{ change_type_short }}">
-                            <td><span class="cb {{ change_type_short }}">{{ change_type }}</span></td>
                             {% for col in all_columns %}
                                 {% if change_type == 'added' %}
                                     {% set val = change.new.get(col) %}

@@ -68,10 +68,3 @@ class DatabaseInspector:
 
             cursor = conn.execute(f"SELECT * FROM `{name}` {order}")  # noqa: S608
             return [dict(row) for row in cursor.fetchall()]
-
-    def get_table_row_count(self, name: str) -> int:
-        """Get the number of rows in a table."""
-        with self.get_connection() as conn:
-            cursor = conn.execute(f"SELECT COUNT(*) FROM `{name}`")  # noqa: S608
-            result = cursor.fetchone()
-            return int(result[0])

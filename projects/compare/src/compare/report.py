@@ -102,7 +102,7 @@ class HtmlReportGenerator:
                 return "null-value"
             if isinstance(value, str):
                 return "string-value"
-            if isinstance(value, (int, float)):
+            if isinstance(value, int | float):
                 return "number-value"
             if isinstance(value, bool):
                 return "boolean-value"
@@ -126,7 +126,7 @@ class HtmlReportGenerator:
                 return "NULL", "null-value"
             if isinstance(value, str):
                 return value, "string-value"
-            if isinstance(value, (int, float)):
+            if isinstance(value, int | float):
                 return str(value), "number-value"
             if isinstance(value, bool):
                 return str(value), "boolean-value"

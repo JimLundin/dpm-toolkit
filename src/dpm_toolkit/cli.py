@@ -453,37 +453,37 @@ def handle_schema_command(args: Namespace) -> None:
 def handle_compare_command(args: Namespace) -> None:
     """Handle the 'compare' subcommand."""
     try:
-        from compare import compare_databases, comparison_to_json, HtmlReportGenerator
+        from compare import HtmlReportGenerator, compare_databases, comparison_to_json
     except ImportError as e:
         print(f"Compare functionality not available: {e}")
         return
-    
+
     source_path = Path(args.source)
     target_path = Path(args.target)
-    
+
     if not source_path.exists():
         print(f"Error: Source database not found: {source_path}")
         return
-    
+
     if not target_path.exists():
         print(f"Error: Target database not found: {target_path}")
         return
-    
-    print(f"Comparing databases:")
+
+    print("Comparing databases:")
     print(f"  Source: {source_path}")
     print(f"  Target: {target_path}")
-    
+
     try:
         # Perform the comparison
         result = compare_databases(source_path, target_path)
-        
+
         # Generate JSON output
         json_output = comparison_to_json(result)
-        
-        if hasattr(args, 'output') and args.output:
+
+        if hasattr(args, "output") and args.output:
             # Save to file
             output_path = Path(args.output)
-            if output_path.suffix.lower() == '.html':
+            if output_path.suffix.lower() == ".html":
                 # Generate HTML report
                 generator = HtmlReportGenerator()
                 generator.generate_report(result, output_path)
@@ -496,7 +496,7 @@ def handle_compare_command(args: Namespace) -> None:
             # Print to stdout
             print("\nComparison Results:")
             print(json_output)
-            
+
     except Exception as e:
         print(f"Error during comparison: {e}")
         return
