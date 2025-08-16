@@ -428,7 +428,7 @@ class DatabaseReportRenderer {
     }
 
     formatValue(value) {
-        if (value === null || value === undefined) return 'NULL';
+        if (value === null || value === undefined) return '<span class="null">NULL</span>';
         if (value === '') return '';
         return String(value);
     }
