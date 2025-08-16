@@ -298,9 +298,9 @@ def create_parser() -> ArgumentParser:
     )
     compare_parser.add_argument(
         "--format",
-        choices=["json", "html"],
+        choices=["json", "html", "html-js"],
         default="json",
-        help="Output format: json (default) or html",
+        help="Output format: json (default), html (server-side), or html-js (client-side)",
     )
     compare_parser.add_argument(
         "--output",
@@ -453,7 +453,7 @@ def handle_schema_command(args: Namespace) -> None:
 def handle_compare_command(args: Namespace) -> None:
     """Handle the 'compare' subcommand."""
     try:
-        from compare import HtmlReportGenerator, compare_databases, comparison_to_json
+        from compare import HtmlReportGenerator, JsonHtmlReportGenerator, compare_databases, comparison_to_json
     except ImportError as e:
         print(f"Compare functionality not available: {e}")
         return
@@ -480,20 +480,26 @@ def handle_compare_command(args: Namespace) -> None:
         # Generate JSON output
         json_output = comparison_to_json(result)
 
-        if hasattr(args, "output") and args.output:
-            # Save to file
+        # Handle output based on format
+        if args.format == "html-js":
+            # Generate JavaScript-based HTML report
+            output_path = args.output or Path("comparison_report.html")
+            generator = JsonHtmlReportGenerator()
+            generator.generate_report(result, output_path)
+            print(f"JavaScript HTML report saved to: {output_path}")
+        elif args.format == "html":
+            # Generate traditional server-side HTML report
+            output_path = args.output or Path("comparison_report.html")
+            generator = HtmlReportGenerator()
+            generator.generate_report(result, output_path)
+            print(f"HTML report saved to: {output_path}")
+        elif hasattr(args, "output") and args.output:
+            # Save JSON to file
             output_path = Path(args.output)
-            if output_path.suffix.lower() == ".html":
-                # Generate HTML report
-                generator = HtmlReportGenerator()
-                generator.generate_report(result, output_path)
-                print(f"HTML report saved to: {output_path}")
-            else:
-                # Save as JSON
-                output_path.write_text(json_output, encoding="utf-8")
-                print(f"JSON report saved to: {output_path}")
+            output_path.write_text(json_output, encoding="utf-8")
+            print(f"JSON report saved to: {output_path}")
         else:
-            # Print to stdout
+            # Print JSON to stdout
             print("\nComparison Results:")
             print(json_output)
 
