@@ -50,7 +50,6 @@ def compare_databases(source_path: str | Path, target_path: str | Path) -> Compa
     for table_name in tables_added:
         target_columns = target_inspector.get_table_columns(table_name)
         target_data = target_inspector.get_all_table_data(table_name)
-        pk_columns = target_inspector.get_primary_key_columns(table_name)
 
         # Create row additions for all data in the new table
 
@@ -58,10 +57,7 @@ def compare_databases(source_path: str | Path, target_path: str | Path) -> Compa
             ColumnAdded(name=col["name"], new=col) for col in target_columns
         ]
 
-        data_added = [
-            RowAdded(key={col: row.get(col) for col in pk_columns}, new=row)
-            for row in target_data
-        ]
+        data_added = [RowAdded(new=row) for row in target_data]
 
         all_changes.append(
             TableComparison(name=table_name, schema=schema_added, data=data_added),
@@ -71,7 +67,6 @@ def compare_databases(source_path: str | Path, target_path: str | Path) -> Compa
     for table_name in tables_removed:
         source_columns = source_inspector.get_table_columns(table_name)
         source_data = source_inspector.get_all_table_data(table_name)
-        pk_columns = source_inspector.get_primary_key_columns(table_name)
 
         # Create row removals for all data in the removed table
 
@@ -79,10 +74,7 @@ def compare_databases(source_path: str | Path, target_path: str | Path) -> Compa
             ColumnRemoved(name=col["name"], old=col) for col in source_columns
         ]
 
-        data_removed = [
-            RowRemoved(key={col: row.get(col) for col in pk_columns}, old=row)
-            for row in source_data
-        ]
+        data_removed = [RowRemoved(old=row) for row in source_data]
 
         all_changes.append(
             TableComparison(name=table_name, schema=schema_removed, data=data_removed),

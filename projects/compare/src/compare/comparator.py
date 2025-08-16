@@ -86,14 +86,6 @@ class DatabaseComparator:
             key_parts = [f"{k}:{v}" for k, v in sorted(row.items())]
         return "|".join(key_parts)
 
-    def _create_primary_key_dict(
-        self,
-        row: Mapping[str, ValueType],
-        pk_columns: Collection[str],
-    ) -> dict[str, ValueType]:
-        """Create primary key dictionary from row data."""
-        return {col: row.get(col) for col in pk_columns}
-
     def compare_data(self, table_name: str) -> list[RowChange]:
         """Compare all data in a table between source and target databases."""
         # Get all data from both tables
@@ -111,33 +103,23 @@ class DatabaseComparator:
         changes: list[RowChange] = []
 
         # Find added rows
-        for key in target_rows.keys() - source_rows.keys():
-            row = target_rows[key]
-            pk_dict = self._create_primary_key_dict(row, target_pk)
-
-            changes.append(RowAdded(key=pk_dict, new=row))
+        changes.extend(
+            RowAdded(new=target_rows[key])
+            for key in target_rows.keys() - source_rows.keys()
+        )
 
         # Find removed rows
-        for key in source_rows.keys() - target_rows.keys():
-            row = source_rows[key]
-            pk_dict = self._create_primary_key_dict(row, source_pk)
-
-            changes.append(RowRemoved(key=pk_dict, old=row))
-
-        # Use source primary key columns for comparison
-        pk_columns = source_pk or target_pk
+        changes.extend(
+            RowRemoved(old=source_rows[key])
+            for key in source_rows.keys() - target_rows.keys()
+        )
 
         # Find modified rows
-        for key in source_rows.keys() & target_rows.keys():
-            source_row = source_rows[key]
-            target_row = target_rows[key]
-
-            if source_row != target_row:
-                pk_dict = self._create_primary_key_dict(source_row, pk_columns)
-
-                changes.append(
-                    RowModified(key=pk_dict, old=source_row, new=target_row),
-                )
+        changes.extend(
+            RowModified(old=source_rows[key], new=target_rows[key])
+            for key in source_rows.keys() & target_rows.keys()
+            if source_rows[key] != target_rows[key]
+        )
 
         return changes
 
