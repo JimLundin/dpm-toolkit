@@ -1,5 +1,6 @@
 """HTML report generation from comparison results using Jinja2 templates."""
 
+import re
 from collections.abc import Collection
 from pathlib import Path
 
@@ -83,13 +84,13 @@ class HtmlReportGenerator:
         def format_cell_value(value: object) -> str:
             """Format a value for table cell display."""
             if value is None:
-                return '<span class="null-value">NULL</span>'
+                return ""
             return str(value)
 
         def format_cell_with_tooltip(value: object) -> str:
             """Format a value with tooltip for truncated display."""
             if value is None:
-                return '<span class="null-value">NULL</span>'
+                return ""
             str_value = str(value)
             if len(str_value) > 30:  # Show tooltip for long values
                 return f'<span title="{str_value}">{str_value}</span>'
@@ -142,6 +143,37 @@ class HtmlReportGenerator:
         self.env.filters["get_value_class"] = get_value_class
         self.env.filters["needs_tooltip"] = needs_tooltip
 
+    def _compress_html(self, html: str) -> str:
+        """Minify HTML by removing all unnecessary whitespace and newlines.
+
+        This aggressively compresses the HTML by removing indentation, newlines,
+        and extra whitespace while preserving content and functionality.
+        """
+        # Remove all newlines and replace with spaces first
+        html = re.sub(r"\n+", " ", html)
+
+        # Remove leading/trailing whitespace
+        html = html.strip()
+
+        # Compress multiple spaces into single spaces
+        html = re.sub(r"\s+", " ", html)
+
+        # Remove whitespace between tags (aggressive minification)
+        html = re.sub(r">\s+<", "><", html)
+
+        # Remove whitespace around specific structural tags
+        html = re.sub(
+            r"\s*(</?(?:html|head|body|div|table|thead|tbody|tr|script|style)[^>]*>)\s*",
+            r"\1",
+            html,
+        )
+
+        # Remove whitespace around table cells and headers (but preserve content spaces)
+        html = re.sub(r"\s*(</?(?:td|th)[^>]*>)\s*", r"\1", html)
+
+        # Remove any remaining leading/trailing whitespace
+        return html.strip()
+
     def generate_report(
         self,
         result: Comparison,
@@ -155,8 +187,11 @@ class HtmlReportGenerator:
         template = self.env.get_template(template_name)
         html_content = template.render(comparison=result)
 
+        # Compress HTML to remove unnecessary whitespace
+        compressed_html = self._compress_html(html_content)
+
         # Write HTML file
-        output_path.write_text(html_content, encoding="utf-8")
+        output_path.write_text(compressed_html, encoding="utf-8")
 
     def list_available_templates(self) -> list[str]:
         """List all available template files in the template directory."""
