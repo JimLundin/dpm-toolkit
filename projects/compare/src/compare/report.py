@@ -5,13 +5,11 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
 
-from compare.types import (
-    Comparison,
-)
+from compare.types import Comparison
 
 
 class JsonHtmlReportGenerator:
-    """Generates single-file HTML reports with embedded JSON and JavaScript rendering."""
+    """Generates single-file HTML reports with JSON and JavaScript rendering."""
 
     def __init__(self, template_dir: str | Path | None = None) -> None:
         """Initialize the JSON-based report generator with template directory."""
@@ -35,18 +33,15 @@ class JsonHtmlReportGenerator:
         )
 
     def generate_report(self, result: Comparison, output_path: str | Path) -> None:
-        """Generate a single-file HTML report with embedded JSON and JavaScript rendering."""
+        """Generate a single-file HTML report with JSON and JavaScript rendering."""
         output_path = Path(output_path)
 
         # Convert comparison result to JSON
         json_data = json.dumps(result, indent=None, separators=(",", ":"))
 
         # Load and render template
-        template = self.env.get_template("json_report.html")
-        html_content = template.render(
-            comparison=result,
-            comparison_json=json_data,
-        )
+        template = self.env.get_template("report.html")
+        html_content = template.render(comparison_json=json_data)
 
         # Write the single HTML file
         output_path.write_text(html_content, encoding="utf-8")

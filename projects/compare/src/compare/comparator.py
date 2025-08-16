@@ -1,5 +1,7 @@
 """Database comparison engine."""
 
+from collections.abc import Collection, Mapping
+
 from .inspector import DatabaseInspector
 from .types import (
     ColumnAdded,
@@ -41,8 +43,8 @@ class DatabaseComparator:
 
     def compare_columns(
         self,
-        source: list[ColumnInfo],
-        target: list[ColumnInfo],
+        source: Collection[ColumnInfo],
+        target: Collection[ColumnInfo],
     ) -> list[ColumnChange]:
         """Compare column definitions between two tables."""
         # Create lookup dictionaries
@@ -71,7 +73,11 @@ class DatabaseComparator:
 
         return changes
 
-    def _create_row_key(self, row: dict[str, ValueType], pk_columns: list[str]) -> str:
+    def _create_row_key(
+        self,
+        row: Mapping[str, ValueType],
+        pk_columns: Collection[str],
+    ) -> str:
         """Create a unique key for a row based on primary key columns."""
         if pk_columns:
             key_parts = [str(row.get(pk, "NULL")) for pk in pk_columns]
@@ -82,8 +88,8 @@ class DatabaseComparator:
 
     def _create_primary_key_dict(
         self,
-        row: dict[str, ValueType],
-        pk_columns: list[str],
+        row: Mapping[str, ValueType],
+        pk_columns: Collection[str],
     ) -> dict[str, ValueType]:
         """Create primary key dictionary from row data."""
         return {col: row.get(col) for col in pk_columns}
