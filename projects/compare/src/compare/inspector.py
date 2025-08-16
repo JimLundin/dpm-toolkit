@@ -67,4 +67,4 @@ class DatabaseInspector:
                 order = "ORDER BY rowid"
 
             cursor = conn.execute(f"SELECT * FROM `{name}` {order}")  # noqa: S608
-            return [dict(row) for row in cursor.fetchall()]
+            return list(cursor)
