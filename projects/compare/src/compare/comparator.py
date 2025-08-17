@@ -1,6 +1,6 @@
 """Database comparison engine."""
 
-from collections.abc import Generator, Iterable
+from collections.abc import Iterable
 from sqlite3 import Row
 
 from compare.inspector import Inspector
@@ -63,16 +63,9 @@ class Comparator:
 
         return changes
 
-    def _row_key(
-        self,
-        row: Row,
-        pk_columns: Iterable[str],
-    ) -> Generator[ValueType]:
+    def _row_key(self, row: Row, pk_columns: Iterable[str]) -> tuple[ValueType, ...]:
         """Create a unique key for a row based on primary key columns."""
-        if pk_columns:
-            return (row[pk] for pk in pk_columns)
-        # Use all columns if no primary key
-        return (f"{k}:{row[k]}" for k in sorted(row.keys()))
+        return tuple(row[pk] for pk in pk_columns) or tuple(row)
 
     def compare_data(self, name: str) -> list[RowMod]:
         """Compare all data in a table between source and target databases."""
@@ -85,8 +78,8 @@ class Comparator:
         target_pk = tuple(self.target.primary_keys(name))
 
         # Create row lookup dictionaries
-        source_rows = {tuple(self._row_key(row, source_pk)): row for row in source_data}
-        target_rows = {tuple(self._row_key(row, target_pk)): row for row in target_data}
+        source_rows = {self._row_key(row, source_pk): row for row in source_data}
+        target_rows = {self._row_key(row, target_pk): row for row in target_data}
 
         # Find modified rows
         changes: list[RowMod] = [
