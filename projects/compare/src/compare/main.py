@@ -90,13 +90,8 @@ def save_comparison_json(result: Comparison, output: Path) -> None:
     output.write_text(json_content, encoding="utf-8")
 
 
-def load_comparison_json(json_path: str | Path) -> Comparison:
+def load_comparison_json(json_path: Path) -> Comparison:
     """Load comparison result from JSON file."""
-    json_path = Path(json_path)
-    if not json_path.exists():
-        msg = f"JSON file not found: {json_path}"
-        raise FileNotFoundError(msg)
-
     content = json_path.read_text(encoding="utf-8")
     result: Comparison = json.loads(content)
     return result
