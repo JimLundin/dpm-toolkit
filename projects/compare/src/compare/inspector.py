@@ -1,8 +1,7 @@
 """Database inspection functionality using sqlite3."""
 
 from collections.abc import Generator, Iterator
-from pathlib import Path
-from sqlite3 import Row, connect
+from sqlite3 import Connection, Row
 
 from compare.types import ColInfo
 
@@ -10,9 +9,9 @@ from compare.types import ColInfo
 class Inspector:
     """Inspects SQLite databases to extract complete schema and data information."""
 
-    def __init__(self, db: Path) -> None:
+    def __init__(self, db: Connection) -> None:
         """Initialize inspector for a database file."""
-        self.conn = connect(db)
+        self.conn = db
         self.conn.row_factory = Row  # Enable named access to columns
 
     def tables(self) -> Generator[str]:

@@ -2,11 +2,9 @@
 
 from collections.abc import Iterable
 from sqlite3 import Row
-from typing import Literal, NamedTuple, ReadOnly, TypedDict
+from typing import NamedTuple, ReadOnly, TypedDict
 
 ValueType = str | int | float | bool | None
-
-type ChangeType = Literal["added", "removed", "modified"]
 
 
 class RowMod(NamedTuple):
@@ -39,14 +37,6 @@ class TableComparison(TypedDict):
     name: ReadOnly[str]
     schema: ReadOnly[Iterable[ColMod]]
     data: ReadOnly[Iterable[RowMod]]
-
-
-class Comparison(TypedDict):
-    """Complete database comparison result."""
-
-    source: ReadOnly[str]
-    target: ReadOnly[str]
-    changes: ReadOnly[Iterable[TableComparison]]
 
 
 type Change = ColMod | RowMod

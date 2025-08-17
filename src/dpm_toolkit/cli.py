@@ -6,6 +6,7 @@ from collections.abc import Sequence
 from datetime import date
 from enum import StrEnum, auto
 from pathlib import Path
+from sqlite3 import connect
 from sys import stdout
 
 import yaml
@@ -453,40 +454,43 @@ def handle_schema_command(args: Namespace) -> None:
 def handle_compare_command(args: Namespace) -> None:
     """Handle the 'compare' subcommand."""
     try:
-        from compare import compare_databases, comparison_to_json, generate_report
+        from compare import compare_databases, comparisons_to_json, generate_report
     except ImportError as e:
         print(f"Compare functionality not available: {e}")
         return
 
-    source_path = Path(args.source)
-    target_path = Path(args.target)
+    source = Path(args.source)
+    target = Path(args.target)
 
-    if not source_path.exists():
-        print(f"Error: Source database not found: {source_path}")
+    if not source.exists():
+        print(f"Error: Source database not found: {source}")
         return
 
-    if not target_path.exists():
-        print(f"Error: Target database not found: {target_path}")
+    if not target.exists():
+        print(f"Error: Target database not found: {target}")
         return
 
     print("Comparing databases:")
-    print(f"  Source: {source_path}")
-    print(f"  Target: {target_path}")
+    print(f"  Source: {source}")
+    print(f"  Target: {target}")
 
     # Perform the comparison
-    result = compare_databases(source_path, target_path)
-    result_json = comparison_to_json(result)
+    source_conn = connect(source)
+    target_conn = connect(target)
+    comparisons = compare_databases(source_conn, target_conn)
+    result_json = comparisons_to_json(comparisons)
 
     # Handle output based on format
     if args.format == "html":
-        output_path = args.output or Path("comparison_report.html")
-        generate_report(result_json, output_path)
-        log_info(f"HTML report saved to: {output_path}")
+        output = args.output or Path("comparison_report.html")
+        report = generate_report(result_json)
+        output.write_text(report, encoding="utf-8")
+        log_info(f"HTML report saved to: {output}")
     elif hasattr(args, "output") and args.output:
         # Save JSON to file
-        output_path = Path(args.output)
-        output_path.write_text(result_json, encoding="utf-8")
-        log_info(f"JSON report saved to: {output_path}")
+        output = Path(args.output)
+        output.write_text(result_json, encoding="utf-8")
+        log_info(f"JSON report saved to: {output}")
     else:
         # Print JSON to stdout
         log_info("\nComparison Results:")
