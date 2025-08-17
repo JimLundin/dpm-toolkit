@@ -21,8 +21,7 @@ class Inspector:
             cursor = conn.execute(
                 "SELECT name "
                 "FROM sqlite_master "
-                "WHERE type='table' AND name NOT LIKE 'sqlite_%' "
-                "ORDER BY name",
+                "WHERE type='table' AND name NOT LIKE 'sqlite_%'",
             )
             return (row[0] for row in cursor)
 
