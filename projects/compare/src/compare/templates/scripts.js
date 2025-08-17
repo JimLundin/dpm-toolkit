@@ -183,21 +183,25 @@ class DatabaseReportRenderer {
                            changeType === 'removed' ? 'cr' : 'cm';
         
         let html = `<tr class="${changeClass}">`;
-        html += `<td title="${change.name}">${change.name}</td>`;
+        
+        // NamedTuple structure: [new, old]
+        const [newCol, oldCol] = change;
+        const columnName = newCol?.name || oldCol?.name;
+        html += `<td title="${columnName}">${columnName}</td>`;
 
         if (changeType === 'added') {
-            html += `<td title="${change.new.type}">${change.new.type}</td>`;
-            html += `<td>${change.new.nullable}</td>`;
-            html += `<td>${this.formatValue(change.new.default)}</td>`;
+            html += `<td title="${newCol.type}">${newCol.type}</td>`;
+            html += `<td>${newCol.nullable}</td>`;
+            html += `<td>${this.formatValue(newCol.default)}</td>`;
         } else if (changeType === 'removed') {
-            html += `<td title="${change.old.type}">${change.old.type}</td>`;
-            html += `<td>${change.old.nullable}</td>`;
-            html += `<td>${this.formatValue(change.old.default)}</td>`;
+            html += `<td title="${oldCol.type}">${oldCol.type}</td>`;
+            html += `<td>${oldCol.nullable}</td>`;
+            html += `<td>${this.formatValue(oldCol.default)}</td>`;
         } else {
-            // Modified - show old→new changes in same style as data changes
-            html += this.renderSchemaFieldChange(change.old.type, change.new.type);
-            html += this.renderSchemaFieldChange(change.old.nullable, change.new.nullable);
-            html += this.renderSchemaFieldChange(change.old.default, change.new.default);
+            // Modified - show old→new changes
+            html += this.renderSchemaFieldChange(oldCol.type, newCol.type);
+            html += this.renderSchemaFieldChange(oldCol.nullable, newCol.nullable);
+            html += this.renderSchemaFieldChange(oldCol.default, newCol.default);
         }
 
         html += `</tr>`;
@@ -373,15 +377,18 @@ class DatabaseReportRenderer {
         let html = '';
 
         allColumns.forEach(col => {
+            // NamedTuple structure: [new, old]
+            const [newRow, oldRow] = change;
+            
             if (changeType === 'added') {
-                const val = change.new?.[col];
+                const val = newRow?.[col];
                 html += `<td title="${val || 'NULL'}">${this.formatValue(val)}</td>`;
             } else if (changeType === 'removed') {
-                const val = change.old?.[col];
+                const val = oldRow?.[col];
                 html += `<td title="${val || 'NULL'}">${this.formatValue(val)}</td>`;
             } else {
-                const oldVal = change.old?.[col];
-                const newVal = change.new?.[col];
+                const oldVal = oldRow?.[col];
+                const newVal = newRow?.[col];
                 if (oldVal !== newVal) {
                     html += `<td class="mc">
                         <span class="ov" title="${oldVal || 'NULL'}">
@@ -407,8 +414,14 @@ class DatabaseReportRenderer {
     getAllColumns(changes) {
         const columns = new Set();
         changes.forEach(change => {
-            if (change.new) Object.keys(change.new).forEach(col => columns.add(col));
-            if (change.old) Object.keys(change.old).forEach(col => columns.add(col));
+            // NamedTuple structure: [new, old]
+            const [newVal, oldVal] = change;
+            if (newVal && typeof newVal === 'object') {
+                Object.keys(newVal).forEach(col => columns.add(col));
+            }
+            if (oldVal && typeof oldVal === 'object') {
+                Object.keys(oldVal).forEach(col => columns.add(col));
+            }
         });
         return Array.from(columns);
     }
@@ -422,8 +435,10 @@ class DatabaseReportRenderer {
     }
 
     getChangeType(change) {
-        if (change.new && !change.old) return 'added';
-        if (change.old && !change.new) return 'removed';
+        // NamedTuple structure: [new, old]
+        const [newVal, oldVal] = change;
+        if (newVal && !oldVal) return 'added';
+        if (oldVal && !newVal) return 'removed';
         return 'modified';
     }
 
