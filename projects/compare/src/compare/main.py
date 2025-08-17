@@ -9,11 +9,11 @@ from jinja2 import Environment, FileSystemLoader
 from compare.comparator import Comparator
 from compare.inspector import Inspector
 from compare.types import (
-    ColumnAdded,
-    ColumnRemoved,
+    ColAdd,
+    ColDel,
     Comparison,
-    RowAdded,
-    RowRemoved,
+    RowAdd,
+    RowDel,
     TableComparison,
 )
 
@@ -60,8 +60,8 @@ def compare_databases(source_db: Path, target_db: Path) -> Comparison:
     changes.extend(
         TableComparison(
             name=table_name,
-            schema=(ColumnAdded(new=col) for col in target.columns(table_name)),
-            data=(RowAdded(new=row) for row in target.data(table_name)),
+            schema=(ColAdd(col) for col in target.columns(table_name)),
+            data=(RowAdd(row) for row in target.data(table_name)),
         )
         for table_name in tables_added
     )
@@ -70,8 +70,8 @@ def compare_databases(source_db: Path, target_db: Path) -> Comparison:
     changes.extend(
         TableComparison(
             name=table_name,
-            schema=(ColumnRemoved(old=col) for col in source.columns(table_name)),
-            data=(RowRemoved(old=row) for row in source.data(table_name)),
+            schema=(ColDel(col) for col in source.columns(table_name)),
+            data=(RowDel(row) for row in source.data(table_name)),
         )
         for table_name in tables_removed
     )

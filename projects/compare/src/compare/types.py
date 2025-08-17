@@ -1,59 +1,66 @@
 """Type definitions for database comparison."""
 
 from collections.abc import Iterable
-from typing import Literal, ReadOnly, TypedDict
+from sqlite3 import Row
+from typing import Literal, NamedTuple, ReadOnly, TypedDict
 
 ValueType = str | int | float | bool | None
 
 type ChangeType = Literal["added", "removed", "modified"]
 
 
-class RowAdded(TypedDict):
+class RowAdd(NamedTuple):
     """Information about a newly added row."""
 
-    new: ReadOnly[tuple[ValueType, ...]]
+    new: Row
 
 
-class RowRemoved(TypedDict):
+class RowDel(NamedTuple):
     """Information about a removed row."""
 
-    old: ReadOnly[tuple[ValueType, ...]]
+    old: Row
 
 
-class RowModified(RowAdded, RowRemoved):
+class RowMod(NamedTuple):
     """Information about a modified row."""
 
+    new: Row
+    old: Row
 
-type RowChange = RowAdded | RowRemoved | RowModified
+
+type RowChange = RowAdd | RowDel | RowMod
 
 
-class ColumnInfo(TypedDict):
+class ColInfo(NamedTuple):
     """Complete column information from database schema."""
 
-    name: ReadOnly[str]
-    type: ReadOnly[str]
-    nullable: ReadOnly[bool]
-    default: ReadOnly[ValueType]
-    primary_key: ReadOnly[bool]
+    name: str
+    type: str
+    nullable: bool
+    default: ValueType
+    primary_key: bool
 
 
-class ColumnAdded(TypedDict):
+class ColAdd(NamedTuple):
     """Information about a newly added column."""
 
-    new: ReadOnly[ColumnInfo]
+    new: ColInfo
 
 
-class ColumnRemoved(TypedDict):
+class ColDel(NamedTuple):
     """Information about a removed column."""
 
-    old: ReadOnly[ColumnInfo]
+    old: ColInfo
 
 
-class ColumnModified(ColumnAdded, ColumnRemoved):
+class ColMod(NamedTuple):
     """Information about a modified column."""
 
+    new: ColInfo
+    old: ColInfo
 
-type ColumnChange = ColumnAdded | ColumnRemoved | ColumnModified
+
+type ColumnChange = ColAdd | ColDel | ColMod
 
 
 class TableComparison(TypedDict):
