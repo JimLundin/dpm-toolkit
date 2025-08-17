@@ -1,6 +1,6 @@
 """Database comparison engine."""
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Generator, Iterable, Mapping
 
 from compare.inspector import Inspector
 from compare.types import (
@@ -26,10 +26,10 @@ class Comparator:
         self.source = source
         self.target = target
 
-    def tables(self) -> tuple[set[str], set[str], set[str]]:
+    def tables(self) -> tuple[frozenset[str], frozenset[str], frozenset[str]]:
         """Get table lists: added, removed, common."""
-        source = set(self.source.tables())
-        target = set(self.target.tables())
+        source = frozenset(self.source.tables())
+        target = frozenset(self.target.tables())
 
         added = target - source
         removed = source - target
@@ -69,18 +69,16 @@ class Comparator:
 
         return changes
 
-    def _create_row_key(
+    def _row_key(
         self,
         row: Mapping[str, ValueType],
         pk_columns: Iterable[str],
-    ) -> str:
+    ) -> Generator[str]:
         """Create a unique key for a row based on primary key columns."""
         if pk_columns:
-            key_parts = [str(row[pk]) for pk in pk_columns]
-        else:
-            # Use all columns if no primary key
-            key_parts = [f"{k}:{row[k]}" for k in sorted(row.keys())]
-        return "|".join(key_parts)
+            return (str(row[pk]) for pk in pk_columns)
+        # Use all columns if no primary key
+        return (f"{k}:{row[k]}" for k in sorted(row.keys()))
 
     def compare_data(self, table_name: str) -> list[RowChange]:
         """Compare all data in a table between source and target databases."""
@@ -89,12 +87,12 @@ class Comparator:
         target_data = self.target.data(table_name)
 
         # Get primary key columns
-        source_pk = tuple(self.source.get_primary_key_columns(table_name))
-        target_pk = tuple(self.target.get_primary_key_columns(table_name))
+        source_pk = tuple(self.source.primary_key(table_name))
+        target_pk = tuple(self.target.primary_key(table_name))
 
         # Create row lookup dictionaries
-        source_rows = {self._create_row_key(row, source_pk): row for row in source_data}
-        target_rows = {self._create_row_key(row, target_pk): row for row in target_data}
+        source_rows = {tuple(self._row_key(row, source_pk)): row for row in source_data}
+        target_rows = {tuple(self._row_key(row, target_pk)): row for row in target_data}
 
         changes: list[RowChange] = []
 
@@ -121,10 +119,10 @@ class Comparator:
 
     def compare_table(self, name: str) -> TableComparison:
         """Compare complete table (schema and data) between databases."""
-        # Compare schema
-        source_columns = self.source.columns(name)
-        target_columns = self.target.columns(name)
-        schema_changes = self.compare_columns(source_columns, target_columns)
+        schema_changes = self.compare_columns(
+            self.source.columns(name),
+            self.target.columns(name),
+        )
 
         # Compare data
         data_changes = self.compare_data(name)

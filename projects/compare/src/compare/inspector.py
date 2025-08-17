@@ -42,7 +42,7 @@ class Inspector:
                 for row in cursor
             )
 
-    def get_primary_key_columns(self, name: str) -> Generator[str]:
+    def primary_key(self, name: str) -> Generator[str]:
         """Get primary key column names for a table."""
         with self.conn as conn:
             cursor = conn.execute(
@@ -56,7 +56,7 @@ class Inspector:
         """Get all data from a table as list of dictionaries."""
         with self.conn as conn:
             # Order by primary key columns for consistent ordering
-            pk_cols = self.get_primary_key_columns(name)
+            pk_cols = self.primary_key(name)
 
             order = ", ".join(f"`{col}`" for col in pk_cols) or "rowid"
 
