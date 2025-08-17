@@ -14,7 +14,7 @@ class DatabaseReportRenderer {
     }
 
     renderSummary() {
-        const tables = this.data.changes;
+        const tables = this.data;
         const totalTables = tables.length;
         const tablesWithChanges = tables.filter(
             t => t.schema.length > 0 || t.data.length > 0
@@ -30,7 +30,7 @@ class DatabaseReportRenderer {
 
     renderTableList() {
         const container = document.getElementById('tables-container');
-        const tables = this.data.changes.filter(
+        const tables = this.data.filter(
             t => t.schema.length > 0 || t.data.length > 0
         );
         
@@ -92,7 +92,7 @@ class DatabaseReportRenderer {
 
     loadTableContent(tableName) {
         try {
-            const table = this.data.changes.find(t => t.name === tableName);
+            const table = this.data.find(t => t.name === tableName);
             const content = document.getElementById(`content-${tableName}`);
             
             if (!table) {
