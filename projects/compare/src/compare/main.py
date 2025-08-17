@@ -20,7 +20,7 @@ from compare.types import (
 TEMPLATE_DIR = Path(__file__).parent / "templates"
 
 
-def generate_report(result: str, output_path: Path) -> None:
+def generate_report(result: str, output: Path) -> None:
     """Generate HTML report from comparison result."""
     env = Environment(
         loader=FileSystemLoader(TEMPLATE_DIR),
@@ -30,7 +30,7 @@ def generate_report(result: str, output_path: Path) -> None:
     )
     template = env.get_template("report.html")
     html_content = template.render(comparison_json=result)
-    output_path.write_text(html_content, encoding="utf-8")
+    output.write_text(html_content, encoding="utf-8")
 
 
 def encoder(obj: object) -> dict[str, str]:
@@ -41,19 +41,11 @@ def encoder(obj: object) -> dict[str, str]:
     raise TypeError(msg)
 
 
-def compare_databases(source_path: Path, target_path: Path) -> Comparison:
+def compare_databases(source_db: Path, target_db: Path) -> Comparison:
     """Compare two SQLite databases completely and return full results."""
-    # Validate database files exist
-    if not source_path.exists():
-        msg = f"Source database not found: {source_path}"
-        raise FileNotFoundError(msg)
-    if not target_path.exists():
-        msg = f"Target database not found: {target_path}"
-        raise FileNotFoundError(msg)
-
     # Create inspectors
-    source = Inspector(source_path)
-    target = Inspector(target_path)
+    source = Inspector(source_db)
+    target = Inspector(target_db)
 
     # Create comparator
     comparator = Comparator(source, target)
@@ -85,11 +77,7 @@ def compare_databases(source_path: Path, target_path: Path) -> Comparison:
     )
 
     # Build complete result
-    return Comparison(
-        source=str(source_path),
-        target=str(target_path),
-        changes=changes,
-    )
+    return Comparison(source=str(source_db), target=str(target_db), changes=changes)
 
 
 def comparison_to_json(result: Comparison, indent: int = 2) -> str:

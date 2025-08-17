@@ -48,11 +48,10 @@ class Comparator:
         target_cols = {col["name"]: col for col in target}
 
         # Find added columns
-        changes: list[ColumnChange] = []
-        changes.extend(
+        changes: list[ColumnChange] = [
             ColumnAdded(new=target_cols[col_name])
             for col_name in target_cols.keys() - source_cols.keys()
-        )
+        ]
 
         # Find removed columns
         changes.extend(
@@ -73,35 +72,33 @@ class Comparator:
         self,
         row: Mapping[str, ValueType],
         pk_columns: Iterable[str],
-    ) -> Generator[str]:
+    ) -> Generator[ValueType]:
         """Create a unique key for a row based on primary key columns."""
         if pk_columns:
-            return (str(row[pk]) for pk in pk_columns)
+            return (row[pk] for pk in pk_columns)
         # Use all columns if no primary key
         return (f"{k}:{row[k]}" for k in sorted(row.keys()))
 
-    def compare_data(self, table_name: str) -> list[RowChange]:
+    def compare_data(self, name: str) -> list[RowChange]:
         """Compare all data in a table between source and target databases."""
         # Get all data from both tables
-        source_data = self.source.data(table_name)
-        target_data = self.target.data(table_name)
+        source_data = self.source.data(name)
+        target_data = self.target.data(name)
 
         # Get primary key columns
-        source_pk = tuple(self.source.primary_key(table_name))
-        target_pk = tuple(self.target.primary_key(table_name))
+        source_pk = tuple(self.source.primary_key(name))
+        target_pk = tuple(self.target.primary_key(name))
 
         # Create row lookup dictionaries
         source_rows = {tuple(self._row_key(row, source_pk)): row for row in source_data}
         target_rows = {tuple(self._row_key(row, target_pk)): row for row in target_data}
 
-        changes: list[RowChange] = []
-
         # Find modified rows
-        changes.extend(
+        changes: list[RowChange] = [
             RowModified(old=source_rows[key], new=target_rows[key])
             for key in source_rows.keys() & target_rows.keys()
             if source_rows[key] != target_rows[key]
-        )
+        ]
 
         # Find added rows
         changes.extend(
@@ -119,12 +116,11 @@ class Comparator:
 
     def compare_table(self, name: str) -> TableComparison:
         """Compare complete table (schema and data) between databases."""
-        schema_changes = self.compare_columns(
-            self.source.columns(name),
-            self.target.columns(name),
+        return TableComparison(
+            name=name,
+            schema=self.compare_columns(
+                self.source.columns(name),
+                self.target.columns(name),
+            ),
+            data=self.compare_data(name),
         )
-
-        # Compare data
-        data_changes = self.compare_data(name)
-
-        return TableComparison(name=name, schema=schema_changes, data=data_changes)
