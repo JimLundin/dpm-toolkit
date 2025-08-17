@@ -4,7 +4,7 @@ from collections.abc import Generator, Iterator
 from pathlib import Path
 from sqlite3 import Row, connect
 
-from compare.types import ColumnInfo, ValueType
+from compare.types import ColInfo
 
 
 class Inspector:
@@ -25,13 +25,13 @@ class Inspector:
             )
             return (row[0] for row in cursor)
 
-    def columns(self, name: str) -> Generator[ColumnInfo]:
+    def columns(self, name: str) -> Generator[ColInfo]:
         """Get complete column information for a table."""
         with self.conn as conn:
             cursor = conn.execute("SELECT * FROM pragma_table_info(?)", (name,))
 
             return (
-                ColumnInfo(
+                ColInfo(
                     name=row["name"],
                     type=row["type"],
                     nullable=not bool(row["notnull"]),
@@ -41,7 +41,7 @@ class Inspector:
                 for row in cursor
             )
 
-    def primary_key(self, name: str) -> Generator[str]:
+    def primary_keys(self, name: str) -> Generator[str]:
         """Get primary key column names for a table."""
         with self.conn as conn:
             cursor = conn.execute(
@@ -51,11 +51,11 @@ class Inspector:
 
             return (row[0] for row in cursor)
 
-    def data(self, name: str) -> Iterator[dict[str, ValueType]]:
+    def data(self, name: str) -> Iterator[Row]:
         """Get all data from a table as list of dictionaries."""
         with self.conn as conn:
             # Order by primary key columns for consistent ordering
-            pk_cols = self.primary_key(name)
+            pk_cols = self.primary_keys(name)
 
             order = ", ".join(f"`{col}`" for col in pk_cols) or "rowid"
 
