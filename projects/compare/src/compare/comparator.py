@@ -5,14 +5,8 @@ from sqlite3 import Row
 
 from compare.inspector import Inspector
 from compare.types import (
-    ColAdd,
-    ColDel,
     ColInfo,
     ColMod,
-    ColumnChange,
-    RowAdd,
-    RowChange,
-    RowDel,
     RowMod,
     TableComparison,
     ValueType,
@@ -42,21 +36,21 @@ class Comparator:
         self,
         source: Iterable[ColInfo],
         target: Iterable[ColInfo],
-    ) -> list[ColumnChange]:
+    ) -> list[ColMod]:
         """Compare column definitions between two tables."""
         # Create lookup dictionaries
         source_cols = {col.name: col for col in source}
         target_cols = {col.name: col for col in target}
 
         # Find added columns
-        changes: list[ColumnChange] = [
-            ColAdd(target_cols[col_name])
+        changes: list[ColMod] = [
+            ColMod(new=target_cols[col_name])
             for col_name in target_cols.keys() - source_cols.keys()
         ]
 
         # Find removed columns
         changes.extend(
-            ColDel(source_cols[col_name])
+            ColMod(old=source_cols[col_name])
             for col_name in source_cols.keys() - target_cols.keys()
         )
 
@@ -80,7 +74,7 @@ class Comparator:
         # Use all columns if no primary key
         return (f"{k}:{row[k]}" for k in sorted(row.keys()))
 
-    def compare_data(self, name: str) -> list[RowChange]:
+    def compare_data(self, name: str) -> list[RowMod]:
         """Compare all data in a table between source and target databases."""
         # Get all data from both tables
         source_data = self.source.data(name)
@@ -95,7 +89,7 @@ class Comparator:
         target_rows = {tuple(self._row_key(row, target_pk)): row for row in target_data}
 
         # Find modified rows
-        changes: list[RowChange] = [
+        changes: list[RowMod] = [
             RowMod(target_rows[key], source_rows[key])
             for key in source_rows.keys() & target_rows.keys()
             if source_rows[key] != target_rows[key]
@@ -103,12 +97,14 @@ class Comparator:
 
         # Find added rows
         changes.extend(
-            RowAdd(target_rows[key]) for key in target_rows.keys() - source_rows.keys()
+            RowMod(new=target_rows[key])
+            for key in target_rows.keys() - source_rows.keys()
         )
 
         # Find removed rows
         changes.extend(
-            RowDel(source_rows[key]) for key in source_rows.keys() - target_rows.keys()
+            RowMod(old=source_rows[key])
+            for key in source_rows.keys() - target_rows.keys()
         )
 
         return changes
