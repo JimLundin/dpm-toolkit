@@ -1,7 +1,7 @@
 """Main database comparison functionality."""
 
 import json
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from itertools import chain
 from pathlib import Path
 from sqlite3 import Connection, Row
@@ -40,7 +40,7 @@ def encoder(obj: object) -> dict[str, str] | tuple[Any, ...]:
     """Convert sqlite3.Row to a regular dict for JSON serialization."""
     if isinstance(obj, Row):
         return dict(obj)
-    if isinstance(obj, chain | Iterable):
+    if isinstance(obj, Iterable):
         return tuple(
             obj,  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType]
         )
@@ -66,7 +66,7 @@ def table_difference(
 def compare_cols(
     source: Iterable[ColInfo],
     target: Iterable[ColInfo],
-) -> Iterable[ColMod]:
+) -> Iterator[ColMod]:
     """Compare column definitions between two tables."""
     # Create lookup dictionaries
     source_cols = {col.name: col for col in source}
@@ -80,12 +80,12 @@ def compare_cols(
             if source_cols[name] != target_cols[name]
         ),
         (
-            ColMod(new=target_cols[col_name])
-            for col_name in target_cols.keys() - source_cols.keys()
+            ColMod(new=target_cols[name])
+            for name in target_cols.keys() - source_cols.keys()
         ),
         (
-            ColMod(old=source_cols[col_name])
-            for col_name in source_cols.keys() - target_cols.keys()
+            ColMod(old=source_cols[name])
+            for name in source_cols.keys() - target_cols.keys()
         ),
     )
 
@@ -96,7 +96,7 @@ def row_key(row: Row, pk_cols: Iterable[str]) -> tuple[ValueType, ...]:
     return (guid,) if guid else tuple(row[pk] for pk in pk_cols) or tuple(row)
 
 
-def compare_rows(name: str, source: Inspector, target: Inspector) -> Iterable[RowMod]:
+def compare_rows(name: str, source: Inspector, target: Inspector) -> Iterator[RowMod]:
     """Compare all data in a table between source and target databases."""
     # Get all data from both tables
     source_rows = source.rows(name)
@@ -148,7 +148,7 @@ def removed_table(name: str, source: Inspector) -> Comparison:
     )
 
 
-def compare_databases(source: Connection, target: Connection) -> Iterable[Comparison]:
+def compare_databases(source: Connection, target: Connection) -> Iterator[Comparison]:
     """Compare two SQLite databases and return differences."""
     source_inspector = Inspector(source)
     target_inspector = Inspector(target)

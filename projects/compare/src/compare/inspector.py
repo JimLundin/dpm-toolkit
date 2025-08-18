@@ -1,6 +1,6 @@
 """Database inspection functionality using sqlite3."""
 
-from collections.abc import Generator, Iterator
+from collections.abc import Iterator
 from sqlite3 import Connection, Row
 
 from compare.types import ColInfo
@@ -14,7 +14,7 @@ class Inspector:
         self.conn = db
         self.conn.row_factory = Row  # Enable named access to columns
 
-    def tables(self) -> Generator[str]:
+    def tables(self) -> Iterator[str]:
         """Get all table names in the database."""
         with self.conn as conn:
             cursor = conn.execute(
@@ -25,7 +25,7 @@ class Inspector:
             )
             return (row["name"] for row in cursor)
 
-    def cols(self, name: str) -> Generator[ColInfo]:
+    def cols(self, name: str) -> Iterator[ColInfo]:
         """Get complete column information for a table."""
         with self.conn as conn:
             cursor = conn.execute("SELECT * FROM pragma_table_info(?)", (name,))
@@ -41,7 +41,7 @@ class Inspector:
                 for row in cursor
             )
 
-    def pks(self, name: str) -> Generator[str]:
+    def pks(self, name: str) -> Iterator[str]:
         """Get primary key column names for a table."""
         with self.conn as conn:
             cursor = conn.execute(
