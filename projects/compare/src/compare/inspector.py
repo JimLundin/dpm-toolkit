@@ -49,14 +49,12 @@ class Inspector:
                 (name,),
             )
 
-            return (row[0] for row in cursor)
+            return (row["name"] for row in cursor)
 
     def rows(self, name: str) -> Iterator[Row]:
         """Get all data from a table as list of dictionaries."""
         with self.conn as conn:
-            # Order by primary key columns for consistent ordering
             pk_cols = self.pks(name)
-
             order = ", ".join(f"`{col}`" for col in pk_cols) or "rowid"
 
             return conn.execute(
