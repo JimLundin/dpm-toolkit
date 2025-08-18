@@ -7,7 +7,8 @@ from pathlib import Path
 from sqlite3 import Connection, Row
 from typing import Any
 
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, select_autoescape
+from jinja2.environment import TemplateStream
 
 from compare.inspector import Inspector
 from compare.types import (
@@ -21,16 +22,18 @@ from compare.types import (
 TEMPLATE_DIR = Path(__file__).parent / "templates"
 
 
-def render_report(result: str) -> str:
+def render_report(comparisons: Iterable[Comparison]) -> TemplateStream:
     """Generate HTML report from comparison result."""
     env = Environment(
         loader=FileSystemLoader(TEMPLATE_DIR),
-        autoescape=True,
+        autoescape=select_autoescape(),
         trim_blocks=True,
         lstrip_blocks=True,
     )
     template = env.get_template("report.html")
-    return template.render(comparison_json=result)
+    env.policies["json.dumps_function"] = comparisons_to_json
+
+    return template.stream(comparisons=comparisons)
 
 
 def encoder(obj: object) -> dict[str, str] | tuple[Any, ...]:
@@ -90,7 +93,7 @@ def compare_cols(
 def row_key(row: Row, pk_cols: Iterable[str]) -> tuple[ValueType, ...]:
     """Create a unique key for a row based on primary key columns."""
     guid = row["RowGUID"] if "RowGUID" in row.keys() else None  # noqa: SIM118
-    return tuple(guid) if guid else tuple(row[pk] for pk in pk_cols) or tuple(row)
+    return (guid,) if guid else tuple(row[pk] for pk in pk_cols) or tuple(row)
 
 
 def compare_rows(name: str, source: Inspector, target: Inspector) -> Iterable[RowMod]:
@@ -159,6 +162,6 @@ def compare_databases(source: Connection, target: Connection) -> Iterable[Compar
     )
 
 
-def comparisons_to_json(comparisons: Iterable[Comparison], indent: int = 0) -> str:
+def comparisons_to_json(comparisons: Iterable[Comparison], **_: str) -> str:
     """Convert comparison result to JSON string."""
-    return json.dumps(comparisons, default=encoder, indent=indent, ensure_ascii=False)
+    return json.dumps(comparisons, default=encoder, ensure_ascii=False)
