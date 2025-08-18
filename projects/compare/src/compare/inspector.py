@@ -3,8 +3,6 @@
 from collections.abc import Iterator
 from sqlite3 import Connection, Row
 
-from compare.types import ColInfo
-
 
 class Inspector:
     """Inspects SQLite databases to extract complete schema and data information."""
@@ -25,21 +23,10 @@ class Inspector:
             )
             return (row["name"] for row in cursor)
 
-    def cols(self, name: str) -> Iterator[ColInfo]:
+    def cols(self, name: str) -> Iterator[Row]:
         """Get complete column information for a table."""
         with self.conn as conn:
-            cursor = conn.execute("SELECT * FROM pragma_table_info(?)", (name,))
-
-            return (
-                ColInfo(
-                    name=row["name"],
-                    type=row["type"],
-                    nullable=not bool(row["notnull"]),
-                    default=row["dflt_value"],
-                    primary_key=bool(row["pk"]),
-                )
-                for row in cursor
-            )
+            return conn.execute("SELECT * FROM pragma_table_info(?)", (name,))
 
     def pks(self, name: str) -> Iterator[str]:
         """Get primary key column names for a table."""
