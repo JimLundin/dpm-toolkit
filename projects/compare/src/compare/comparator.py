@@ -60,9 +60,9 @@ class Comparator:
             ),
         )
 
-    def _row_key(self, row: Row, pk_columns: Iterable[str]) -> tuple[ValueType, ...]:
+    def _row_key(self, row: Row, pk_cols: Iterable[str]) -> tuple[ValueType, ...]:
         """Create a unique key for a row based on primary key columns."""
-        return tuple(row[pk] for pk in pk_columns) or tuple(row)
+        return tuple(row[pk] for pk in pk_cols) or tuple(row)
 
     def compare_rows(self, name: str) -> Iterable[RowMod]:
         """Compare all data in a table between source and target databases."""
@@ -71,8 +71,8 @@ class Comparator:
         target_data = self.target.rows(name)
 
         # Get primary key columns
-        source_pk = tuple(self.source.primary_keys(name))
-        target_pk = tuple(self.target.primary_keys(name))
+        source_pk = tuple(self.source.pks(name))
+        target_pk = tuple(self.target.pks(name))
 
         # Create row lookup dictionaries
         source_map = {self._row_key(row, source_pk): row for row in source_data}

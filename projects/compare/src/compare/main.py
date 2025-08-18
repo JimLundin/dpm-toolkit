@@ -40,21 +40,13 @@ def encoder(obj: object) -> dict[str, str] | tuple[Any, ...]:
     raise TypeError(msg)
 
 
-def compare_databases(
-    source_db: Connection,
-    target_db: Connection,
-) -> Iterable[Comparison]:
+def compare_databases(source: Connection, target: Connection) -> Iterable[Comparison]:
     """Compare two SQLite databases completely and return full results."""
-    # Create inspectors
-    source = Inspector(source_db)
-    target = Inspector(target_db)
-
-    # Create comparator
-    comparator = Comparator(source, target)
+    comparator = Comparator(Inspector(source), Inspector(target))
 
     return comparator.compare()
 
 
-def comparisons_to_json(comparisons: Iterable[Comparison], indent: int = 2) -> str:
+def comparisons_to_json(comparisons: Iterable[Comparison], indent: int = 0) -> str:
     """Convert comparison result to JSON string."""
     return json.dumps(comparisons, default=encoder, indent=indent, ensure_ascii=False)
