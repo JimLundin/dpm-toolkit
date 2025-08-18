@@ -478,23 +478,23 @@ def handle_compare_command(args: Namespace) -> None:
     source_conn = connect(source)
     target_conn = connect(target)
     comparisons = compare_databases(source_conn, target_conn)
-    result_json = comparisons_to_json(comparisons)
 
     # Handle output based on format
     if args.format == "html":
         output = args.output or Path("comparison_report.html")
-        report = render_report(result_json)
-        output.write_text(report, encoding="utf-8")
+        render_report(comparisons).dump(str(output), encoding="utf-8")
         log_info(f"HTML report saved to: {output}")
     elif hasattr(args, "output") and args.output:
+        comparison_json = comparisons_to_json(comparisons)
         # Save JSON to file
         output = Path(args.output)
-        output.write_text(result_json, encoding="utf-8")
+        output.write_text(comparison_json, encoding="utf-8")
         log_info(f"JSON report saved to: {output}")
     else:
         # Print JSON to stdout
+        comparison_json = comparisons_to_json(comparisons)
         log_info("\nComparison Results:")
-        log_info(result_json)
+        log_info(comparison_json)
 
 
 def main() -> None:

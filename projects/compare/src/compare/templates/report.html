@@ -42,7 +42,7 @@
     </div>
 
     <script>
-      window.comparisonData = {{ comparison_json | safe }};
+      window.comparisonData = {{ comparisons | tojson }};
       {% include 'scripts.js' %}
     </script>
   </body>
