@@ -62,7 +62,8 @@ class Comparator:
 
     def _row_key(self, row: Row, pk_cols: Iterable[str]) -> tuple[ValueType, ...]:
         """Create a unique key for a row based on primary key columns."""
-        return tuple(row[pk] for pk in pk_cols) or tuple(row)
+        guid = row["RowGUID"] if "RowGUID" in row.keys() else None  # noqa: SIM118
+        return tuple(guid) if guid else tuple(row[pk] for pk in pk_cols) or tuple(row)
 
     def compare_rows(self, name: str) -> Iterable[RowMod]:
         """Compare all data in a table between source and target databases."""
