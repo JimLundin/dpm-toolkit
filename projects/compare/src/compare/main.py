@@ -32,7 +32,7 @@ def encoder(obj: object) -> dict[str, str] | tuple[Any, ...]:
     """Convert sqlite3.Row to a regular dict for JSON serialization."""
     if isinstance(obj, Row):
         return dict(obj)
-    if isinstance(obj, chain):
+    if isinstance(obj, (chain, Iterable)):
         return tuple(
             obj,  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType]
         )
