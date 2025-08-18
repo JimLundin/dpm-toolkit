@@ -11,12 +11,12 @@ from jinja2 import Environment, FileSystemLoader
 
 from compare.comparator import Comparator
 from compare.inspector import Inspector
-from compare.types import TableComparison
+from compare.types import Comparison
 
 TEMPLATE_DIR = Path(__file__).parent / "templates"
 
 
-def generate_report(result: str) -> str:
+def render_report(result: str) -> str:
     """Generate HTML report from comparison result."""
     env = Environment(
         loader=FileSystemLoader(TEMPLATE_DIR),
@@ -43,7 +43,7 @@ def encoder(obj: object) -> dict[str, str] | tuple[Any, ...]:
 def compare_databases(
     source_db: Connection,
     target_db: Connection,
-) -> Iterable[TableComparison]:
+) -> Iterable[Comparison]:
     """Compare two SQLite databases completely and return full results."""
     # Create inspectors
     source = Inspector(source_db)
@@ -55,6 +55,6 @@ def compare_databases(
     return comparator.compare()
 
 
-def comparisons_to_json(comparisons: Iterable[TableComparison], indent: int = 2) -> str:
+def comparisons_to_json(comparisons: Iterable[Comparison], indent: int = 2) -> str:
     """Convert comparison result to JSON string."""
     return json.dumps(comparisons, default=encoder, indent=indent, ensure_ascii=False)

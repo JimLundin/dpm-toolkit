@@ -185,27 +185,27 @@ class DatabaseReportRenderer {
         
         let html = `<tr class="${changeClass}">`;
         
-        // NamedTuple structure: [new, old]
+        // NamedTuple structure: [new, old] where each is [name, type, nullable, default, primary_key]
         const [newCol, oldCol] = change;
-        const columnName = newCol?.name || oldCol?.name;
+        const columnName = newCol?.[0] || oldCol?.[0]; // name is at index 0
         html += `<td title="${columnName}">${columnName}</td>`;
 
         if (changeType === 'added') {
-            html += `<td title="${newCol.type}">${newCol.type}</td>`;
-            html += `<td>${newCol.nullable}</td>`;
-            html += `<td>${this.formatValue(newCol.default)}</td>`;
-            html += `<td>${newCol.primary_key}</td>`;
+            html += `<td title="${newCol[1]}">${newCol[1]}</td>`; // type
+            html += `<td>${newCol[2]}</td>`; // nullable
+            html += `<td>${this.formatValue(newCol[3])}</td>`; // default
+            html += `<td>${newCol[4]}</td>`; // primary_key
         } else if (changeType === 'removed') {
-            html += `<td title="${oldCol.type}">${oldCol.type}</td>`;
-            html += `<td>${oldCol.nullable}</td>`;
-            html += `<td>${this.formatValue(oldCol.default)}</td>`;
-            html += `<td>${oldCol.primary_key}</td>`;
+            html += `<td title="${oldCol[1]}">${oldCol[1]}</td>`; // type
+            html += `<td>${oldCol[2]}</td>`; // nullable
+            html += `<td>${this.formatValue(oldCol[3])}</td>`; // default
+            html += `<td>${oldCol[4]}</td>`; // primary_key
         } else {
             // Modified - show old→new changes
-            html += this.renderColFieldChange(oldCol.type, newCol.type);
-            html += this.renderColFieldChange(oldCol.nullable, newCol.nullable);
-            html += this.renderColFieldChange(oldCol.default, newCol.default);
-            html += this.renderColFieldChange(oldCol.primary_key, newCol.primary_key);
+            html += this.renderColFieldChange(oldCol[1], newCol[1]); // type
+            html += this.renderColFieldChange(oldCol[2], newCol[2]); // nullable
+            html += this.renderColFieldChange(oldCol[3], newCol[3]); // default
+            html += this.renderColFieldChange(oldCol[4], newCol[4]); // primary_key
         }
 
         html += `</tr>`;

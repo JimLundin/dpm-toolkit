@@ -454,7 +454,7 @@ def handle_schema_command(args: Namespace) -> None:
 def handle_compare_command(args: Namespace) -> None:
     """Handle the 'compare' subcommand."""
     try:
-        from compare import compare_databases, comparisons_to_json, generate_report
+        from compare import compare_databases, comparisons_to_json, render_report
     except ImportError as e:
         print(f"Compare functionality not available: {e}")
         return
@@ -483,7 +483,7 @@ def handle_compare_command(args: Namespace) -> None:
     # Handle output based on format
     if args.format == "html":
         output = args.output or Path("comparison_report.html")
-        report = generate_report(result_json)
+        report = render_report(result_json)
         output.write_text(report, encoding="utf-8")
         log_info(f"HTML report saved to: {output}")
     elif hasattr(args, "output") and args.output:

@@ -8,8 +8,8 @@ from compare.inspector import Inspector
 from compare.types import (
     ColInfo,
     ColMod,
+    Comparison,
     RowMod,
-    TableComparison,
     ValueType,
 )
 
@@ -94,13 +94,13 @@ class Comparator:
             ),
         )
 
-    def compare(self) -> Iterable[TableComparison]:
+    def compare(self) -> Iterable[Comparison]:
         """Compare all tables in both databases and return full results."""
         added, removed, common = self.tables()
 
         return chain(
             (
-                TableComparison(
+                Comparison(
                     name=name,
                     cols=self.compare_cols(
                         self.source.cols(name),
@@ -111,7 +111,7 @@ class Comparator:
                 for name in common
             ),
             (
-                TableComparison(
+                Comparison(
                     name=name,
                     cols=(ColMod(new=col) for col in self.target.cols(name)),
                     rows=(RowMod(new=row) for row in self.target.rows(name)),
@@ -119,7 +119,7 @@ class Comparator:
                 for name in added
             ),
             (
-                TableComparison(
+                Comparison(
                     name=name,
                     cols=(ColMod(old=col) for col in self.source.cols(name)),
                     rows=(RowMod(old=row) for row in self.source.rows(name)),
