@@ -3,11 +3,11 @@
 from compare.main import (
     compare_databases,
     comparisons_to_json,
-    generate_report,
+    render_report,
 )
 
 __all__ = [
     "compare_databases",
     "comparisons_to_json",
-    "generate_report",
+    "render_report",
 ]

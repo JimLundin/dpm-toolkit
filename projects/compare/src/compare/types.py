@@ -31,7 +31,7 @@ class ColMod(NamedTuple):
     old: ColInfo | None = None
 
 
-class TableComparison(TypedDict):
+class Comparison(TypedDict):
     """Complete comparison result for a table."""
 
     name: ReadOnly[str]
