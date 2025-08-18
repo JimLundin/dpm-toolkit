@@ -60,16 +60,16 @@ def compare_databases(
         (
             TableComparison(
                 name=name,
-                schema=(ColMod(new=col) for col in target.columns(name)),
-                data=(RowMod(new=row) for row in target.data(name)),
+                cols=(ColMod(new=col) for col in target.cols(name)),
+                rows=(RowMod(new=row) for row in target.rows(name)),
             )
             for name in added
         ),
         (
             TableComparison(
                 name=name,
-                schema=(ColMod(old=col) for col in source.columns(name)),
-                data=(RowMod(old=row) for row in source.data(name)),
+                cols=(ColMod(old=col) for col in source.cols(name)),
+                rows=(RowMod(old=row) for row in source.rows(name)),
             )
             for name in removed
         ),

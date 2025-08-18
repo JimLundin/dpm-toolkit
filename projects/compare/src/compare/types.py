@@ -35,5 +35,5 @@ class TableComparison(TypedDict):
     """Complete comparison result for a table."""
 
     name: ReadOnly[str]
-    schema: ReadOnly[Iterable[ColMod]]
-    data: ReadOnly[Iterable[RowMod]]
+    cols: ReadOnly[Iterable[ColMod]]
+    rows: ReadOnly[Iterable[RowMod]]

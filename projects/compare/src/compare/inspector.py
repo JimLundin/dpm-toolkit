@@ -24,7 +24,7 @@ class Inspector:
             )
             return (row[0] for row in cursor)
 
-    def columns(self, name: str) -> Generator[ColInfo]:
+    def cols(self, name: str) -> Generator[ColInfo]:
         """Get complete column information for a table."""
         with self.conn as conn:
             cursor = conn.execute("SELECT * FROM pragma_table_info(?)", (name,))
@@ -50,7 +50,7 @@ class Inspector:
 
             return (row[0] for row in cursor)
 
-    def data(self, name: str) -> Iterator[Row]:
+    def rows(self, name: str) -> Iterator[Row]:
         """Get all data from a table as list of dictionaries."""
         with self.conn as conn:
             # Order by primary key columns for consistent ordering
