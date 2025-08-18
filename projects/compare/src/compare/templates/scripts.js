@@ -159,6 +159,7 @@ class DatabaseReportRenderer {
                             <th>Type</th>
                             <th>Nullable</th>
                             <th>Default</th>
+                            <th>Primary Key</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -193,15 +194,18 @@ class DatabaseReportRenderer {
             html += `<td title="${newCol.type}">${newCol.type}</td>`;
             html += `<td>${newCol.nullable}</td>`;
             html += `<td>${this.formatValue(newCol.default)}</td>`;
+            html += `<td>${newCol.primary_key}</td>`;
         } else if (changeType === 'removed') {
             html += `<td title="${oldCol.type}">${oldCol.type}</td>`;
             html += `<td>${oldCol.nullable}</td>`;
             html += `<td>${this.formatValue(oldCol.default)}</td>`;
+            html += `<td>${oldCol.primary_key}</td>`;
         } else {
             // Modified - show old→new changes
             html += this.renderColFieldChange(oldCol.type, newCol.type);
             html += this.renderColFieldChange(oldCol.nullable, newCol.nullable);
             html += this.renderColFieldChange(oldCol.default, newCol.default);
+            html += this.renderColFieldChange(oldCol.primary_key, newCol.primary_key);
         }
 
         html += `</tr>`;
