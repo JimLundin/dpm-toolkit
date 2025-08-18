@@ -11,7 +11,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from compare.comparator import Comparator
 from compare.inspector import Inspector
-from compare.types import ColMod, RowMod, TableComparison
+from compare.types import TableComparison
 
 TEMPLATE_DIR = Path(__file__).parent / "templates"
 
@@ -52,28 +52,7 @@ def compare_databases(
     # Create comparator
     comparator = Comparator(source, target)
 
-    # Get all tables
-    added, removed, common = comparator.tables()
-
-    return chain(
-        (comparator.compare_table(name) for name in common),
-        (
-            TableComparison(
-                name=name,
-                cols=(ColMod(new=col) for col in target.cols(name)),
-                rows=(RowMod(new=row) for row in target.rows(name)),
-            )
-            for name in added
-        ),
-        (
-            TableComparison(
-                name=name,
-                cols=(ColMod(old=col) for col in source.cols(name)),
-                rows=(RowMod(old=row) for row in source.rows(name)),
-            )
-            for name in removed
-        ),
-    )
+    return comparator.compare()
 
 
 def comparisons_to_json(comparisons: Iterable[TableComparison], indent: int = 2) -> str:
