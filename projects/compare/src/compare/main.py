@@ -10,7 +10,6 @@ from typing import Any
 from jinja2 import Environment, FileSystemLoader
 
 from compare.comparator import Comparator
-from compare.inspector import Inspector
 from compare.types import Comparison
 
 TEMPLATE_DIR = Path(__file__).parent / "templates"
@@ -42,9 +41,7 @@ def encoder(obj: object) -> dict[str, str] | tuple[Any, ...]:
 
 def compare_databases(source: Connection, target: Connection) -> Iterable[Comparison]:
     """Compare two SQLite databases completely and return full results."""
-    comparator = Comparator(Inspector(source), Inspector(target))
-
-    return comparator.compare()
+    return Comparator(source, target).compare()
 
 
 def comparisons_to_json(comparisons: Iterable[Comparison], indent: int = 0) -> str:
