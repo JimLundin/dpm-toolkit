@@ -37,6 +37,3 @@ class TableComparison(TypedDict):
     name: ReadOnly[str]
     schema: ReadOnly[Iterable[ColMod]]
     data: ReadOnly[Iterable[RowMod]]
-
-
-type Change = ColMod | RowMod

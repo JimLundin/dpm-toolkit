@@ -9,11 +9,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from compare.comparator import Comparator
 from compare.inspector import Inspector
-from compare.types import (
-    ColMod,
-    RowMod,
-    TableComparison,
-)
+from compare.types import ColMod, RowMod, TableComparison
 
 TEMPLATE_DIR = Path(__file__).parent / "templates"
 
