@@ -2,8 +2,10 @@
 
 import json
 from collections.abc import Iterable
+from itertools import chain
 from pathlib import Path
 from sqlite3 import Connection, Row
+from typing import Any
 
 from jinja2 import Environment, FileSystemLoader
 
@@ -26,10 +28,14 @@ def generate_report(result: str) -> str:
     return template.render(comparison_json=result)
 
 
-def encoder(obj: object) -> dict[str, str]:
+def encoder(obj: object) -> dict[str, str] | tuple[Any, ...]:
     """Convert sqlite3.Row to a regular dict for JSON serialization."""
     if isinstance(obj, Row):
         return dict(obj)
+    if isinstance(obj, chain):
+        return tuple(
+            obj,  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType]
+        )
     msg = f"Object of type {type(obj)} is not JSON serializable"
     raise TypeError(msg)
 
@@ -37,7 +43,7 @@ def encoder(obj: object) -> dict[str, str]:
 def compare_databases(
     source_db: Connection,
     target_db: Connection,
-) -> list[TableComparison]:
+) -> Iterable[TableComparison]:
     """Compare two SQLite databases completely and return full results."""
     # Create inspectors
     source = Inspector(source_db)
@@ -47,33 +53,27 @@ def compare_databases(
     comparator = Comparator(source, target)
 
     # Get all tables
-    tables_added, tables_removed, tables_common = comparator.tables()
+    added, removed, common = comparator.tables()
 
-    # Compare common tables (schema and data)
-    changes = [comparator.compare_table(table_name) for table_name in tables_common]
-
-    # Add tables that were added (only exist in target)
-    changes.extend(
-        TableComparison(
-            name=table_name,
-            schema=(ColMod(new=col) for col in target.columns(table_name)),
-            data=(RowMod(new=row) for row in target.data(table_name)),
-        )
-        for table_name in tables_added
+    return chain(
+        (comparator.compare_table(name) for name in common),
+        (
+            TableComparison(
+                name=name,
+                schema=(ColMod(new=col) for col in target.columns(name)),
+                data=(RowMod(new=row) for row in target.data(name)),
+            )
+            for name in added
+        ),
+        (
+            TableComparison(
+                name=name,
+                schema=(ColMod(old=col) for col in source.columns(name)),
+                data=(RowMod(old=row) for row in source.data(name)),
+            )
+            for name in removed
+        ),
     )
-
-    # Add tables that were removed (only exist in source)
-    changes.extend(
-        TableComparison(
-            name=table_name,
-            schema=(ColMod(old=col) for col in source.columns(table_name)),
-            data=(RowMod(old=row) for row in source.data(table_name)),
-        )
-        for table_name in tables_removed
-    )
-
-    # Build complete result
-    return changes
 
 
 def comparisons_to_json(comparisons: Iterable[TableComparison], indent: int = 2) -> str:

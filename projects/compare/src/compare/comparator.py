@@ -1,6 +1,7 @@
 """Database comparison engine."""
 
 from collections.abc import Iterable
+from itertools import chain
 from sqlite3 import Row
 
 from compare.inspector import Inspector
@@ -67,7 +68,7 @@ class Comparator:
         """Create a unique key for a row based on primary key columns."""
         return tuple(row[pk] for pk in pk_columns) or tuple(row)
 
-    def compare_data(self, name: str) -> list[RowMod]:
+    def compare_data(self, name: str) -> Iterable[RowMod]:
         """Compare all data in a table between source and target databases."""
         # Get all data from both tables
         source_data = self.source.data(name)
@@ -81,26 +82,21 @@ class Comparator:
         source_rows = {self._row_key(row, source_pk): row for row in source_data}
         target_rows = {self._row_key(row, target_pk): row for row in target_data}
 
-        # Find modified rows
-        changes: list[RowMod] = [
-            RowMod(target_rows[key], source_rows[key])
-            for key in source_rows.keys() & target_rows.keys()
-            if source_rows[key] != target_rows[key]
-        ]
-
-        # Find added rows
-        changes.extend(
-            RowMod(new=target_rows[key])
-            for key in target_rows.keys() - source_rows.keys()
+        return chain(
+            (
+                RowMod(target_rows[key], source_rows[key])
+                for key in source_rows.keys() & target_rows.keys()
+                if source_rows[key] != target_rows[key]
+            ),
+            (
+                RowMod(new=target_rows[key])
+                for key in target_rows.keys() - source_rows.keys()
+            ),
+            (
+                RowMod(old=source_rows[key])
+                for key in source_rows.keys() - target_rows.keys()
+            ),
         )
-
-        # Find removed rows
-        changes.extend(
-            RowMod(old=source_rows[key])
-            for key in source_rows.keys() - target_rows.keys()
-        )
-
-        return changes
 
     def compare_table(self, name: str) -> TableComparison:
         """Compare complete table (schema and data) between databases."""
