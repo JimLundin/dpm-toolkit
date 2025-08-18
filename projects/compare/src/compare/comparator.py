@@ -2,7 +2,7 @@
 
 from collections.abc import Iterable
 from itertools import chain
-from sqlite3 import Row
+from sqlite3 import Connection, Row
 
 from compare.inspector import Inspector
 from compare.types import (
@@ -17,10 +17,10 @@ from compare.types import (
 class Comparator:
     """Compares two databases and generates complete difference information."""
 
-    def __init__(self, source: Inspector, target: Inspector) -> None:
+    def __init__(self, source: Connection, target: Connection) -> None:
         """Initialize comparator with source and target database inspectors."""
-        self.source = source
-        self.target = target
+        self.source = Inspector(source)
+        self.target = Inspector(target)
 
     def tables(self) -> tuple[frozenset[str], frozenset[str], frozenset[str]]:
         """Get table lists: added, removed, common."""
