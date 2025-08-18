@@ -139,11 +139,16 @@ class DatabaseReportRenderer {
     }
 
     renderColsSection(table) {
-        const changes = table.cols;
+        return this.renderChangesSection(table.cols, 'Column Changes', 'st');
+    }
+
+
+    renderChangesSection(changes, title, tableClass) {
         const counters = this.countChangeTypes(changes);
+        const allFields = this.getAllFields(changes);
         
         let html = `
-            <h4>Column Changes
+            <h4>${title}
                 ${counters.added > 0 ? 
                   `<span class="cb a">Added</span> ${counters.added}` : ''}
                 ${counters.removed > 0 ? 
@@ -152,21 +157,20 @@ class DatabaseReportRenderer {
                   `<span class="cb m">Modified</span> ${counters.modified}` : ''}
             </h4>
             <div class="tct">
-                <table class="st">
+                <table class="${tableClass}">
                     <thead>
                         <tr>
-                            <th>Column</th>
-                            <th>Type</th>
-                            <th>Nullable</th>
-                            <th>Default</th>
-                            <th>Primary Key</th>
+                            ${allFields.map(field => `<th>${field}</th>`).join('')}
                         </tr>
                     </thead>
                     <tbody>
         `;
 
         changes.forEach(change => {
-            html += this.renderColRow(change);
+            const changeType = this.getChangeType(change);
+            const changeClass = changeType === 'added' ? 'ca' : 
+                               changeType === 'removed' ? 'cr' : 'cm';
+            html += `<tr class="${changeClass}">${this.renderChangeRow(change, allFields)}</tr>`;
         });
 
         html += `
@@ -178,66 +182,48 @@ class DatabaseReportRenderer {
         return html;
     }
 
-    renderColRow(change) {
+    renderChangeRow(change, allFields) {
         const changeType = this.getChangeType(change);
-        const changeClass = changeType === 'added' ? 'ca' : 
-                           changeType === 'removed' ? 'cr' : 'cm';
-        
-        let html = `<tr class="${changeClass}">`;
-        
-        // NamedTuple structure: [new, old] where each is [name, type, nullable, default, primary_key]
-        const [newCol, oldCol] = change;
-        const columnName = newCol?.[0] || oldCol?.[0]; // name is at index 0
-        html += `<td title="${columnName}">${columnName}</td>`;
+        let html = '';
 
-        if (changeType === 'added') {
-            html += `<td title="${newCol[1]}">${newCol[1]}</td>`; // type
-            html += `<td>${newCol[2]}</td>`; // nullable
-            html += `<td>${this.formatValue(newCol[3])}</td>`; // default
-            html += `<td>${newCol[4]}</td>`; // primary_key
-        } else if (changeType === 'removed') {
-            html += `<td title="${oldCol[1]}">${oldCol[1]}</td>`; // type
-            html += `<td>${oldCol[2]}</td>`; // nullable
-            html += `<td>${this.formatValue(oldCol[3])}</td>`; // default
-            html += `<td>${oldCol[4]}</td>`; // primary_key
-        } else {
-            // Modified - show old→new changes
-            html += this.renderColFieldChange(oldCol[1], newCol[1]); // type
-            html += this.renderColFieldChange(oldCol[2], newCol[2]); // nullable
-            html += this.renderColFieldChange(oldCol[3], newCol[3]); // default
-            html += this.renderColFieldChange(oldCol[4], newCol[4]); // primary_key
-        }
+        allFields.forEach(field => {
+            // Tuple structure: [new, old] where SQLite Row objects are serialized as dictionaries
+            const [newVal, oldVal] = change;
+            
+            if (changeType === 'added') {
+                const val = newVal?.[field];
+                html += `<td title="${val || 'NULL'}">${this.formatValue(val)}</td>`;
+            } else if (changeType === 'removed') {
+                const val = oldVal?.[field];
+                html += `<td title="${val || 'NULL'}">${this.formatValue(val)}</td>`;
+            } else {
+                const oldFieldVal = oldVal?.[field];
+                const newFieldVal = newVal?.[field];
+                if (oldFieldVal !== newFieldVal) {
+                    html += `<td class="mc">
+                        <span class="ov" title="${oldFieldVal || 'NULL'}">
+                            ${this.formatValue(oldFieldVal)}
+                        </span>
+                        <span class="ar">→</span>
+                        <span class="nv" title="${newFieldVal || 'NULL'}">
+                            ${this.formatValue(newFieldVal)}
+                        </span>
+                    </td>`;
+                } else {
+                    html += `<td title="${newFieldVal || 'NULL'}">
+                        ${this.formatValue(newFieldVal)}
+                    </td>`;
+                }
+            }
+        });
 
-        html += `</tr>`;
         return html;
-    }
-
-    renderColFieldChange(oldValue, newValue) {
-        // Format values for comparison
-        const formattedOld = this.formatValue(oldValue);
-        const formattedNew = this.formatValue(newValue);
-        
-        if (formattedOld !== formattedNew) {
-            return `<td class="mc">
-                <span class="ov" title="${oldValue || 'NULL'}">
-                    ${formattedOld}
-                </span>
-                <span class="ar">→</span>
-                <span class="nv" title="${newValue || 'NULL'}">
-                    ${formattedNew}
-                </span>
-            </td>`;
-        } else {
-            return `<td title="${newValue || 'NULL'}">
-                ${formattedNew}
-            </td>`;
-        }
     }
 
     renderRowsSection(table) {
         const changes = table.rows;
+        const allFields = this.getAllFields(changes);
         const counters = this.countChangeTypes(changes);
-        const allColumns = this.getAllColumns(changes);
         
         let html = `
             <h4>Row Changes
@@ -248,16 +234,11 @@ class DatabaseReportRenderer {
                 ${counters.modified > 0 ? 
                   `<span class="cb m">Modified</span> ${counters.modified}` : ''}
             </h4>
-        `;
-
-        // Remove non-functional search bar
-
-        html += `
             <div class="tct">
                 <table class="dt" id="data-table-${table.name}">
                     <thead>
                         <tr>
-                            ${allColumns.map(col => `<th>${col}</th>`).join('')}
+                            ${allFields.map(field => `<th>${field}</th>`).join('')}
                         </tr>
                     </thead>
                     <tbody id="data-tbody-${table.name}" class="virtual-table">
@@ -277,7 +258,7 @@ class DatabaseReportRenderer {
                 return;
             }
             
-            const allColumns = this.getAllColumns(dataChanges);
+            const allFields = this.getAllFields(dataChanges);
             
             // Clear any existing content
             tbody.innerHTML = '';
@@ -288,7 +269,7 @@ class DatabaseReportRenderer {
                 const changeType = this.getChangeType(change);
                 row.className = changeType === 'added' ? 'ca' : 
                                changeType === 'removed' ? 'cr' : 'cm';
-                row.innerHTML = this.renderDataRowContent(change, allColumns);
+                row.innerHTML = this.renderChangeRow(change, allFields);
                 tbody.appendChild(row);
             });
         } catch (error) {
@@ -310,19 +291,19 @@ class DatabaseReportRenderer {
                 return;
             }
             
-            const allColumns = this.getAllColumns(dataChanges);
+            const allFields = this.getAllFields(dataChanges);
             
             // Set initial height
             tbody.style.height = `${dataChanges.length * this.rowHeight}px`;
             
             // Render initial visible rows
             this.renderVisibleRows(
-                tableName, dataChanges, allColumns, 0, this.maxVisibleRows
+                tableName, dataChanges, allFields, 0, this.maxVisibleRows
             );
             
             // Add scroll listener
             container.addEventListener('scroll', () => {
-                this.handleScroll(tableName, dataChanges, allColumns, container);
+                this.handleScroll(tableName, dataChanges, allFields, container);
             });
         } catch (error) {
             console.error(`Error initializing virtual scrolling for ${tableName}:`, error);
@@ -331,17 +312,17 @@ class DatabaseReportRenderer {
         }
     }
 
-    handleScroll(tableName, dataChanges, allColumns, container) {
+    handleScroll(tableName, dataChanges, allFields, container) {
         const scrollTop = container.scrollTop;
         const startIndex = Math.floor(scrollTop / this.rowHeight);
         const endIndex = Math.min(startIndex + this.maxVisibleRows, dataChanges.length);
         
         this.renderVisibleRows(
-            tableName, dataChanges, allColumns, startIndex, endIndex
+            tableName, dataChanges, allFields, startIndex, endIndex
         );
     }
 
-    renderVisibleRows(tableName, dataChanges, allColumns, startIndex, endIndex) {
+    renderVisibleRows(tableName, dataChanges, allFields, startIndex, endIndex) {
         const tbody = document.getElementById(`data-tbody-${tableName}`);
         
         // Clear existing rows
@@ -351,7 +332,7 @@ class DatabaseReportRenderer {
         if (startIndex > 0) {
             const spacer = document.createElement('tr');
             spacer.style.height = `${startIndex * this.rowHeight}px`;
-            spacer.innerHTML = `<td colspan="${allColumns.length}"></td>`;
+            spacer.innerHTML = `<td colspan="${allFields.length}"></td>`;
             tbody.appendChild(spacer);
         }
         
@@ -362,7 +343,7 @@ class DatabaseReportRenderer {
             row.className = 'virtual-row ' + 
                 (this.getChangeType(change) === 'added' ? 'ca' : 
                  this.getChangeType(change) === 'removed' ? 'cr' : 'cm');
-            row.innerHTML = this.renderDataRowContent(change, allColumns);
+            row.innerHTML = this.renderChangeRow(change, allFields);
             tbody.appendChild(row);
         }
         
@@ -371,63 +352,29 @@ class DatabaseReportRenderer {
             const spacer = document.createElement('tr');
             spacer.style.height = 
                 `${(dataChanges.length - endIndex) * this.rowHeight}px`;
-            spacer.innerHTML = `<td colspan="${allColumns.length}"></td>`;
+            spacer.innerHTML = `<td colspan="${allFields.length}"></td>`;
             tbody.appendChild(spacer);
         }
     }
 
-    renderDataRowContent(change, allColumns) {
-        const changeType = this.getChangeType(change);
-        let html = '';
-
-        allColumns.forEach(col => {
-            // NamedTuple structure: [new, old]
-            const [newRow, oldRow] = change;
-            
-            if (changeType === 'added') {
-                const val = newRow?.[col];
-                html += `<td title="${val || 'NULL'}">${this.formatValue(val)}</td>`;
-            } else if (changeType === 'removed') {
-                const val = oldRow?.[col];
-                html += `<td title="${val || 'NULL'}">${this.formatValue(val)}</td>`;
-            } else {
-                const oldVal = oldRow?.[col];
-                const newVal = newRow?.[col];
-                if (oldVal !== newVal) {
-                    html += `<td class="mc">
-                        <span class="ov" title="${oldVal || 'NULL'}">
-                            ${this.formatValue(oldVal)}
-                        </span>
-                        <span class="ar">→</span>
-                        <span class="nv" title="${newVal || 'NULL'}">
-                            ${this.formatValue(newVal)}
-                        </span>
-                    </td>`;
-                } else {
-                    html += `<td title="${newVal || 'NULL'}">
-                        ${this.formatValue(newVal)}
-                    </td>`;
-                }
-            }
-        });
-
-        return html;
+    renderDataRowContent(change, allFields) {
+        return this.renderChangeRow(change, allFields);
     }
 
 
-    getAllColumns(changes) {
-        const columns = new Set();
+    getAllFields(changes) {
+        const fields = new Set();
         changes.forEach(change => {
-            // NamedTuple structure: [new, old]
+            // Tuple structure: [new, old] where SQLite Row objects are serialized as dictionaries
             const [newVal, oldVal] = change;
             if (newVal && typeof newVal === 'object') {
-                Object.keys(newVal).forEach(col => columns.add(col));
+                Object.keys(newVal).forEach(field => fields.add(field));
             }
             if (oldVal && typeof oldVal === 'object') {
-                Object.keys(oldVal).forEach(col => columns.add(col));
+                Object.keys(oldVal).forEach(field => fields.add(field));
             }
         });
-        return Array.from(columns);
+        return Array.from(fields);
     }
 
     countChangeTypes(changes) {
@@ -439,7 +386,7 @@ class DatabaseReportRenderer {
     }
 
     getChangeType(change) {
-        // NamedTuple structure: [new, old]
+        // Tuple structure: [new, old] where SQLite Row objects are serialized as dictionaries
         const [newVal, oldVal] = change;
         if (newVal && !oldVal) return 'added';
         if (oldVal && !newVal) return 'removed';
