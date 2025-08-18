@@ -33,7 +33,7 @@ class Comparator:
 
         return added, removed, common
 
-    def compare_columns(
+    def compare_cols(
         self,
         source: Iterable[ColInfo],
         target: Iterable[ColInfo],
@@ -75,32 +75,55 @@ class Comparator:
         target_pk = tuple(self.target.primary_keys(name))
 
         # Create row lookup dictionaries
-        source_rows = {self._row_key(row, source_pk): row for row in source_data}
-        target_rows = {self._row_key(row, target_pk): row for row in target_data}
+        source_map = {self._row_key(row, source_pk): row for row in source_data}
+        target_map = {self._row_key(row, target_pk): row for row in target_data}
 
         return chain(
             (
-                RowMod(target_rows[key], source_rows[key])
-                for key in source_rows.keys() & target_rows.keys()
-                if source_rows[key] != target_rows[key]
+                RowMod(target_map[key], source_map[key])
+                for key in source_map.keys() & target_map.keys()
+                if source_map[key] != target_map[key]
             ),
             (
-                RowMod(new=target_rows[key])
-                for key in target_rows.keys() - source_rows.keys()
+                RowMod(new=target_map[key])
+                for key in target_map.keys() - source_map.keys()
             ),
             (
-                RowMod(old=source_rows[key])
-                for key in source_rows.keys() - target_rows.keys()
+                RowMod(old=source_map[key])
+                for key in source_map.keys() - target_map.keys()
             ),
         )
 
-    def compare_table(self, name: str) -> TableComparison:
-        """Compare complete table (schema and data) between databases."""
-        return TableComparison(
-            name=name,
-            cols=self.compare_columns(
-                self.source.cols(name),
-                self.target.cols(name),
+    def compare(self) -> Iterable[TableComparison]:
+        """Compare all tables in both databases and return full results."""
+        added, removed, common = self.tables()
+
+        return chain(
+            (
+                TableComparison(
+                    name=name,
+                    cols=self.compare_cols(
+                        self.source.cols(name),
+                        self.target.cols(name),
+                    ),
+                    rows=self.compare_rows(name),
+                )
+                for name in common
             ),
-            rows=self.compare_rows(name),
+            (
+                TableComparison(
+                    name=name,
+                    cols=(ColMod(new=col) for col in self.target.cols(name)),
+                    rows=(RowMod(new=row) for row in self.target.rows(name)),
+                )
+                for name in added
+            ),
+            (
+                TableComparison(
+                    name=name,
+                    cols=(ColMod(old=col) for col in self.source.cols(name)),
+                    rows=(RowMod(old=row) for row in self.source.rows(name)),
+                )
+                for name in removed
+            ),
         )
