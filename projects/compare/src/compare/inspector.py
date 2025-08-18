@@ -20,9 +20,10 @@ class Inspector:
             cursor = conn.execute(
                 "SELECT name "
                 "FROM sqlite_master "
-                "WHERE type='table' AND name NOT LIKE 'sqlite_%'",
+                "WHERE type='table' AND name NOT LIKE 'sqlite_%' "
+                "ORDER BY name",
             )
-            return (row[0] for row in cursor)
+            return (row["name"] for row in cursor)
 
     def cols(self, name: str) -> Generator[ColInfo]:
         """Get complete column information for a table."""
@@ -40,7 +41,7 @@ class Inspector:
                 for row in cursor
             )
 
-    def primary_keys(self, name: str) -> Generator[str]:
+    def pks(self, name: str) -> Generator[str]:
         """Get primary key column names for a table."""
         with self.conn as conn:
             cursor = conn.execute(
@@ -54,7 +55,7 @@ class Inspector:
         """Get all data from a table as list of dictionaries."""
         with self.conn as conn:
             # Order by primary key columns for consistent ordering
-            pk_cols = self.primary_keys(name)
+            pk_cols = self.pks(name)
 
             order = ", ".join(f"`{col}`" for col in pk_cols) or "rowid"
 
