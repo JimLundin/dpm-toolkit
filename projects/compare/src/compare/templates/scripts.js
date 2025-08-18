@@ -17,21 +17,21 @@ class DatabaseReportRenderer {
         const tables = this.data;
         const totalTables = tables.length;
         const tablesWithChanges = tables.filter(
-            t => t.schema.length > 0 || t.data.length > 0
+            t => t.cols.length > 0 || t.rows.length > 0
         );
-        const totalSchemaChanges = tables.reduce((sum, t) => sum + t.schema.length, 0);
-        const totalDataChanges = tables.reduce((sum, t) => sum + t.data.length, 0);
+        const totalColChanges = tables.reduce((sum, t) => sum + t.cols.length, 0);
+        const totalRowChanges = tables.reduce((sum, t) => sum + t.rows.length, 0);
 
         document.getElementById('total-tables').textContent = totalTables;
         document.getElementById('tables-with-changes').textContent = tablesWithChanges.length;
-        document.getElementById('schema-changes').textContent = totalSchemaChanges;
-        document.getElementById('data-changes').textContent = totalDataChanges;
+        document.getElementById('schema-changes').textContent = totalColChanges;
+        document.getElementById('data-changes').textContent = totalRowChanges;
     }
 
     renderTableList() {
         const container = document.getElementById('tables-container');
         const tables = this.data.filter(
-            t => t.schema.length > 0 || t.data.length > 0
+            t => t.cols.length > 0 || t.rows.length > 0
         );
         
         // Clear loading message
@@ -52,9 +52,9 @@ class DatabaseReportRenderer {
         const section = document.createElement('div');
         section.className = 'tc';
         
-        const schemaCount = table.schema.length;
-        const dataCount = table.data.length;
-        const totalChanges = schemaCount + dataCount;
+        const colCount = table.cols.length;
+        const rowCount = table.rows.length;
+        const totalChanges = colCount + rowCount;
 
         section.innerHTML = `
             <h3 class="ex" onclick="window.renderer.toggleTable('${table.name}')">
@@ -108,25 +108,25 @@ class DatabaseReportRenderer {
             
             let html = '';
 
-            // Schema changes
-            if (table.schema && table.schema.length > 0) {
-                html += this.renderSchemaSection(table);
+            // Column changes
+            if (table.cols && table.cols.length > 0) {
+                html += this.renderColsSection(table);
             }
 
-            // Data changes with virtual scrolling
-            if (table.data && table.data.length > 0) {
-                html += this.renderDataSection(table);
+            // Row changes with virtual scrolling
+            if (table.rows && table.rows.length > 0) {
+                html += this.renderRowsSection(table);
             }
 
             content.innerHTML = html;
 
             // Initialize rendering for data tables
-            if (table.data && table.data.length > 0) {
-                if (table.data.length > this.maxVisibleRows) {
-                    this.initVirtualScrolling(tableName, table.data);
+            if (table.rows && table.rows.length > 0) {
+                if (table.rows.length > this.maxVisibleRows) {
+                    this.initVirtualScrolling(tableName, table.rows);
                 } else {
                     // For smaller datasets, render all rows directly
-                    this.renderAllDataRows(tableName, table.data);
+                    this.renderAllDataRows(tableName, table.rows);
                 }
             }
         } catch (error) {
@@ -138,12 +138,12 @@ class DatabaseReportRenderer {
         }
     }
 
-    renderSchemaSection(table) {
-        const changes = table.schema;
+    renderColsSection(table) {
+        const changes = table.cols;
         const counters = this.countChangeTypes(changes);
         
         let html = `
-            <h4>Schema Changes
+            <h4>Column Changes
                 ${counters.added > 0 ? 
                   `<span class="cb a">Added</span> ${counters.added}` : ''}
                 ${counters.removed > 0 ? 
@@ -165,7 +165,7 @@ class DatabaseReportRenderer {
         `;
 
         changes.forEach(change => {
-            html += this.renderSchemaRow(change);
+            html += this.renderColRow(change);
         });
 
         html += `
@@ -177,7 +177,7 @@ class DatabaseReportRenderer {
         return html;
     }
 
-    renderSchemaRow(change) {
+    renderColRow(change) {
         const changeType = this.getChangeType(change);
         const changeClass = changeType === 'added' ? 'ca' : 
                            changeType === 'removed' ? 'cr' : 'cm';
@@ -199,16 +199,16 @@ class DatabaseReportRenderer {
             html += `<td>${this.formatValue(oldCol.default)}</td>`;
         } else {
             // Modified - show old→new changes
-            html += this.renderSchemaFieldChange(oldCol.type, newCol.type);
-            html += this.renderSchemaFieldChange(oldCol.nullable, newCol.nullable);
-            html += this.renderSchemaFieldChange(oldCol.default, newCol.default);
+            html += this.renderColFieldChange(oldCol.type, newCol.type);
+            html += this.renderColFieldChange(oldCol.nullable, newCol.nullable);
+            html += this.renderColFieldChange(oldCol.default, newCol.default);
         }
 
         html += `</tr>`;
         return html;
     }
 
-    renderSchemaFieldChange(oldValue, newValue) {
+    renderColFieldChange(oldValue, newValue) {
         // Format values for comparison
         const formattedOld = this.formatValue(oldValue);
         const formattedNew = this.formatValue(newValue);
@@ -230,13 +230,13 @@ class DatabaseReportRenderer {
         }
     }
 
-    renderDataSection(table) {
-        const changes = table.data;
+    renderRowsSection(table) {
+        const changes = table.rows;
         const counters = this.countChangeTypes(changes);
         const allColumns = this.getAllColumns(changes);
         
         let html = `
-            <h4>Data Changes
+            <h4>Row Changes
                 ${counters.added > 0 ? 
                   `<span class="cb a">Added</span> ${counters.added}` : ''}
                 ${counters.removed > 0 ? 
