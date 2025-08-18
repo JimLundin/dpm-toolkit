@@ -1,0 +1,25 @@
+# python generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.mypy_cache
+
+# venv
+.venv
+
+# scratch
+.scratch
+
+# assets
+assets/
+data/
+downloads/
+
+# database
+*.sqlite
+*.sqlite3
+*.db
+*.accdb

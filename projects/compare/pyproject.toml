@@ -1,0 +1,25 @@
+[project]
+name = "compare"
+version = "0.0.0"
+description = "Database comparison for DPM Toolkit"
+authors = [{ name = "Jim Lundin", email = "jimeriklundin@gmail.com" }]
+requires-python = ">=3.13"
+dependencies = ["jinja2>=3.1.0"]
+
+[tool.ruff]
+unsafe-fixes = true
+
+[tool.ruff.lint]
+fixable = ["ALL"]
+select = ["ALL"]
+ignore = ["T201"]
+
+[tool.mypy]
+strict = true
+
+[tool.pyright]
+typeCheckingMode = "strict"
+
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"

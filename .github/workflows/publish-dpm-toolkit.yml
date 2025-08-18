@@ -1,0 +1,36 @@
+name: Publish DPM Toolkit CLI
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@v6
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Set CalVer version
+        run: |
+          VERSION=$(date +'%Y.%-m.%-d')
+          uv version $VERSION
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Sync dependencies
+        run: uv sync
+
+      - name: Build package
+        run: uv build
+
+      - name: Publish to PyPI
+        run: uv publish

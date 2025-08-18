@@ -1,0 +1,55 @@
+name: Download Database
+
+on:
+  workflow_call:
+    inputs:
+      version_id:
+        description: "The version ID to download"
+        required: true
+        type: string
+      database_type:
+        description: "Type of database to download (original, archive, converted)"
+        required: false
+        type: string
+        default: "original"
+    outputs:
+      artifact_name:
+        description: "The name of the uploaded artifact containing the downloaded database"
+        value: ${{ inputs.version_id }}-${{ inputs.database_type }}
+
+jobs:
+  download:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache downloaded databases
+        id: cache-dbs
+        uses: actions/cache@v4
+        with:
+          path: download-temp/
+          key: ${{ inputs.version_id }}-${{ inputs.database_type }}
+
+      - name: Install UV
+        if: steps.cache-dbs.outputs.cache-hit != 'true'
+        uses: astral-sh/setup-uv@v6
+
+      - name: Set up Python
+        if: steps.cache-dbs.outputs.cache-hit != 'true'
+        run: uv python install
+
+      - name: Install dependencies
+        if: steps.cache-dbs.outputs.cache-hit != 'true'
+        run: uv sync
+
+      - name: Download database files
+        if: steps.cache-dbs.outputs.cache-hit != 'true'
+        run: |
+          uv run dpm-toolkit download --version "${{ inputs.version_id }}" --type "${{ inputs.database_type }}" --target download-temp
+
+      - name: Upload database artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.version_id }}-${{ inputs.database_type }}
+          path: download-temp/
+          retention-days: 90

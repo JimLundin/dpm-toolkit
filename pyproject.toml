@@ -1,0 +1,56 @@
+[project]
+name = "dpm-toolkit"
+version = "0.0.0"
+description = "Open-source tools and models for working with DPM databases"
+authors = [{ name = "Jim Lundin", email = "jimeriklundin@gmail.com" }]
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">= 3.13"
+
+dependencies = ["archive", "pyyaml>=6.0.2"]
+
+[project.scripts]
+dpm-toolkit = "dpm_toolkit.cli:main"
+
+[project.optional-dependencies]
+scrape = ["scrape"]
+migrate = ["migrate"]
+schema = ["schema"]
+compare = ["compare"]
+
+[tool.ruff]
+unsafe-fixes = true
+
+[tool.ruff.lint]
+fixable = ["ALL"]
+select = ["ALL"]
+ignore = ["T201"]
+
+[tool.mypy]
+strict = true
+
+[tool.pyright]
+typeCheckingMode = "strict"
+
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.15.0",
+    "ruff>=0.11.4",
+    "ty>=0.0.1a15",
+    "types-beautifulsoup4>=4.12.0.20250204",
+    "types-requests>=2.32.0.20250328",
+]
+
+[tool.uv.workspace]
+members = ["projects/*"]
+
+[tool.uv.sources]
+archive = { workspace = true }
+migrate = { workspace = true }
+scrape = { workspace = true }
+schema = { workspace = true }
+compare = { workspace = true }
