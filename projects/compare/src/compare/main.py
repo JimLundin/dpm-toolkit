@@ -102,6 +102,7 @@ def compare_rows(name: str, source: Inspector, target: Inspector) -> Iterator[Mo
     source_pks = tuple(source.pks(name))
     target_pks = tuple(target.pks(name))
 
+    # This is a memory disaster
     source_map = {row_key(row, source_pks): row for row in source_rows}
     target_map = {row_key(row, target_pks): row for row in target_rows}
 
