@@ -35,9 +35,4 @@ class Inspector:
     def rows(self, name: str) -> Iterator[Row]:
         """Return all rows from the specified table, ordered by primary key."""
         with self.conn as conn:
-            pk_cols = self.pks(name)
-            order = ", ".join(f"`{col}`" for col in pk_cols) or "rowid"
-
-            return conn.execute(
-                f"SELECT * FROM `{name}` ORDER BY {order}",  # noqa: S608
-            )
+            return conn.execute(f"SELECT * FROM `{name}`")  # noqa: S608
