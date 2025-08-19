@@ -1,20 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Database Comparison Report</title>
-    <style>
-      {% include 'styles.css' %}
-    </style>
+    <style>{% include 'styles.css' %}</style>
   </head>
   <body>
-    <div class="ct">
-      <div class="h">
+    <main class="ct">
+      <header class="h">
         <h1>Database Comparison Report</h1>
-      </div>
+      </header>
 
-      <div class="s">
+      <section class="s">
         <div class="sc">
           <h3>Tables Compared</h3>
           <div class="n" id="total-tables">-</div>
@@ -31,15 +29,15 @@
           <h3>Row Changes</h3>
           <div class="n" id="data-changes">-</div>
         </div>
-      </div>
+      </section>
 
-      <div class="se">
+      <section class="se">
         <h2>Table Comparisons</h2>
-        <div class="tcs" id="tables-container">
+        <div id="tables-container">
           <div class="loading">Loading tables...</div>
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
 
     <script>
       window.comparisonData = {{ comparisons | tojson }};
