@@ -17,10 +17,10 @@ class DatabaseReportRenderer {
         const tables = this.data;
         const totalTables = tables.length;
         const tablesWithChanges = tables.filter(
-            t => t.cols.length > 0 || t.rows.length > 0
+            t => this.getChangeSetLength(t.cols) > 0 || this.getChangeSetLength(t.rows) > 0
         );
-        const totalColChanges = tables.reduce((sum, t) => sum + t.cols.length, 0);
-        const totalRowChanges = tables.reduce((sum, t) => sum + t.rows.length, 0);
+        const totalColChanges = tables.reduce((sum, t) => sum + this.getChangeSetLength(t.cols), 0);
+        const totalRowChanges = tables.reduce((sum, t) => sum + this.getChangeSetLength(t.rows), 0);
 
         document.getElementById('total-tables').textContent = totalTables;
         document.getElementById('tables-with-changes').textContent = tablesWithChanges.length;
@@ -31,7 +31,7 @@ class DatabaseReportRenderer {
     renderTableList() {
         const container = document.getElementById('tables-container');
         const tables = this.data.filter(
-            t => t.cols.length > 0 || t.rows.length > 0
+            t => this.getChangeSetLength(t.cols) > 0 || this.getChangeSetLength(t.rows) > 0
         );
         
         // Clear loading message
@@ -52,8 +52,8 @@ class DatabaseReportRenderer {
         const section = document.createElement('div');
         section.className = 'tc';
         
-        const colCount = table.cols.length;
-        const rowCount = table.rows.length;
+        const colCount = this.getChangeSetLength(table.cols);
+        const rowCount = this.getChangeSetLength(table.rows);
         const totalChanges = colCount + rowCount;
 
         section.innerHTML = `
@@ -109,23 +109,23 @@ class DatabaseReportRenderer {
             let html = '';
 
             // Column changes
-            if (table.cols && table.cols.length > 0) {
-                html += this.renderColsSection(table);
+            if (this.getChangeSetLength(table.cols) > 0) {
+                html += this.renderChangeSet(table.cols, 'Column Changes', 'st');
             }
 
-            // Row changes with virtual scrolling
-            if (table.rows && table.rows.length > 0) {
-                html += this.renderRowsSection(table);
+            // Row changes
+            if (this.getChangeSetLength(table.rows) > 0) {
+                html += this.renderChangeSet(table.rows, 'Row Changes', 'dt', `data-table-${tableName}`, `data-tbody-${tableName}`);
             }
 
             content.innerHTML = html;
 
-            // Initialize rendering for data tables
-            if (table.rows && table.rows.length > 0) {
-                if (table.rows.length > this.maxVisibleRows) {
+            // Initialize rendering for row data tables only
+            if (this.getChangeSetLength(table.rows) > 0) {
+                const changes = this.getChangeSetChanges(table.rows);
+                if (changes.length > this.maxVisibleRows) {
                     this.initVirtualScrolling(tableName, table.rows);
                 } else {
-                    // For smaller datasets, render all rows directly
                     this.renderAllDataRows(tableName, table.rows);
                 }
             }
@@ -138,10 +138,121 @@ class DatabaseReportRenderer {
         }
     }
 
-    renderColsSection(table) {
-        return this.renderChangesSection(table.cols, 'Column Changes', 'st');
+    // Helper functions for ChangeSet structure
+    getChangeSetLength(changeSet) {
+        if (!changeSet || !changeSet.changes) return 0;
+        const changes = Array.isArray(changeSet.changes) ? changeSet.changes : Array.from(changeSet.changes);
+        return changes.length;
     }
 
+    getChangeSetChanges(changeSet) {
+        if (!changeSet || !changeSet.changes) return [];
+        return Array.isArray(changeSet.changes) ? changeSet.changes : Array.from(changeSet.changes);
+    }
+
+    getChangeSetFields(changeSet) {
+        // Get all fields from headers WITHOUT sorting to maintain alignment
+        const fields = new Set();
+        const [newFields, oldFields] = changeSet.headers;
+        
+        if (newFields && Array.isArray(newFields)) {
+            newFields.forEach(field => fields.add(field));
+        }
+        if (oldFields && Array.isArray(oldFields)) {
+            oldFields.forEach(field => fields.add(field));
+        }
+        
+        // Return array WITHOUT sorting to maintain header alignment
+        return Array.from(fields);
+    }
+
+    renderChangeSet(changeSet, title, tableClass, tableId = null, tbodyId = null) {
+        const changes = this.getChangeSetChanges(changeSet);
+        const counters = this.countChangeTypes(changes);
+        const allFields = this.getChangeSetFields(changeSet);
+        
+        let html = `
+            <h4>${title}
+                ${counters.added > 0 ? 
+                  `<span class="cb a">Added</span> ${counters.added}` : ''}
+                ${counters.removed > 0 ? 
+                  `<span class="cb r">Removed</span> ${counters.removed}` : ''}
+                ${counters.modified > 0 ? 
+                  `<span class="cb m">Modified</span> ${counters.modified}` : ''}
+            </h4>
+            <div class="tct">
+                <table class="${tableClass}"${tableId ? ` id="${tableId}"` : ''}>
+                    <thead>
+                        <tr>
+                            ${allFields.map(field => `<th>${field}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody${tbodyId ? ` id="${tbodyId}" class="virtual-table"` : ''}>
+        `;
+
+        // For columns (no tbodyId), render inline. For rows (with tbodyId), render empty for virtual scrolling
+        if (!tbodyId) {
+            changes.forEach(change => {
+                const changeType = this.getChangeType(change);
+                const changeClass = changeType === 'added' ? 'ca' : 
+                                   changeType === 'removed' ? 'cr' : 'cm';
+                html += `<tr class="${changeClass}">${this.renderChangeRowFromChangeSet(change, changeSet, allFields)}</tr>`;
+            });
+        }
+
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        return html;
+    }
+
+    renderChangeRowFromChangeSet(change, changeSet, allFields) {
+        const changeType = this.getChangeType(change);
+        let html = '';
+
+        allFields.forEach(field => {
+            const [newValues, oldValues] = change;
+            const [newFields, oldFields] = changeSet.headers;
+            
+            let newVal, oldVal;
+            
+            if (changeType === 'added') {
+                const fieldIndex = newFields?.indexOf(field);
+                newVal = fieldIndex >= 0 ? newValues?.[fieldIndex] : null;
+                html += `<td title="${newVal || 'NULL'}">${this.formatValue(newVal)}</td>`;
+            } else if (changeType === 'removed') {
+                const fieldIndex = oldFields?.indexOf(field);
+                oldVal = fieldIndex >= 0 ? oldValues?.[fieldIndex] : null;
+                html += `<td title="${oldVal || 'NULL'}">${this.formatValue(oldVal)}</td>`;
+            } else {
+                const newFieldIndex = newFields?.indexOf(field);
+                const oldFieldIndex = oldFields?.indexOf(field);
+                newVal = newFieldIndex >= 0 ? newValues?.[newFieldIndex] : null;
+                oldVal = oldFieldIndex >= 0 ? oldValues?.[oldFieldIndex] : null;
+                
+                if (oldVal !== newVal) {
+                    html += `<td class="mc">
+                        <span class="ov" title="${oldVal || 'NULL'}">
+                            ${this.formatValue(oldVal)}
+                        </span>
+                        <span class="ar">→</span>
+                        <span class="nv" title="${newVal || 'NULL'}">
+                            ${this.formatValue(newVal)}
+                        </span>
+                    </td>`;
+                } else {
+                    html += `<td title="${newVal || 'NULL'}">
+                        ${this.formatValue(newVal)}
+                    </td>`;
+                }
+            }
+        });
+
+        return html;
+    }
 
     renderChangesSection(changes, title, tableClass) {
         const counters = this.countChangeTypes(changes);
@@ -250,7 +361,7 @@ class DatabaseReportRenderer {
         return html;
     }
 
-    renderAllDataRows(tableName, dataChanges) {
+    renderAllDataRows(tableName, changeSet) {
         try {
             const tbody = document.getElementById(`data-tbody-${tableName}`);
             if (!tbody) {
@@ -258,18 +369,19 @@ class DatabaseReportRenderer {
                 return;
             }
             
-            const allFields = this.getAllFields(dataChanges);
+            const changes = this.getChangeSetChanges(changeSet);
+            const allFields = this.getChangeSetFields(changeSet);
             
             // Clear any existing content
             tbody.innerHTML = '';
             
             // Render all rows directly (no virtual scrolling)
-            dataChanges.forEach(change => {
+            changes.forEach(change => {
                 const row = document.createElement('tr');
                 const changeType = this.getChangeType(change);
                 row.className = changeType === 'added' ? 'ca' : 
                                changeType === 'removed' ? 'cr' : 'cm';
-                row.innerHTML = this.renderChangeRow(change, allFields);
+                row.innerHTML = this.renderChangeRowFromChangeSet(change, changeSet, allFields);
                 tbody.appendChild(row);
             });
         } catch (error) {
@@ -277,7 +389,7 @@ class DatabaseReportRenderer {
         }
     }
 
-    initVirtualScrolling(tableName, dataChanges) {
+    initVirtualScrolling(tableName, changeSet) {
         try {
             const tbody = document.getElementById(`data-tbody-${tableName}`);
             if (!tbody) {
@@ -291,39 +403,42 @@ class DatabaseReportRenderer {
                 return;
             }
             
-            const allFields = this.getAllFields(dataChanges);
+            const changes = this.getChangeSetChanges(changeSet);
+            const allFields = this.getChangeSetFields(changeSet);
             
             // Set initial height
-            tbody.style.height = `${dataChanges.length * this.rowHeight}px`;
+            tbody.style.height = `${changes.length * this.rowHeight}px`;
             
             // Render initial visible rows
             this.renderVisibleRows(
-                tableName, dataChanges, allFields, 0, this.maxVisibleRows
+                tableName, changeSet, allFields, 0, this.maxVisibleRows
             );
             
             // Add scroll listener
             container.addEventListener('scroll', () => {
-                this.handleScroll(tableName, dataChanges, allFields, container);
+                this.handleScroll(tableName, changeSet, allFields, container);
             });
         } catch (error) {
             console.error(`Error initializing virtual scrolling for ${tableName}:`, error);
             // Fallback to rendering all rows
-            this.renderAllDataRows(tableName, dataChanges);
+            this.renderAllDataRows(tableName, changeSet);
         }
     }
 
-    handleScroll(tableName, dataChanges, allFields, container) {
+    handleScroll(tableName, changeSet, allFields, container) {
+        const changes = this.getChangeSetChanges(changeSet);
         const scrollTop = container.scrollTop;
         const startIndex = Math.floor(scrollTop / this.rowHeight);
-        const endIndex = Math.min(startIndex + this.maxVisibleRows, dataChanges.length);
+        const endIndex = Math.min(startIndex + this.maxVisibleRows, changes.length);
         
         this.renderVisibleRows(
-            tableName, dataChanges, allFields, startIndex, endIndex
+            tableName, changeSet, allFields, startIndex, endIndex
         );
     }
 
-    renderVisibleRows(tableName, dataChanges, allFields, startIndex, endIndex) {
+    renderVisibleRows(tableName, changeSet, allFields, startIndex, endIndex) {
         const tbody = document.getElementById(`data-tbody-${tableName}`);
+        const changes = this.getChangeSetChanges(changeSet);
         
         // Clear existing rows
         tbody.innerHTML = '';
@@ -338,20 +453,20 @@ class DatabaseReportRenderer {
         
         // Render visible rows
         for (let i = startIndex; i < endIndex; i++) {
-            const change = dataChanges[i];
+            const change = changes[i];
             const row = document.createElement('tr');
             row.className = 'virtual-row ' + 
                 (this.getChangeType(change) === 'added' ? 'ca' : 
                  this.getChangeType(change) === 'removed' ? 'cr' : 'cm');
-            row.innerHTML = this.renderChangeRow(change, allFields);
+            row.innerHTML = this.renderChangeRowFromChangeSet(change, changeSet, allFields);
             tbody.appendChild(row);
         }
         
         // Add spacer for content below
-        if (endIndex < dataChanges.length) {
+        if (endIndex < changes.length) {
             const spacer = document.createElement('tr');
             spacer.style.height = 
-                `${(dataChanges.length - endIndex) * this.rowHeight}px`;
+                `${(changes.length - endIndex) * this.rowHeight}px`;
             spacer.innerHTML = `<td colspan="${allFields.length}"></td>`;
             tbody.appendChild(spacer);
         }
