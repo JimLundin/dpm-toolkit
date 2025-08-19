@@ -30,13 +30,7 @@ class Inspector:
 
     def pks(self, name: str) -> Iterator[str]:
         """Get primary key column names for a table."""
-        with self.conn as conn:
-            cursor = conn.execute(
-                "SELECT name FROM pragma_table_info(?) WHERE pk",
-                (name,),
-            )
-
-            return (row["name"] for row in cursor)
+        return (col["name"] for col in self.cols(name) if col["pk"])
 
     def rows(self, name: str) -> Iterator[Row]:
         """Get all data from a table as list of dictionaries."""
