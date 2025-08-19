@@ -51,7 +51,7 @@ def render_report(comparisons: Iterable[Comparison]) -> TemplateStream:
     return template.stream(comparisons=comparisons)
 
 
-def table_difference(
+def table_diff(
     source: Inspector,
     target: Inspector,
 ) -> tuple[frozenset[str], frozenset[str], frozenset[str]]:
@@ -96,15 +96,12 @@ def row_key(row: Row, pk_cols: Iterable[str]) -> tuple[ValueType, ...]:
 
 def compare_rows(name: str, source: Inspector, target: Inspector) -> Iterator[Change]:
     """Compare table data and return row modifications, additions, and removals."""
-    source_rows = source.rows(name)
-    target_rows = target.rows(name)
-
     source_pks = tuple(source.pks(name))
     target_pks = tuple(target.pks(name))
 
     # This is a memory disaster
-    source_map = {row_key(row, source_pks): row for row in source_rows}
-    target_map = {row_key(row, target_pks): row for row in target_rows}
+    source_map = {row_key(row, source_pks): row for row in source.rows(name)}
+    target_map = {row_key(row, target_pks): row for row in target.rows(name)}
 
     return chain(
         (
@@ -149,7 +146,7 @@ def compare_databases(source: Connection, target: Connection) -> Iterator[Compar
     source_inspector = Inspector(source)
     target_inspector = Inspector(target)
 
-    added, removed, common = table_difference(source_inspector, target_inspector)
+    added, removed, common = table_diff(source_inspector, target_inspector)
 
     return chain(
         (common_table(name, source_inspector, target_inspector) for name in common),
