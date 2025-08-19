@@ -17,11 +17,15 @@ class Inspector:
         with self.conn as conn:
             cursor = conn.execute(
                 "SELECT name "
-                "FROM sqlite_master "
-                "WHERE type='table' AND name NOT LIKE 'sqlite_%' "
-                "ORDER BY name",
+                "FROM sqlite_schema "
+                "WHERE type='table' AND name NOT LIKE 'sqlite_%' ",
             )
             return (row["name"] for row in cursor)
+
+    def rows(self, name: str) -> Iterator[Row]:
+        """Return all rows from the specified table, ordered by primary key."""
+        with self.conn as conn:
+            return conn.execute(f"SELECT * FROM `{name}`")  # noqa: S608
 
     def cols(self, name: str) -> Iterator[Row]:
         """Return column metadata for the specified table."""
@@ -31,8 +35,3 @@ class Inspector:
     def pks(self, name: str) -> Iterator[str]:
         """Return primary key column names for the specified table."""
         return (col["name"] for col in self.cols(name) if col["pk"])
-
-    def rows(self, name: str) -> Iterator[Row]:
-        """Return all rows from the specified table, ordered by primary key."""
-        with self.conn as conn:
-            return conn.execute(f"SELECT * FROM `{name}`")  # noqa: S608
