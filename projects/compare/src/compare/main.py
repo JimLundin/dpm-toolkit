@@ -10,7 +10,7 @@ from typing import Any
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from jinja2.environment import TemplateStream
 
-from compare.inspector import Inspector
+from compare.inspector import TABLE_INFO_COLS, Inspector
 from compare.types import (
     Change,
     ChangeSet,
@@ -20,15 +20,6 @@ from compare.types import (
 )
 
 TEMPLATE_DIR = Path(__file__).parent / "templates"
-
-TABLE_INFO_COLS = (
-    "cid",
-    "name",
-    "type",
-    "notnull",
-    "dflt_value",
-    "pk",
-)
 
 
 def encoder(obj: object) -> tuple[Any, ...]:
@@ -97,10 +88,10 @@ def compare_cols(source: Iterable[Row], target: Iterable[Row]) -> Iterator[Chang
     )
 
 
-def row_key(row: Row, pk_cols: Iterable[str]) -> tuple[ValueType, ...]:
+def row_key(row: Row, pks: Iterable[str]) -> tuple[ValueType, ...]:
     """Create a unique key for a row, preferring RowGUID over primary key columns."""
     guid = row["RowGUID"] if "RowGUID" in row.keys() else None  # noqa: SIM118
-    return (guid,) if guid else tuple(row[pk] for pk in pk_cols) or tuple(row)
+    return (guid,) if guid else tuple(row[pk] for pk in pks) or tuple(row)
 
 
 def compare_rows(name: str, source: Inspector, target: Inspector) -> Iterator[Change]:
