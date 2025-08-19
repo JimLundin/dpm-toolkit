@@ -138,228 +138,90 @@ class DatabaseReportRenderer {
         }
     }
 
-    // Helper functions for ChangeSet structure
+    // ChangeSet helper functions
     getChangeSetLength(changeSet) {
-        if (!changeSet || !changeSet.changes) return 0;
+        if (!changeSet?.changes) return 0;
         const changes = Array.isArray(changeSet.changes) ? changeSet.changes : Array.from(changeSet.changes);
         return changes.length;
     }
 
     getChangeSetChanges(changeSet) {
-        if (!changeSet || !changeSet.changes) return [];
+        if (!changeSet?.changes) return [];
         return Array.isArray(changeSet.changes) ? changeSet.changes : Array.from(changeSet.changes);
     }
 
     getChangeSetFields(changeSet) {
-        // Get all fields from headers WITHOUT sorting to maintain alignment
         const fields = new Set();
         const [newFields, oldFields] = changeSet.headers;
         
-        if (newFields && Array.isArray(newFields)) {
-            newFields.forEach(field => fields.add(field));
-        }
-        if (oldFields && Array.isArray(oldFields)) {
-            oldFields.forEach(field => fields.add(field));
-        }
+        if (newFields) newFields.forEach(field => fields.add(field));
+        if (oldFields) oldFields.forEach(field => fields.add(field));
         
-        // Return array WITHOUT sorting to maintain header alignment
-        return Array.from(fields);
+        return Array.from(fields); // Maintain order for header alignment
     }
 
     renderChangeSet(changeSet, title, tableClass, tableId = null, tbodyId = null) {
         const changes = this.getChangeSetChanges(changeSet);
         const counters = this.countChangeTypes(changes);
-        const allFields = this.getChangeSetFields(changeSet);
+        const fields = this.getChangeSetFields(changeSet);
         
+        const badges = ['added', 'removed', 'modified']
+            .filter(type => counters[type] > 0)
+            .map(type => `<span class="cb ${type[0]}">${type.charAt(0).toUpperCase() + type.slice(1)}</span> ${counters[type]}`)
+            .join(' ');
+
         let html = `
-            <h4>${title}
-                ${counters.added > 0 ? 
-                  `<span class="cb a">Added</span> ${counters.added}` : ''}
-                ${counters.removed > 0 ? 
-                  `<span class="cb r">Removed</span> ${counters.removed}` : ''}
-                ${counters.modified > 0 ? 
-                  `<span class="cb m">Modified</span> ${counters.modified}` : ''}
-            </h4>
+            <h4>${title} ${badges}</h4>
             <div class="tct">
                 <table class="${tableClass}"${tableId ? ` id="${tableId}"` : ''}>
                     <thead>
-                        <tr>
-                            ${allFields.map(field => `<th>${field}</th>`).join('')}
-                        </tr>
+                        <tr>${fields.map(field => `<th>${field}</th>`).join('')}</tr>
                     </thead>
                     <tbody${tbodyId ? ` id="${tbodyId}" class="virtual-table"` : ''}>
         `;
 
-        // For columns (no tbodyId), render inline. For rows (with tbodyId), render empty for virtual scrolling
+        // Render inline for columns, empty for rows (virtual scrolling)
         if (!tbodyId) {
             changes.forEach(change => {
                 const changeType = this.getChangeType(change);
-                const changeClass = changeType === 'added' ? 'ca' : 
-                                   changeType === 'removed' ? 'cr' : 'cm';
-                html += `<tr class="${changeClass}">${this.renderChangeRowFromChangeSet(change, changeSet, allFields)}</tr>`;
+                const changeClass = changeType === 'added' ? 'ca' : changeType === 'removed' ? 'cr' : 'cm';
+                html += `<tr class="${changeClass}">${this.renderChangeRowFromChangeSet(change, changeSet, fields)}</tr>`;
             });
         }
 
-        html += `
-                    </tbody>
-                </table>
-            </div>
-        `;
-
-        return html;
+        return html + '</tbody></table></div>';
     }
 
-    renderChangeRowFromChangeSet(change, changeSet, allFields) {
+    renderChangeRowFromChangeSet(change, changeSet, fields) {
         const changeType = this.getChangeType(change);
-        let html = '';
+        const [newValues, oldValues] = change;
+        const [newFields, oldFields] = changeSet.headers;
 
-        allFields.forEach(field => {
-            const [newValues, oldValues] = change;
-            const [newFields, oldFields] = changeSet.headers;
-            
-            let newVal, oldVal;
-            
+        return fields.map(field => {
             if (changeType === 'added') {
-                const fieldIndex = newFields?.indexOf(field);
-                newVal = fieldIndex >= 0 ? newValues?.[fieldIndex] : null;
-                html += `<td title="${newVal || 'NULL'}">${this.formatValue(newVal)}</td>`;
+                const val = newFields ? newValues?.[newFields.indexOf(field)] : null;
+                return `<td title="${val || 'NULL'}">${this.formatValue(val)}</td>`;
             } else if (changeType === 'removed') {
-                const fieldIndex = oldFields?.indexOf(field);
-                oldVal = fieldIndex >= 0 ? oldValues?.[fieldIndex] : null;
-                html += `<td title="${oldVal || 'NULL'}">${this.formatValue(oldVal)}</td>`;
+                const val = oldFields ? oldValues?.[oldFields.indexOf(field)] : null;
+                return `<td title="${val || 'NULL'}">${this.formatValue(val)}</td>`;
             } else {
-                const newFieldIndex = newFields?.indexOf(field);
-                const oldFieldIndex = oldFields?.indexOf(field);
-                newVal = newFieldIndex >= 0 ? newValues?.[newFieldIndex] : null;
-                oldVal = oldFieldIndex >= 0 ? oldValues?.[oldFieldIndex] : null;
+                const newVal = newFields ? newValues?.[newFields.indexOf(field)] : null;
+                const oldVal = oldFields ? oldValues?.[oldFields.indexOf(field)] : null;
                 
                 if (oldVal !== newVal) {
-                    html += `<td class="mc">
-                        <span class="ov" title="${oldVal || 'NULL'}">
-                            ${this.formatValue(oldVal)}
-                        </span>
+                    return `<td class="mc">
+                        <span class="ov" title="${oldVal || 'NULL'}">${this.formatValue(oldVal)}</span>
                         <span class="ar">→</span>
-                        <span class="nv" title="${newVal || 'NULL'}">
-                            ${this.formatValue(newVal)}
-                        </span>
-                    </td>`;
-                } else {
-                    html += `<td title="${newVal || 'NULL'}">
-                        ${this.formatValue(newVal)}
+                        <span class="nv" title="${newVal || 'NULL'}">${this.formatValue(newVal)}</span>
                     </td>`;
                 }
+                return `<td title="${newVal || 'NULL'}">${this.formatValue(newVal)}</td>`;
             }
-        });
-
-        return html;
+        }).join('');
     }
 
-    renderChangesSection(changes, title, tableClass) {
-        const counters = this.countChangeTypes(changes);
-        const allFields = this.getAllFields(changes);
-        
-        let html = `
-            <h4>${title}
-                ${counters.added > 0 ? 
-                  `<span class="cb a">Added</span> ${counters.added}` : ''}
-                ${counters.removed > 0 ? 
-                  `<span class="cb r">Removed</span> ${counters.removed}` : ''}
-                ${counters.modified > 0 ? 
-                  `<span class="cb m">Modified</span> ${counters.modified}` : ''}
-            </h4>
-            <div class="tct">
-                <table class="${tableClass}">
-                    <thead>
-                        <tr>
-                            ${allFields.map(field => `<th>${field}</th>`).join('')}
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
 
-        changes.forEach(change => {
-            const changeType = this.getChangeType(change);
-            const changeClass = changeType === 'added' ? 'ca' : 
-                               changeType === 'removed' ? 'cr' : 'cm';
-            html += `<tr class="${changeClass}">${this.renderChangeRow(change, allFields)}</tr>`;
-        });
 
-        html += `
-                    </tbody>
-                </table>
-            </div>
-        `;
-
-        return html;
-    }
-
-    renderChangeRow(change, allFields) {
-        const changeType = this.getChangeType(change);
-        let html = '';
-
-        allFields.forEach(field => {
-            // Tuple structure: [new, old] where SQLite Row objects are serialized as dictionaries
-            const [newVal, oldVal] = change;
-            
-            if (changeType === 'added') {
-                const val = newVal?.[field];
-                html += `<td title="${val || 'NULL'}">${this.formatValue(val)}</td>`;
-            } else if (changeType === 'removed') {
-                const val = oldVal?.[field];
-                html += `<td title="${val || 'NULL'}">${this.formatValue(val)}</td>`;
-            } else {
-                const oldFieldVal = oldVal?.[field];
-                const newFieldVal = newVal?.[field];
-                if (oldFieldVal !== newFieldVal) {
-                    html += `<td class="mc">
-                        <span class="ov" title="${oldFieldVal || 'NULL'}">
-                            ${this.formatValue(oldFieldVal)}
-                        </span>
-                        <span class="ar">→</span>
-                        <span class="nv" title="${newFieldVal || 'NULL'}">
-                            ${this.formatValue(newFieldVal)}
-                        </span>
-                    </td>`;
-                } else {
-                    html += `<td title="${newFieldVal || 'NULL'}">
-                        ${this.formatValue(newFieldVal)}
-                    </td>`;
-                }
-            }
-        });
-
-        return html;
-    }
-
-    renderRowsSection(table) {
-        const changes = table.rows;
-        const allFields = this.getAllFields(changes);
-        const counters = this.countChangeTypes(changes);
-        
-        let html = `
-            <h4>Row Changes
-                ${counters.added > 0 ? 
-                  `<span class="cb a">Added</span> ${counters.added}` : ''}
-                ${counters.removed > 0 ? 
-                  `<span class="cb r">Removed</span> ${counters.removed}` : ''}
-                ${counters.modified > 0 ? 
-                  `<span class="cb m">Modified</span> ${counters.modified}` : ''}
-            </h4>
-            <div class="tct">
-                <table class="dt" id="data-table-${table.name}">
-                    <thead>
-                        <tr>
-                            ${allFields.map(field => `<th>${field}</th>`).join('')}
-                        </tr>
-                    </thead>
-                    <tbody id="data-tbody-${table.name}" class="virtual-table">
-                    </tbody>
-                </table>
-            </div>
-        `;
-
-        return html;
-    }
 
     renderAllDataRows(tableName, changeSet) {
         try {
@@ -472,25 +334,8 @@ class DatabaseReportRenderer {
         }
     }
 
-    renderDataRowContent(change, allFields) {
-        return this.renderChangeRow(change, allFields);
-    }
 
 
-    getAllFields(changes) {
-        const fields = new Set();
-        changes.forEach(change => {
-            // Tuple structure: [new, old] where SQLite Row objects are serialized as dictionaries
-            const [newVal, oldVal] = change;
-            if (newVal && typeof newVal === 'object') {
-                Object.keys(newVal).forEach(field => fields.add(field));
-            }
-            if (oldVal && typeof oldVal === 'object') {
-                Object.keys(oldVal).forEach(field => fields.add(field));
-            }
-        });
-        return Array.from(fields);
-    }
 
     countChangeTypes(changes) {
         return changes.reduce((counts, change) => {
