@@ -12,8 +12,8 @@ from jinja2.environment import TemplateStream
 
 from compare.inspector import Inspector
 from compare.types import (
+    Change,
     Comparison,
-    Mod,
     ValueType,
 )
 
@@ -66,23 +66,23 @@ def table_difference(
     return added, removed, common
 
 
-def compare_cols(source: Iterable[Row], target: Iterable[Row]) -> Iterator[Mod]:
+def compare_cols(source: Iterable[Row], target: Iterable[Row]) -> Iterator[Change]:
     """Compare column definitions and return modifications, additions, and removals."""
     source_cols = {col["name"]: col for col in source}
     target_cols = {col["name"]: col for col in target}
 
     return chain(
         (
-            Mod(target_cols[name], source_cols[name])
+            Change(target_cols[name], source_cols[name])
             for name in source_cols.keys() & target_cols.keys()
             if source_cols[name] != target_cols[name]
         ),
         (
-            Mod(new=target_cols[name])
+            Change(new=target_cols[name])
             for name in target_cols.keys() - source_cols.keys()
         ),
         (
-            Mod(old=source_cols[name])
+            Change(old=source_cols[name])
             for name in source_cols.keys() - target_cols.keys()
         ),
     )
@@ -94,7 +94,7 @@ def row_key(row: Row, pk_cols: Iterable[str]) -> tuple[ValueType, ...]:
     return (guid,) if guid else tuple(row[pk] for pk in pk_cols) or tuple(row)
 
 
-def compare_rows(name: str, source: Inspector, target: Inspector) -> Iterator[Mod]:
+def compare_rows(name: str, source: Inspector, target: Inspector) -> Iterator[Change]:
     """Compare table data and return row modifications, additions, and removals."""
     source_rows = source.rows(name)
     target_rows = target.rows(name)
@@ -108,12 +108,12 @@ def compare_rows(name: str, source: Inspector, target: Inspector) -> Iterator[Mo
 
     return chain(
         (
-            Mod(target_map[key], source_map[key])
+            Change(target_map[key], source_map[key])
             for key in source_map.keys() & target_map.keys()
             if source_map[key] != target_map[key]
         ),
-        (Mod(new=target_map[key]) for key in target_map.keys() - source_map.keys()),
-        (Mod(old=source_map[key]) for key in source_map.keys() - target_map.keys()),
+        (Change(new=target_map[key]) for key in target_map.keys() - source_map.keys()),
+        (Change(old=source_map[key]) for key in source_map.keys() - target_map.keys()),
     )
 
 
@@ -130,8 +130,8 @@ def added_table(name: str, target: Inspector) -> Comparison:
     """Handle a table that was added to the target database."""
     return Comparison(
         name=name,
-        cols=(Mod(new=col) for col in target.cols(name)),
-        rows=(Mod(new=row) for row in target.rows(name)),
+        cols=(Change(new=col) for col in target.cols(name)),
+        rows=(Change(new=row) for row in target.rows(name)),
     )
 
 
@@ -139,8 +139,8 @@ def removed_table(name: str, source: Inspector) -> Comparison:
     """Handle a table that was removed from the source database."""
     return Comparison(
         name=name,
-        cols=(Mod(old=col) for col in source.cols(name)),
-        rows=(Mod(old=row) for row in source.rows(name)),
+        cols=(Change(old=col) for col in source.cols(name)),
+        rows=(Change(old=row) for row in source.rows(name)),
     )
 
 

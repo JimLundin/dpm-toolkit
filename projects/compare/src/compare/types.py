@@ -7,7 +7,7 @@ from typing import NamedTuple, ReadOnly, TypedDict
 ValueType = str | int | float | None
 
 
-class Mod(NamedTuple):
+class Change(NamedTuple):
     """Information about a modified row."""
 
     new: Row | None = None
@@ -18,5 +18,5 @@ class Comparison(TypedDict):
     """Complete comparison result for a table."""
 
     name: ReadOnly[str]
-    cols: ReadOnly[Iterable[Mod]]
-    rows: ReadOnly[Iterable[Mod]]
+    cols: ReadOnly[Iterable[Change]]
+    rows: ReadOnly[Iterable[Change]]
