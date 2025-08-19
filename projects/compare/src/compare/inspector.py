@@ -8,12 +8,12 @@ class Inspector:
     """Inspects SQLite databases to extract complete schema and data information."""
 
     def __init__(self, db: Connection) -> None:
-        """Initialize inspector for a database file."""
+        """Initialize inspector with a database connection."""
         self.conn = db
-        self.conn.row_factory = Row  # Enable named access to columns
+        self.conn.row_factory = Row
 
     def tables(self) -> Iterator[str]:
-        """Get all table names in the database."""
+        """Return all user table names, excluding system tables."""
         with self.conn as conn:
             cursor = conn.execute(
                 "SELECT name "
@@ -24,16 +24,16 @@ class Inspector:
             return (row["name"] for row in cursor)
 
     def cols(self, name: str) -> Iterator[Row]:
-        """Get complete column information for a table."""
+        """Return column metadata for the specified table."""
         with self.conn as conn:
             return conn.execute("SELECT * FROM pragma_table_info(?)", (name,))
 
     def pks(self, name: str) -> Iterator[str]:
-        """Get primary key column names for a table."""
+        """Return primary key column names for the specified table."""
         return (col["name"] for col in self.cols(name) if col["pk"])
 
     def rows(self, name: str) -> Iterator[Row]:
-        """Get all data from a table as list of dictionaries."""
+        """Return all rows from the specified table, ordered by primary key."""
         with self.conn as conn:
             pk_cols = self.pks(name)
             order = ", ".join(f"`{col}`" for col in pk_cols) or "rowid"
