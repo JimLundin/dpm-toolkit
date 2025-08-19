@@ -3,6 +3,8 @@
 from collections.abc import Iterator
 from sqlite3 import Connection, Row
 
+TABLE_INFO_COLS = ("cid", "name", "type", "notnull", "dflt_value", "pk")
+
 
 class Inspector:
     """Inspects SQLite databases to extract complete schema and data information."""
