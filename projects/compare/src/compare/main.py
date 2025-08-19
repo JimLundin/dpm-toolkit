@@ -13,17 +13,26 @@ from jinja2.environment import TemplateStream
 from compare.inspector import Inspector
 from compare.types import (
     Change,
+    ChangeSet,
     Comparison,
+    Header,
     ValueType,
 )
 
 TEMPLATE_DIR = Path(__file__).parent / "templates"
 
+TABLE_INFO_COLS = (
+    "cid",
+    "name",
+    "type",
+    "notnull",
+    "dflt_value",
+    "pk",
+)
 
-def encoder(obj: object) -> dict[str, str] | tuple[Any, ...]:
+
+def encoder(obj: object) -> tuple[Any, ...]:
     """Convert sqlite3.Row to a regular dict for JSON serialization."""
-    if isinstance(obj, Row):
-        return dict(obj)
     if isinstance(obj, Iterable):
         return tuple(
             obj,  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType]
@@ -118,8 +127,17 @@ def common_table(name: str, source: Inspector, target: Inspector) -> Comparison:
     """Compare a table that exists in both databases."""
     return Comparison(
         name=name,
-        cols=compare_cols(source.cols(name), target.cols(name)),
-        rows=compare_rows(name, source, target),
+        cols=ChangeSet(
+            headers=Header(TABLE_INFO_COLS, TABLE_INFO_COLS),
+            changes=(compare_cols(source.cols(name), target.cols(name))),
+        ),
+        rows=ChangeSet(
+            headers=Header(
+                (col["name"] for col in target.cols(name)),
+                (col["name"] for col in source.cols(name)),
+            ),
+            changes=compare_rows(name, source, target),
+        ),
     )
 
 
@@ -127,8 +145,14 @@ def added_table(name: str, target: Inspector) -> Comparison:
     """Handle a table that was added to the target database."""
     return Comparison(
         name=name,
-        cols=(Change(new=col) for col in target.cols(name)),
-        rows=(Change(new=row) for row in target.rows(name)),
+        cols=ChangeSet(
+            headers=Header(new=TABLE_INFO_COLS),
+            changes=(Change(new=col) for col in target.cols(name)),
+        ),
+        rows=ChangeSet(
+            headers=Header(new=(col["name"] for col in target.cols(name))),
+            changes=(Change(new=row) for row in target.rows(name)),
+        ),
     )
 
 
@@ -136,8 +160,14 @@ def removed_table(name: str, source: Inspector) -> Comparison:
     """Handle a table that was removed from the source database."""
     return Comparison(
         name=name,
-        cols=(Change(old=col) for col in source.cols(name)),
-        rows=(Change(old=row) for row in source.rows(name)),
+        cols=ChangeSet(
+            headers=Header(old=TABLE_INFO_COLS),
+            changes=(Change(old=col) for col in source.cols(name)),
+        ),
+        rows=ChangeSet(
+            headers=Header(old=(col["name"] for col in source.cols(name))),
+            changes=(Change(old=row) for row in source.rows(name)),
+        ),
     )
 
 
