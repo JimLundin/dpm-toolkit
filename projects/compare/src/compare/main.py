@@ -55,7 +55,7 @@ def table_difference(
     source: Inspector,
     target: Inspector,
 ) -> tuple[frozenset[str], frozenset[str], frozenset[str]]:
-    """Get table lists: added, removed, common."""
+    """Return sets of added, removed, and common table names between databases."""
     source_tables = frozenset(source.tables())
     target_tables = frozenset(target.tables())
 
@@ -67,12 +67,10 @@ def table_difference(
 
 
 def compare_cols(source: Iterable[Row], target: Iterable[Row]) -> Iterator[Mod]:
-    """Compare column definitions between two tables."""
-    # Create lookup dictionaries
+    """Compare column definitions and return modifications, additions, and removals."""
     source_cols = {col["name"]: col for col in source}
     target_cols = {col["name"]: col for col in target}
 
-    # Find modified, added, and removed columns
     return chain(
         (
             Mod(target_cols[name], source_cols[name])
@@ -91,22 +89,19 @@ def compare_cols(source: Iterable[Row], target: Iterable[Row]) -> Iterator[Mod]:
 
 
 def row_key(row: Row, pk_cols: Iterable[str]) -> tuple[ValueType, ...]:
-    """Create a unique key for a row based on primary key columns."""
+    """Create a unique key for a row, preferring RowGUID over primary key columns."""
     guid = row["RowGUID"] if "RowGUID" in row.keys() else None  # noqa: SIM118
     return (guid,) if guid else tuple(row[pk] for pk in pk_cols) or tuple(row)
 
 
 def compare_rows(name: str, source: Inspector, target: Inspector) -> Iterator[Mod]:
-    """Compare all data in a table between source and target databases."""
-    # Get all data from both tables
+    """Compare table data and return row modifications, additions, and removals."""
     source_rows = source.rows(name)
     target_rows = target.rows(name)
 
-    # Get primary key columns
     source_pks = tuple(source.pks(name))
     target_pks = tuple(target.pks(name))
 
-    # Create row lookup dictionaries
     source_map = {row_key(row, source_pks): row for row in source_rows}
     target_map = {row_key(row, target_pks): row for row in target_rows}
 
