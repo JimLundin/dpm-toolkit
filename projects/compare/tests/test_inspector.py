@@ -193,209 +193,220 @@ def create_composite_pk_db() -> Iterator[Connection]:
     conn.close()
 
 
-class TestInspector:
-    """Test cases for the Inspector class."""
+def test_init_sets_row_factory(simple_db: Connection) -> None:
+    """Test that Inspector sets row_factory correctly."""
+    inspector = Inspector(simple_db)
+    assert inspector.conn.row_factory is Row
 
-    def test_init_sets_row_factory(self, simple_db: Connection) -> None:
-        """Test that Inspector sets row_factory correctly."""
-        inspector = Inspector(simple_db)
-        assert inspector.conn.row_factory is Row
 
-    def test_tables_returns_user_tables(self, simple_db: Connection) -> None:
-        """Test that tables() returns all user tables."""
-        inspector = Inspector(simple_db)
-        tables = list(inspector.tables())
+def test_tables_returns_user_tables(simple_db: Connection) -> None:
+    """Test that tables() returns all user tables."""
+    inspector = Inspector(simple_db)
+    tables = list(inspector.tables())
 
-        assert set(tables) == {"users", "posts", "tags"}
+    assert set(tables) == {"users", "posts", "tags"}
 
-    def test_tables_empty_database(self, empty_db: Connection) -> None:
-        """Test tables() with empty database."""
-        inspector = Inspector(empty_db)
-        tables = list(inspector.tables())
 
-        assert not tables
+def test_tables_empty_database(empty_db: Connection) -> None:
+    """Test tables() with empty database."""
+    inspector = Inspector(empty_db)
+    tables = list(inspector.tables())
 
-    def test_tables_excludes_system_tables(self, system_tables_db: Connection) -> None:
-        """Test that tables() includes user tables with sqlite-like names."""
-        inspector = Inspector(system_tables_db)
-        tables = list(inspector.tables())
+    assert not tables
 
-        # Should include both tables (neither starts with sqlite_)
-        assert set(tables) == {"user_data", "my_sqlite_logs"}
 
-    def test_tables_excludes_real_system_tables(self, simple_db: Connection) -> None:
-        """Test that tables() excludes actual sqlite_ system tables."""
-        inspector = Inspector(simple_db)
-        tables = list(inspector.tables())
+def test_tables_excludes_system_tables(system_tables_db: Connection) -> None:
+    """Test that tables() includes user tables with sqlite-like names."""
+    inspector = Inspector(system_tables_db)
+    tables = list(inspector.tables())
 
-        # Should not include any system tables (sqlite_master, sqlite_sequence, etc.)
-        for table in tables:
-            assert not table.startswith("sqlite_")
+    # Should include both tables (neither starts with sqlite_)
+    assert set(tables) == {"user_data", "my_sqlite_logs"}
 
-        # Should only have our user tables
-        assert set(tables) == {"users", "posts", "tags"}
 
-    def test_cols_returns_column_info(self, simple_db: Connection) -> None:
-        """Test that cols() returns correct column metadata."""
-        inspector = Inspector(simple_db)
-        cols = list(inspector.cols("users"))
+def test_tables_excludes_real_system_tables(simple_db: Connection) -> None:
+    """Test that tables() excludes actual sqlite_ system tables."""
+    inspector = Inspector(simple_db)
+    tables = list(inspector.tables())
 
-        # Should have 4 columns
-        assert len(cols) == 4
+    # Should not include any system tables (sqlite_master, sqlite_sequence, etc.)
+    for table in tables:
+        assert not table.startswith("sqlite_")
 
-        # Check column names
-        col_names = [col["name"] for col in cols]
-        assert col_names == ["id", "name", "email", "age"]
+    # Should only have our user tables
+    assert set(tables) == {"users", "posts", "tags"}
 
-        # Check primary key
-        pk_cols = [col for col in cols if col["pk"]]
-        assert len(pk_cols) == 1
-        assert pk_cols[0]["name"] == "id"
 
-        # Check not null constraint
-        notnull_cols = [col["name"] for col in cols if col["notnull"]]
-        assert "name" in notnull_cols
+def test_cols_returns_column_info(simple_db: Connection) -> None:
+    """Test that cols() returns correct column metadata."""
+    inspector = Inspector(simple_db)
+    cols = list(inspector.cols("users"))
 
-    def test_cols_nonexistent_table(self, simple_db: Connection) -> None:
-        """Test cols() with nonexistent table."""
-        inspector = Inspector(simple_db)
-        cols = list(inspector.cols("nonexistent"))
+    # Should have 4 columns
+    assert len(cols) == 4
 
-        assert not cols
+    # Check column names
+    col_names = [col["name"] for col in cols]
+    assert col_names == ["id", "name", "email", "age"]
 
-    def test_pks_single_primary_key(self, simple_db: Connection) -> None:
-        """Test pks() with single primary key."""
-        inspector = Inspector(simple_db)
-        pks = list(inspector.pks("users"))
+    # Check primary key
+    pk_cols = [col for col in cols if col["pk"]]
+    assert len(pk_cols) == 1
+    assert pk_cols[0]["name"] == "id"
 
-        assert pks == ["id"]
+    # Check not null constraint
+    notnull_cols = [col["name"] for col in cols if col["notnull"]]
+    assert "name" in notnull_cols
 
-    def test_pks_text_primary_key(self, simple_db: Connection) -> None:
-        """Test pks() with text primary key."""
-        inspector = Inspector(simple_db)
-        pks = list(inspector.pks("tags"))
 
-        assert pks == ["name"]
+def test_cols_nonexistent_table(simple_db: Connection) -> None:
+    """Test cols() with nonexistent table."""
+    inspector = Inspector(simple_db)
+    cols = list(inspector.cols("nonexistent"))
 
-    def test_pks_no_primary_key(self, no_pk_db: Connection) -> None:
-        """Test pks() with table that has no primary key."""
-        inspector = Inspector(no_pk_db)
-        pks = list(inspector.pks("logs"))
+    assert not cols
 
-        assert not pks
 
-    def test_rows_returns_data(self, simple_db: Connection) -> None:
-        """Test that rows() returns table data."""
-        inspector = Inspector(simple_db)
-        rows = list(inspector.rows("users"))
+def test_pks_single_primary_key(simple_db: Connection) -> None:
+    """Test pks() with single primary key."""
+    inspector = Inspector(simple_db)
+    pks = list(inspector.pks("users"))
 
-        assert len(rows) == 2
+    assert pks == ["id"]
 
-        # Check first row
-        assert rows[0]["name"] == "Alice"
-        assert rows[0]["email"] == "alice@example.com"
-        assert rows[0]["age"] == 30
 
-        # Check second row
-        assert rows[1]["name"] == "Bob"
-        assert rows[1]["email"] == "bob@example.com"
-        assert rows[1]["age"] == 25
+def test_pks_text_primary_key(simple_db: Connection) -> None:
+    """Test pks() with text primary key."""
+    inspector = Inspector(simple_db)
+    pks = list(inspector.pks("tags"))
 
-    def test_rows_empty_table(self, simple_db: Connection) -> None:
-        """Test rows() with empty table."""
-        # Create empty table
-        simple_db.execute("CREATE TABLE empty_table (id INTEGER PRIMARY KEY)")
-        simple_db.commit()
+    assert pks == ["name"]
 
-        inspector = Inspector(simple_db)
-        rows = list(inspector.rows("empty_table"))
 
-        assert not rows
+def test_pks_no_primary_key(no_pk_db: Connection) -> None:
+    """Test pks() with table that has no primary key."""
+    inspector = Inspector(no_pk_db)
+    pks = list(inspector.pks("logs"))
 
-    def test_rows_nonexistent_table(self, simple_db: Connection) -> None:
-        """Test rows() with nonexistent table raises exception."""
-        inspector = Inspector(simple_db)
+    assert not pks
 
-        with pytest.raises(OperationalError):
-            list(inspector.rows("nonexistent"))
 
-    def test_rows_with_sql_injection_attempt(self, simple_db: Connection) -> None:
-        """Test that rows() handles table names safely."""
-        inspector = Inspector(simple_db)
+def test_rows_returns_data(simple_db: Connection) -> None:
+    """Test that rows() returns table data."""
+    inspector = Inspector(simple_db)
+    rows = list(inspector.rows("users"))
 
-        # This should raise an error, not execute malicious SQL
-        with pytest.raises(OperationalError):
-            list(inspector.rows("users; DROP TABLE users; --"))
+    assert len(rows) == 2
 
-    def test_multiple_operations_on_same_connection(
-        self,
-        simple_db: Connection,
-    ) -> None:
-        """Test that multiple operations work correctly on the same connection."""
-        inspector = Inspector(simple_db)
+    # Check first row
+    assert rows[0]["name"] == "Alice"
+    assert rows[0]["email"] == "alice@example.com"
+    assert rows[0]["age"] == 30
 
-        # Multiple calls should work
-        tables1 = list(inspector.tables())
-        tables2 = list(inspector.tables())
-        assert tables1 == tables2
+    # Check second row
+    assert rows[1]["name"] == "Bob"
+    assert rows[1]["email"] == "bob@example.com"
+    assert rows[1]["age"] == 25
 
-        # Mixed operations
-        cols = list(inspector.cols("users"))
-        rows = list(inspector.rows("users"))
-        pks = list(inspector.pks("users"))
 
-        assert len(cols) == 4
-        assert len(rows) == 2
-        assert pks == ["id"]
+def test_rows_empty_table(simple_db: Connection) -> None:
+    """Test rows() with empty table."""
+    # Create empty table
+    simple_db.execute("CREATE TABLE empty_table (id INTEGER PRIMARY KEY)")
+    simple_db.commit()
 
-    def test_row_factory_provides_dict_access(self, simple_db: Connection) -> None:
-        """Test that Row objects provide dict-like access."""
-        inspector = Inspector(simple_db)
-        rows = list(inspector.rows("users"))
+    inspector = Inspector(simple_db)
+    rows = list(inspector.rows("empty_table"))
 
-        # Should be able to access by column name
-        row = rows[0]
-        assert "name" in row.keys()  # noqa: SIM118
-        assert row["name"] == "Alice"
+    assert not rows
 
-        # Should be able to iterate over keys
-        keys = list(row.keys())
-        assert "id" in keys
-        assert "name" in keys
-        assert "email" in keys
-        assert "age" in keys
 
-    def test_rowguid_column_detection(self, rowguid_db: Connection) -> None:
-        """Test detection of RowGUID columns (critical for DPM databases)."""
-        inspector = Inspector(rowguid_db)
-        rows = list(inspector.rows("entities"))
+def test_rows_nonexistent_table(simple_db: Connection) -> None:
+    """Test rows() with nonexistent table raises exception."""
+    inspector = Inspector(simple_db)
 
-        # Verify RowGUID column exists and is accessible
-        assert len(rows) == 2
+    with pytest.raises(OperationalError):
+        list(inspector.rows("nonexistent"))
 
-        row = rows[0]
-        assert "RowGUID" in row.keys()  # noqa: SIM118
-        assert row["RowGUID"] == "guid-001"
 
-        # Verify we can access RowGUID from any row
-        for test_row in rows:
-            assert test_row["RowGUID"] is not None
-            assert isinstance(test_row["RowGUID"], str)
-            assert test_row["RowGUID"].startswith("guid-")
+def test_rows_with_sql_injection_attempt(simple_db: Connection) -> None:
+    """Test that rows() handles table names safely."""
+    inspector = Inspector(simple_db)
 
-    def test_composite_primary_keys(self, composite_pk_db: Connection) -> None:
-        """Test tables with composite primary keys."""
-        inspector = Inspector(composite_pk_db)
-        pks = list(inspector.pks("mappings"))
+    # This should raise an error, not execute malicious SQL
+    with pytest.raises(OperationalError):
+        list(inspector.rows("users; DROP TABLE users; --"))
 
-        # Should return all primary key columns in order
-        assert pks == ["source_id", "target_id", "mapping_type"]
 
-        # Verify we can access all PK columns from rows
-        rows = list(inspector.rows("mappings"))
-        assert len(rows) == 3
+def test_multiple_operations_on_same_connection(simple_db: Connection) -> None:
+    """Test that multiple operations work correctly on the same connection."""
+    inspector = Inspector(simple_db)
 
-        for row in rows:
-            assert row["source_id"] is not None
-            assert row["target_id"] is not None
-            assert row["mapping_type"] is not None
+    # Multiple calls should work
+    tables1 = list(inspector.tables())
+    tables2 = list(inspector.tables())
+    assert tables1 == tables2
+
+    # Mixed operations
+    cols = list(inspector.cols("users"))
+    rows = list(inspector.rows("users"))
+    pks = list(inspector.pks("users"))
+
+    assert len(cols) == 4
+    assert len(rows) == 2
+    assert pks == ["id"]
+
+
+def test_row_factory_provides_dict_access(simple_db: Connection) -> None:
+    """Test that Row objects provide dict-like access."""
+    inspector = Inspector(simple_db)
+    rows = list(inspector.rows("users"))
+
+    # Should be able to access by column name
+    row = rows[0]
+    assert "name" in row.keys()  # noqa: SIM118
+    assert row["name"] == "Alice"
+
+    # Should be able to iterate over keys
+    keys = list(row.keys())
+    assert "id" in keys
+    assert "name" in keys
+    assert "email" in keys
+    assert "age" in keys
+
+
+def test_rowguid_column_detection(rowguid_db: Connection) -> None:
+    """Test detection of RowGUID columns (critical for DPM databases)."""
+    inspector = Inspector(rowguid_db)
+    rows = list(inspector.rows("entities"))
+
+    # Verify RowGUID column exists and is accessible
+    assert len(rows) == 2
+
+    row = rows[0]
+    assert "RowGUID" in row.keys()  # noqa: SIM118
+    assert row["RowGUID"] == "guid-001"
+
+    # Verify we can access RowGUID from any row
+    for test_row in rows:
+        assert test_row["RowGUID"] is not None
+        assert isinstance(test_row["RowGUID"], str)
+        assert test_row["RowGUID"].startswith("guid-")
+
+
+def test_composite_primary_keys(composite_pk_db: Connection) -> None:
+    """Test tables with composite primary keys."""
+    inspector = Inspector(composite_pk_db)
+    pks = list(inspector.pks("mappings"))
+
+    # Should return all primary key columns in order
+    assert pks == ["source_id", "target_id", "mapping_type"]
+
+    # Verify we can access all PK columns from rows
+    rows = list(inspector.rows("mappings"))
+    assert len(rows) == 3
+
+    for row in rows:
+        assert row["source_id"] is not None
+        assert row["target_id"] is not None
+        assert row["mapping_type"] is not None
