@@ -215,9 +215,9 @@ class DatabaseReport {
                 const oldVal = this.getValue(oldVals, oldFields, field);
                 if (oldVal !== newVal) {
                     return `<td class="modified-cell">
-                        <span class="old-value">${this.formatValue(oldVal)}</span>
+                        <span class="old-value" title="${this.escape(oldVal)}">${this.formatValue(oldVal)}</span>
                         <span class="change-arrow">→</span>
-                        <span class="new-value">${this.formatValue(newVal)}</span>
+                        <span class="new-value" title="${this.escape(newVal)}">${this.formatValue(newVal)}</span>
                     </td>`;
                 }
                 return `<td title="${this.escape(newVal)}">${this.formatValue(newVal)}</td>`;
