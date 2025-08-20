@@ -7,34 +7,34 @@
     <style>{% include 'styles.css' %}</style>
   </head>
   <body>
-    <main class="ct">
-      <header class="h">
+    <main class="container">
+      <header class="header">
         <h1>Database Comparison Report</h1>
       </header>
 
-      <section class="s">
-        <div class="sc">
+      <section class="summary">
+        <div class="summary-card">
           <h3>Tables Compared</h3>
-          <div class="n" id="total-tables">-</div>
+          <div class="summary-number" id="total-tables">-</div>
         </div>
-        <div class="sc">
+        <div class="summary-card">
           <h3>Tables with Changes</h3>
-          <div class="n" id="tables-with-changes">-</div>
+          <div class="summary-number" id="tables-with-changes">-</div>
         </div>
-        <div class="sc">
+        <div class="summary-card">
           <h3>Column Changes</h3>
-          <div class="n" id="schema-changes">-</div>
+          <div class="summary-number" id="schema-changes">-</div>
         </div>
-        <div class="sc">
+        <div class="summary-card">
           <h3>Row Changes</h3>
-          <div class="n" id="data-changes">-</div>
+          <div class="summary-number" id="data-changes">-</div>
         </div>
       </section>
 
-      <section class="se">
+      <section class="section">
         <h2>Table Comparisons</h2>
         <div id="tables-container">
-          <div class="loading">Loading tables...</div>
+          <div class="loading">Loading tables</div>
         </div>
       </section>
     </main>
