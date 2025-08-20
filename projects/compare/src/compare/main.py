@@ -51,40 +51,34 @@ def render_report(comparisons: Iterable[Comparison]) -> TemplateStream:
     return template.stream(comparisons=comparisons)
 
 
-def table_diff(
-    source: Inspector,
-    target: Inspector,
+def name_diff(
+    old: Iterable[str],
+    new: Iterable[str],
 ) -> tuple[frozenset[str], frozenset[str], frozenset[str]]:
-    """Return sets of added, removed, and common table names between databases."""
-    source_tables = frozenset(source.tables())
-    target_tables = frozenset(target.tables())
+    """Return sets of added, removed, and common names between iterables of strings."""
+    old_names = frozenset(old)
+    new_names = frozenset(new)
 
-    added = target_tables - source_tables
-    removed = source_tables - target_tables
-    common = source_tables & target_tables
+    added = new_names - old_names
+    removed = old_names - new_names
+    common = old_names & new_names
 
     return added, removed, common
 
 
-def compare_cols(source: Iterable[Row], target: Iterable[Row]) -> Iterator[Change]:
+def compare_cols(old: Iterable[Row], new: Iterable[Row]) -> Iterator[Change]:
     """Compare column definitions and return modifications, additions, and removals."""
-    source_cols = {col["name"]: col for col in source}
-    target_cols = {col["name"]: col for col in target}
+    old_cols = {col["name"]: col for col in old}
+    new_cols = {col["name"]: col for col in new}
 
     return chain(
         (
-            Change(target_cols[name], source_cols[name])
-            for name in source_cols.keys() & target_cols.keys()
-            if source_cols[name] != target_cols[name]
+            Change(new_cols[name], old_cols[name])
+            for name in old_cols.keys() & new_cols.keys()
+            if old_cols[name] != new_cols[name]
         ),
-        (
-            Change(new=target_cols[name])
-            for name in target_cols.keys() - source_cols.keys()
-        ),
-        (
-            Change(old=source_cols[name])
-            for name in source_cols.keys() - target_cols.keys()
-        ),
+        (Change(new=new_cols[name]) for name in new_cols.keys() - old_cols.keys()),
+        (Change(old=old_cols[name]) for name in old_cols.keys() - new_cols.keys()),
     )
 
 
@@ -94,83 +88,89 @@ def row_key(row: Row, pks: Iterable[str]) -> tuple[ValueType, ...]:
     return (guid,) if guid else tuple(row[pk] for pk in pks) or tuple(row)
 
 
-def compare_rows(name: str, source: Inspector, target: Inspector) -> Iterator[Change]:
+def compare_rows(name: str, old: Inspector, new: Inspector) -> Iterator[Change]:
     """Compare table data and return row modifications, additions, and removals."""
-    source_pks = tuple(source.pks(name))
-    target_pks = tuple(target.pks(name))
+    old_pks = tuple(old.pks(name))
+    new_pks = tuple(new.pks(name))
 
     # This is a memory disaster
-    source_map = {row_key(row, source_pks): row for row in source.rows(name)}
-    target_map = {row_key(row, target_pks): row for row in target.rows(name)}
+    old_row_map = {row_key(row, old_pks): row for row in old.rows(name)}
+    new_row_map = {row_key(row, new_pks): row for row in new.rows(name)}
 
     return chain(
         (
-            Change(target_map[key], source_map[key])
-            for key in source_map.keys() & target_map.keys()
-            if source_map[key] != target_map[key]
+            Change(new_row_map[key], old_row_map[key])
+            for key in old_row_map.keys() & new_row_map.keys()
+            if old_row_map[key] != new_row_map[key]
         ),
-        (Change(new=target_map[key]) for key in target_map.keys() - source_map.keys()),
-        (Change(old=source_map[key]) for key in source_map.keys() - target_map.keys()),
+        (
+            Change(new=new_row_map[key])
+            for key in new_row_map.keys() - old_row_map.keys()
+        ),
+        (
+            Change(old=old_row_map[key])
+            for key in old_row_map.keys() - new_row_map.keys()
+        ),
     )
 
 
-def common_table(name: str, source: Inspector, target: Inspector) -> Comparison:
+def common_table(name: str, old: Inspector, new: Inspector) -> Comparison:
     """Compare a table that exists in both databases."""
     return Comparison(
         name=name,
         cols=ChangeSet(
             headers=Header(TABLE_INFO_COLS, TABLE_INFO_COLS),
-            changes=(compare_cols(source.cols(name), target.cols(name))),
+            changes=(compare_cols(old.cols(name), new.cols(name))),
         ),
         rows=ChangeSet(
             headers=Header(
-                (col["name"] for col in target.cols(name)),
-                (col["name"] for col in source.cols(name)),
+                (col["name"] for col in new.cols(name)),
+                (col["name"] for col in old.cols(name)),
             ),
-            changes=compare_rows(name, source, target),
+            changes=compare_rows(name, old, new),
         ),
     )
 
 
-def added_table(name: str, target: Inspector) -> Comparison:
+def added_table(name: str, new: Inspector) -> Comparison:
     """Handle a table that was added to the target database."""
     return Comparison(
         name=name,
         cols=ChangeSet(
             headers=Header(new=TABLE_INFO_COLS),
-            changes=(Change(new=col) for col in target.cols(name)),
+            changes=(Change(new=col) for col in new.cols(name)),
         ),
         rows=ChangeSet(
-            headers=Header(new=(col["name"] for col in target.cols(name))),
-            changes=(Change(new=row) for row in target.rows(name)),
+            headers=Header(new=(col["name"] for col in new.cols(name))),
+            changes=(Change(new=row) for row in new.rows(name)),
         ),
     )
 
 
-def removed_table(name: str, source: Inspector) -> Comparison:
+def removed_table(name: str, old: Inspector) -> Comparison:
     """Handle a table that was removed from the source database."""
     return Comparison(
         name=name,
         cols=ChangeSet(
             headers=Header(old=TABLE_INFO_COLS),
-            changes=(Change(old=col) for col in source.cols(name)),
+            changes=(Change(old=col) for col in old.cols(name)),
         ),
         rows=ChangeSet(
-            headers=Header(old=(col["name"] for col in source.cols(name))),
-            changes=(Change(old=row) for row in source.rows(name)),
+            headers=Header(old=(col["name"] for col in old.cols(name))),
+            changes=(Change(old=row) for row in old.rows(name)),
         ),
     )
 
 
-def compare_databases(source: Connection, target: Connection) -> Iterator[Comparison]:
+def compare_databases(old: Connection, new: Connection) -> Iterator[Comparison]:
     """Compare two SQLite databases and return differences."""
-    source_inspector = Inspector(source)
-    target_inspector = Inspector(target)
+    old_inspector = Inspector(old)
+    new_inspector = Inspector(new)
 
-    added, removed, common = table_diff(source_inspector, target_inspector)
+    added, removed, common = name_diff(old_inspector.tables(), new_inspector.tables())
 
     return chain(
-        (common_table(name, source_inspector, target_inspector) for name in common),
-        (added_table(name, target_inspector) for name in added),
-        (removed_table(name, source_inspector) for name in removed),
+        (common_table(name, old_inspector, new_inspector) for name in common),
+        (added_table(name, new_inspector) for name in added),
+        (removed_table(name, old_inspector) for name in removed),
     )
