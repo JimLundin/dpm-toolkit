@@ -1,6 +1,6 @@
 """Database inspection functionality using sqlite3."""
 
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from sqlite3 import Connection, Row
 
 TABLE_INFO_COLS = ("cid", "name", "type", "notnull", "dflt_value", "pk")
@@ -20,14 +20,18 @@ class Inspector:
             cursor = conn.execute(
                 "SELECT name "
                 "FROM sqlite_schema "
-                "WHERE type='table' AND name NOT LIKE 'sqlite_%' ",
+                "WHERE type='table' AND name NOT LIKE 'sqlite_%' "
+                "ORDER BY name",
             )
             return (row["name"] for row in cursor)
 
-    def rows(self, name: str) -> Iterator[Row]:
-        """Return all rows from the specified table, ordered by primary key."""
+    def rows(self, name: str, sort_keys: Iterable[str] | None = None) -> Iterator[Row]:
+        """Return all rows from the specified table, sorted by given sort keys."""
         with self.conn as conn:
-            return conn.execute(f"SELECT * FROM `{name}`")  # noqa: S608
+            order = ", ".join(sort_keys or (col["name"] for col in self.cols(name)))
+            return conn.execute(
+                f"SELECT * FROM `{name}` ORDER BY {order}",  # noqa: S608
+            )
 
     def cols(self, name: str) -> Iterator[Row]:
         """Return column metadata for the specified table."""
