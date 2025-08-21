@@ -1,8 +1,8 @@
 """Test specific edge case: NULL RowGUID handling with composite sort order."""
 
-import sqlite3
+from sqlite3 import connect
 
-from compare.main import compare_databases
+from compare.main import compare_dbs
 
 
 def test_null_rowguid_composite_sort_order() -> None:
@@ -15,7 +15,7 @@ def test_null_rowguid_composite_sort_order() -> None:
     for both valid GUIDs and NULL GUIDs.
     """
     # Create scenario with mixed NULL/non-NULL RowGUIDs
-    old_conn = sqlite3.connect(":memory:")
+    old_conn = connect(":memory:")
     old_conn.execute(
         """
         CREATE TABLE users (
@@ -39,7 +39,7 @@ def test_null_rowguid_composite_sort_order() -> None:
     )
     old_conn.commit()
 
-    new_conn = sqlite3.connect(":memory:")
+    new_conn = connect(":memory:")
     new_conn.execute(
         """
         CREATE TABLE users (
@@ -94,7 +94,7 @@ def test_null_rowguid_composite_sort_order() -> None:
     )
     new_conn.commit()
 
-    changes = next(iter(compare_databases(old_conn, new_conn)))["rows"]["changes"]
+    changes = next(iter(compare_dbs(old_conn, new_conn)))["rows"]["changes"]
     changes = list(changes)
 
     # Categorize changes
@@ -145,7 +145,7 @@ def test_null_rowguid_composite_sort_order() -> None:
 
 def test_all_null_rowguids() -> None:
     """Test case where all rows have NULL RowGUIDs - should fall back to PK matching."""
-    old_conn = sqlite3.connect(":memory:")
+    old_conn = connect(":memory:")
     old_conn.execute(
         "CREATE TABLE test (id INTEGER PRIMARY KEY, RowGUID TEXT, data TEXT)",
     )
@@ -159,7 +159,7 @@ def test_all_null_rowguids() -> None:
     )
     old_conn.commit()
 
-    new_conn = sqlite3.connect(":memory:")
+    new_conn = connect(":memory:")
     new_conn.execute(
         "CREATE TABLE test (id INTEGER PRIMARY KEY, RowGUID TEXT, data TEXT)",
     )
@@ -174,7 +174,7 @@ def test_all_null_rowguids() -> None:
     )
     new_conn.commit()
 
-    changes = next(iter(compare_databases(old_conn, new_conn)))["rows"]["changes"]
+    changes = next(iter(compare_dbs(old_conn, new_conn)))["rows"]["changes"]
     changes = list(changes)
 
     modified = [c for c in changes if c.old and c.new]

@@ -87,7 +87,7 @@ def key(row: Iterable[ValueType]) -> tuple[tuple[bool, ValueType], ...]:
     return tuple((val is None, val) for val in row)
 
 
-def merge_compare_rows(
+def compare_rows(
     old: Iterator[Row],
     new: Iterator[Row],
     keys: Iterable[str],
@@ -124,7 +124,7 @@ def merge_compare_rows(
                 new_row = next(new, None)
 
 
-def compare_rows(name: str, old: Inspector, new: Inspector) -> Iterator[Change]:
+def compare_table(name: str, old: Inspector, new: Inspector) -> Iterator[Change]:
     """Compare table data using consistent sort/comparison key strategy.
 
     Strategy: Always sort and compare by the same key hierarchy:
@@ -134,24 +134,24 @@ def compare_rows(name: str, old: Inspector, new: Inspector) -> Iterator[Change]:
     """
     old_cols = frozenset(col["name"] for col in old.cols(name))
     new_cols = frozenset(col["name"] for col in new.cols(name))
-    common_cols = old_cols & new_cols
+    com_cols = old_cols & new_cols
 
     old_pks = frozenset(old.pks(name))
     new_pks = frozenset(new.pks(name))
-    common_pks = old_pks & new_pks
+    com_pks = old_pks & new_pks
 
     # Build unified key hierarchy: RowGUID > common PKs > all common columns
-    if "RowGUID" in common_cols:
+    if "RowGUID" in com_cols:
         # Best case: RowGUID + PKs as tiebreaker for NULL RowGUIDs
-        sort_keys = (*common_pks, "RowGUID")
+        keys = (*com_pks, "RowGUID")
     else:
         # Good case: Common PKs provide stable identity
-        sort_keys = tuple(common_pks or common_cols)
+        keys = tuple(com_pks or com_cols)
 
     # Use same keys for both sorting and comparison
-    old_iter = old.rows(name, sort_keys)
-    new_iter = new.rows(name, sort_keys)
-    return merge_compare_rows(old_iter, new_iter, sort_keys)
+    old_rows = old.rows(name, keys)
+    new_rows = new.rows(name, keys)
+    return compare_rows(old_rows, new_rows, keys)
 
 
 def common_table(name: str, old: Inspector, new: Inspector) -> Comparison:
@@ -167,7 +167,7 @@ def common_table(name: str, old: Inspector, new: Inspector) -> Comparison:
                 (col["name"] for col in new.cols(name)),
                 (col["name"] for col in old.cols(name)),
             ),
-            changes=compare_rows(name, old, new),
+            changes=compare_table(name, old, new),
         ),
     )
 
@@ -202,7 +202,7 @@ def removed_table(name: str, old: Inspector) -> Comparison:
     )
 
 
-def compare_databases(old: Connection, new: Connection) -> Iterator[Comparison]:
+def compare_dbs(old: Connection, new: Connection) -> Iterator[Comparison]:
     """Compare two SQLite databases and return differences."""
     old_inspector = Inspector(old)
     new_inspector = Inspector(new)
