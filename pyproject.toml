@@ -4,7 +4,7 @@ version = "0.0.0"
 description = "Open-source tools and models for working with DPM databases"
 authors = [{ name = "Jim Lundin", email = "jimeriklundin@gmail.com" }]
 readme = "README.md"
-license = {file = "LICENSE"}
+license = { file = "LICENSE" }
 requires-python = ">= 3.13"
 
 dependencies = ["archive", "pyyaml>=6.0.2"]
@@ -16,6 +16,7 @@ dpm-toolkit = "dpm_toolkit.cli:main"
 scrape = ["scrape"]
 migrate = ["migrate"]
 schema = ["schema"]
+compare = ["compare"]
 
 [tool.ruff]
 unsafe-fixes = true
@@ -24,6 +25,15 @@ unsafe-fixes = true
 fixable = ["ALL"]
 select = ["ALL"]
 ignore = ["T201"]
+
+[tool.ruff.lint.per-file-ignores]
+"test_*.py" = [
+    "S101",    # asserts allowed in tests...
+    "ARG",     # Unused function args -> fixtures nevertheless are functionally relevant...
+    "FBT",     # Don't care about booleans as positional arguments in tests, e.g. via @pytest.mark.parametrize()
+    "PLR2004", # Magic value used in comparison, ...
+    "S311",    # Standard pseudo-random generators are not suitable for cryptographic purposes
+]
 
 [tool.mypy]
 strict = true
@@ -53,3 +63,4 @@ archive = { workspace = true }
 migrate = { workspace = true }
 scrape = { workspace = true }
 schema = { workspace = true }
+compare = { workspace = true }
