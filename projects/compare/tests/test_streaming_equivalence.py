@@ -2,7 +2,7 @@
 
 from sqlite3 import connect
 
-from compare.main import compare_databases
+from compare.main import compare_dbs
 
 
 def test_basic_modifications() -> None:
@@ -35,7 +35,7 @@ def test_basic_modifications() -> None:
     )
     new_conn.commit()
 
-    changes = next(iter(compare_databases(old_conn, new_conn)))["rows"]["changes"]
+    changes = next(iter(compare_dbs(old_conn, new_conn)))["rows"]["changes"]
     changes = list(changes)
 
     modified = [c for c in changes if c.old and c.new]
@@ -77,7 +77,7 @@ def test_additions_and_removals() -> None:
     )
     new_conn.commit()
 
-    changes = next(iter(compare_databases(old_conn, new_conn)))["rows"]["changes"]
+    changes = next(iter(compare_dbs(old_conn, new_conn)))["rows"]["changes"]
     changes = list(changes)
 
     modified = [c for c in changes if c.old and c.new]
@@ -121,7 +121,7 @@ def test_rowguid_with_valid_guids() -> None:
     )
     new_conn.commit()
 
-    changes = next(iter(compare_databases(old_conn, new_conn)))["rows"]["changes"]
+    changes = next(iter(compare_dbs(old_conn, new_conn)))["rows"]["changes"]
     changes = list(changes)
 
     modified = [c for c in changes if c.old and c.new]
@@ -182,7 +182,7 @@ def test_rowguid_with_null_values() -> None:
     )
     new_conn.commit()
 
-    changes = next(iter(compare_databases(old_conn, new_conn)))["rows"]["changes"]
+    changes = next(iter(compare_dbs(old_conn, new_conn)))["rows"]["changes"]
     changes = list(changes)
 
     modified = [c for c in changes if c.old and c.new]
@@ -227,7 +227,7 @@ def test_no_common_primary_keys() -> None:
     )
     new_conn.commit()
 
-    changes = next(iter(compare_databases(old_conn, new_conn)))["rows"]["changes"]
+    changes = next(iter(compare_dbs(old_conn, new_conn)))["rows"]["changes"]
     changes = list(changes)
 
     # Without common PKs or RowGUID, this falls back to all-column sorting
@@ -278,7 +278,7 @@ def test_composite_primary_keys() -> None:
     )
     new_conn.commit()
 
-    changes = next(iter(compare_databases(old_conn, new_conn)))["rows"]["changes"]
+    changes = next(iter(compare_dbs(old_conn, new_conn)))["rows"]["changes"]
     changes = list(changes)
 
     modified = [c for c in changes if c.old and c.new]
@@ -306,7 +306,7 @@ def test_empty_tables() -> None:
     new_conn.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
     new_conn.commit()
 
-    changes = next(iter(compare_databases(old_conn, new_conn)))["rows"]["changes"]
+    changes = next(iter(compare_dbs(old_conn, new_conn)))["rows"]["changes"]
     changes = list(changes)
 
     assert len(changes) == 0
@@ -339,7 +339,7 @@ def test_large_dataset_memory_efficiency() -> None:
     new_conn.executemany("INSERT INTO test VALUES (?, ?, ?)", new_data)
     new_conn.commit()
 
-    changes = next(iter(compare_databases(old_conn, new_conn)))["rows"]["changes"]
+    changes = next(iter(compare_dbs(old_conn, new_conn)))["rows"]["changes"]
     changes = list(changes)
 
     modified = [c for c in changes if c.old and c.new]
