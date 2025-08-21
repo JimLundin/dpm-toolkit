@@ -26,6 +26,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `dpm-toolkit update` - Find new EBA releases
 - `dpm-toolkit schema --source SOURCE --target TARGET` - Generate Python models from SQLite
 - `dpm-toolkit migrate --source SOURCE --target TARGET` - Migrate Access to SQLite (Windows only)
+- `dpm-toolkit compare --source SOURCE --target TARGET` - Compare two SQLite databases for schema and data changes
 
 ## Architecture Overview
 
@@ -41,6 +42,7 @@ DPM Toolkit is a UV workspace with multiple specialized subprojects:
 - **`migrate/`**: Access-to-SQLite migration engine (Windows-only, requires ODBC drivers)
 - **`scrape/`**: Automated discovery of new EBA releases via web scraping
 - **`schema/`**: Python model generation from SQLite databases
+- **`compare/`**: Database comparison functionality for tracking schema and data changes
 - **`dpm2/`**: Generated Python packages (future enhancement placeholder)
 
 ### Key Design Patterns
