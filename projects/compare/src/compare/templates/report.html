@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Comparison Report</title>
+    <style>{% include 'styles.css' %}</style>
+  </head>
+  <body>
+    <main class="container">
+      <header class="header">
+        <h1>Database Comparison Report</h1>
+      </header>
+
+      <section class="summary">
+        <div class="summary-card">
+          <h3>Tables Compared</h3>
+          <div class="summary-number" id="total-tables">-</div>
+        </div>
+        <div class="summary-card">
+          <h3>Tables with Changes</h3>
+          <div class="summary-number" id="tables-with-changes">-</div>
+        </div>
+        <div class="summary-card">
+          <h3>Column Changes</h3>
+          <div class="summary-number" id="schema-changes">-</div>
+        </div>
+        <div class="summary-card">
+          <h3>Row Changes</h3>
+          <div class="summary-number" id="data-changes">-</div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Table Comparisons</h2>
+        <div id="tables-container">
+          <div class="loading">Loading tables</div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      window.comparisonData = {{ comparisons | tojson }};
+      {% include 'scripts.js' %}
+    </script>
+  </body>
+</html>
