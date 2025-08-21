@@ -37,7 +37,7 @@ def comparisons_to_json(comparisons: Iterable[Comparison], **_: str) -> str:
     return json.dumps(comparisons, default=encoder, ensure_ascii=False)
 
 
-def render_report(comparisons: Iterable[Comparison]) -> TemplateStream:
+def comparisons_to_html(comparisons: Iterable[Comparison]) -> TemplateStream:
     """Generate HTML report from comparison result."""
     env = Environment(
         loader=FileSystemLoader(TEMPLATE_DIR),
