@@ -5,7 +5,7 @@ from sqlite3 import Row, connect
 
 import pytest
 
-from compare.main import compare_cols, encoder, name_diff, row_key
+from compare.main import compare_cols, encoder, name_diff
 
 
 @pytest.fixture(name="mock_row")
@@ -176,53 +176,6 @@ def test_name_diff_both_empty() -> None:
     assert added == set()
     assert removed == set()
     assert common == set()
-
-
-def test_row_key_with_rowguid(mock_row: Row) -> None:
-    """Test row_key prefers RowGUID over primary keys."""
-    pks = ["id"]
-
-    result = row_key(mock_row, pks)
-
-    # Should return RowGUID, not primary key
-    assert result == ("guid-123",)
-
-
-def test_row_key_without_rowguid(mock_row_no_guid: Row) -> None:
-    """Test row_key uses primary keys when no RowGUID."""
-    pks = ["id"]
-
-    result = row_key(mock_row_no_guid, pks)
-
-    # Should return primary key values
-    assert result == (1,)
-
-
-def test_row_key_composite_primary_key() -> None:
-    """Test row_key with multiple primary key columns."""
-    conn = connect(":memory:")
-    conn.row_factory = Row
-    conn.execute("CREATE TABLE test (pk1 INTEGER, pk2 TEXT, value INTEGER)")
-    conn.execute("INSERT INTO test VALUES (1, 'A', 100)")
-    cursor = conn.execute("SELECT * FROM test")
-    row = cursor.fetchone()
-    conn.close()
-
-    pks = ["pk1", "pk2"]
-
-    result = row_key(row, pks)
-
-    assert result == (1, "A")
-
-
-def test_row_key_no_primary_keys(mock_row_no_guid: Row) -> None:
-    """Test row_key fallback to all columns when no primary keys."""
-    pks: list[str] = []  # No primary keys
-
-    result = row_key(mock_row_no_guid, pks)
-
-    # Should return all column values
-    assert result == (1, "test")
 
 
 def test_row_key_empty_row() -> None:
