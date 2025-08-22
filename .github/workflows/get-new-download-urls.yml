@@ -48,10 +48,8 @@ jobs:
       - name: Run scraper and capture output
         id: scrape
         run: |
-          SCRAPE_RESULT=$(uv run dpm-toolkit scrape --json)
-          echo "SCRAPE_RESULT<<EOF" >> $GITHUB_ENV
-          echo "$SCRAPE_RESULT" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+          # Update command is deprecated - workflow may need manual intervention
+          echo "SCRAPE_RESULT=Update command deprecated - manual intervention required" >> $GITHUB_ENV
       
       - name: Create or update branch
         run: |
@@ -77,7 +75,7 @@ jobs:
       
       - name: Comment on PR with scrape results
         run: |
-          COMMENT_BODY="Result of dpm-toolkit scrape:\n\n\`\`\`\n${SCRAPE_RESULT}\n\`\`\`"
+          COMMENT_BODY="Update command status:\n\n\`\`\`\n${SCRAPE_RESULT}\n\`\`\`"
           gh pr comment "${PR_NUMBER}" --body "$COMMENT_BODY"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

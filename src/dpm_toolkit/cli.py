@@ -50,7 +50,7 @@ def versions(
         Option(help="Group of versions to show"),
     ] = "release",
     *,
-    latest: Annotated[bool, Option(help="Show latest version")] = True,
+    latest: Annotated[bool, Option(help="Show latest version")] = False,
     json: Annotated[bool, Option(help="Output in JSON format")] = False,
 ) -> None:
     """List available database versions."""
