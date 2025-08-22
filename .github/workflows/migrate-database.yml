@@ -62,7 +62,7 @@ jobs:
         run: |
           ACCDB_FILE=$(find database-files -name "*.accdb" -type f | head -1)
           SQLITE_FILE="${{ inputs.source_artifact_name }}.sqlite"
-          uv run dpm-toolkit migrate --source "$ACCDB_FILE" --target "$SQLITE_FILE"
+          uv run dpm-toolkit migrate "$ACCDB_FILE" --target "$SQLITE_FILE"
 
       - name: Upload SQLite database artifact
         uses: actions/upload-artifact@v4
