@@ -78,7 +78,7 @@ def versions(
 def download(
     version_id: Annotated[
         str,
-        Argument(help="Version: latest, release, or the version ID"),
+        Argument(help="The ID of the database version"),
     ] = "release",
     output: Annotated[Path, Option(help="Directory to save downloaded database")] = CWD,
     variant: Annotated[
@@ -114,15 +114,16 @@ def download(
     if extract:
         extract_archive(archive, target_folder)
     else:
-        target_folder.write_bytes(archive.getbuffer())
+        archive_path = target_folder / f"{version_id}.zip"
+        archive_path.write_bytes(archive.getbuffer())
 
     echo(f"Downloaded version {version_id} to {target_folder}")
 
 
 @app.command()
 def migrate(
-    source: Annotated[Path, Option(help="Path of Access database to migrate")],
-    target: Annotated[Path, Option(help="Path to save migrated SQLite database")],
+    source: Annotated[Path, Argument(help="Path of Access database to migrate")],
+    target: Annotated[Path, Option(help="Path to save migrated SQLite database")] = CWD,
 ) -> None:
     """Migrate Access databases to SQLite."""
     try:
@@ -157,8 +158,8 @@ def schema(
 
 @app.command()
 def compare(
-    source: Annotated[Path, Option(help="Path to source (older) SQLite database")],
-    target: Annotated[Path, Option(help="Path to target (newer) SQLite database")],
+    source: Annotated[Path, Argument(help="Path to source (older) SQLite database")],
+    target: Annotated[Path, Argument(help="Path to target (newer) SQLite database")],
     output: Annotated[Path | None, Option(help="Output file path")] = None,
     *,
     html: Annotated[bool, Option("--html", help="Generate HTML report")] = False,
