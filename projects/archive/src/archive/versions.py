@@ -1,12 +1,17 @@
 """Module for loading and managing version information."""
 
 from collections import defaultdict
+from collections.abc import Iterable
 from datetime import date
 from pathlib import Path
 from tomllib import load
 from typing import Literal, NotRequired, TypedDict
 
 type VersionUrls = dict[str, set[str]]
+
+type VersionGroup = Literal["all", "release", "draft"]
+
+type SourceType = Literal["original", "archive", "converted"]
 
 
 class Source(TypedDict):
@@ -25,11 +30,11 @@ class Version(TypedDict):
     type: Literal["sample", "draft", "final", "release", "errata"]
     revision: NotRequired[int]
     original: Source
-    archive: NotRequired[Source]
-    converted: NotRequired[Source]
+    archive: Source
+    converted: Source
 
 
-type Versions = list[Version]
+type Versions = Iterable[Version]
 
 VERSION_FILE = Path(__file__).parent / "versions.toml"
 
@@ -41,9 +46,16 @@ def get_versions() -> Versions:
         return versions
 
 
-def get_versions_by_type(versions: Versions, *version_types: str) -> Versions:
+def get_versions_by_type(versions: Versions, group: VersionGroup) -> Versions:
     """Get the versions of the given type."""
-    return [v for v in versions if v["type"] in version_types]
+    if group == "all":
+        return versions
+    if group == "release":
+        return (v for v in versions if v["type"] in ("release", "errata"))
+    if group == "draft":
+        return (v for v in versions if v["type"] in ("draft", "sample"))
+    msg = f"Unknown version group: {group}"
+    raise ValueError(msg)
 
 
 def latest_version(versions: Versions) -> Version:
