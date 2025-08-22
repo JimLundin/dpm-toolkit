@@ -3,7 +3,9 @@
 from archive.download import download_source, extract_archive
 from archive.versions import (
     Source,
+    SourceType,
     Version,
+    VersionGroup,
     compare_version_urls,
     get_version,
     get_version_urls,
@@ -14,7 +16,9 @@ from archive.versions import (
 
 __all__ = [
     "Source",
+    "SourceType",
     "Version",
+    "VersionGroup",
     "compare_version_urls",
     "download_source",
     "extract_archive",
