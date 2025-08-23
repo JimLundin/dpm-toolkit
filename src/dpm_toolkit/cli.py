@@ -4,20 +4,21 @@ from datetime import date
 from json import dumps
 from pathlib import Path
 from sqlite3 import OperationalError, connect
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING
 
 from archive import (
+    Group,
     SourceType,
     Version,
-    VersionGroup,
     download_source,
     extract_archive,
+    get_source,
     get_version,
     get_versions,
     get_versions_by_type,
     latest_version,
 )
-from typer import Argument, Exit, Option, Typer, echo
+from typer import Exit, Typer, echo
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -32,8 +33,6 @@ CWD = Path.cwd()
 
 VERSIONS = get_versions()
 VERSION_IDS = [v["id"] for v in VERSIONS]
-RELEASE = latest_version(get_versions_by_type(VERSIONS, "release"))
-LATEST = latest_version(VERSIONS)
 
 
 def date_serializer(obj: object) -> str | None:
@@ -45,13 +44,10 @@ def date_serializer(obj: object) -> str | None:
 
 @app.command()
 def versions(
-    group: Annotated[
-        VersionGroup,
-        Option(help="Group of versions to show"),
-    ] = "release",
+    group: Group = Group.RELEASE,
     *,
-    latest: Annotated[bool, Option(help="Show latest version")] = False,
-    json: Annotated[bool, Option(help="Output in JSON format")] = False,
+    latest: bool = False,
+    json: bool = False,
 ) -> None:
     """List available database versions."""
     version_group: Iterable[Version] = get_versions_by_type(VERSIONS, group)
@@ -64,29 +60,21 @@ def versions(
         return
 
     if json:
-        echo(dumps(version_group, default=date_serializer))
+        echo(dumps(list(version_group), default=date_serializer))
     else:
-        echo(
-            "---".join(
-                "\n".join(f"{key}: {value}" for key, value in version.items())
-                for version in version_group
-            ),
-        )
+        for version in version_group:
+            for key, value in version.items():
+                echo(f"{key}: {value}")
+            echo("\n" + "-" * 40 + "\n")
 
 
 @app.command()
 def download(
-    version_id: Annotated[
-        str,
-        Argument(help="The ID of the database version"),
-    ] = "release",
-    output: Annotated[Path, Option(help="Directory to save downloaded database")] = CWD,
-    variant: Annotated[
-        SourceType,
-        Option(help="Variant of database to download"),
-    ] = "converted",
+    version_id: str,
+    output: Path = CWD,
+    variant: SourceType = SourceType.ORIGINAL,
     *,
-    extract: Annotated[bool, Option(help="Extract archive after download")] = True,
+    extract: bool = True,
 ) -> None:
     """Download databases."""
     version_obj = get_version(VERSIONS, version_id)
@@ -98,18 +86,14 @@ def download(
     echo(f"Downloading version {version_id} ({variant})")
 
     # Get source
-    variant_def = version_obj[variant]
-
-    if not variant_def:
-        echo("Error: Source not available for this version", err=True)
-        raise Exit(1)
+    db_source = get_source(version_obj, variant)
 
     target_folder = output / version_id
     target_folder.mkdir(parents=True, exist_ok=True)
 
-    echo(f"Downloading from: {variant_def.get('url', 'unknown')}")
+    echo(f"Downloading from: {db_source.get('url', 'unknown')}")
 
-    archive = download_source(variant_def)
+    archive = download_source(db_source)
 
     if extract:
         extract_archive(archive, target_folder)
@@ -121,10 +105,7 @@ def download(
 
 
 @app.command()
-def migrate(
-    source: Annotated[Path, Argument(help="Path of Access database to migrate")],
-    target: Annotated[Path, Option(help="Path to save migrated SQLite database")] = CWD,
-) -> None:
+def migrate(source: Path, target: Path = CWD) -> None:
     """Migrate Access databases to SQLite."""
     try:
         from migrate import migrate_to_sqlite
@@ -139,10 +120,7 @@ def migrate(
 
 
 @app.command()
-def schema(
-    source: Annotated[Path, Argument(help="Path of SQLite database")],
-    output: Annotated[Path, Option(help="Path to save SQLAlchemy schema file")] = CWD,
-) -> None:
+def schema(source: Path, output: Path = CWD) -> None:
     """Generate SQLAlchemy schema from SQLite database."""
     try:
         from schema import generate_schema
@@ -158,11 +136,11 @@ def schema(
 
 @app.command()
 def compare(
-    source: Annotated[Path, Argument(help="Path to source (older) SQLite database")],
-    target: Annotated[Path, Argument(help="Path to target (newer) SQLite database")],
-    output: Annotated[Path | None, Option(help="Output file path")] = None,
+    source: Path,
+    target: Path,
+    output: Path = CWD,
     *,
-    html: Annotated[bool, Option("--html", help="Generate HTML report")] = False,
+    html: bool = False,
 ) -> None:
     """Compare two SQLite databases."""
     try:
@@ -170,14 +148,6 @@ def compare(
     except ImportError as e:
         echo(f"Error: Compare functionality not available: {e}", err=True)
         raise Exit(1) from e
-
-    if not source.exists():
-        echo(f"Error: Source database not found: {source}", err=True)
-        raise Exit(1)
-
-    if not target.exists():
-        echo(f"Error: Target database not found: {target}", err=True)
-        raise Exit(1)
 
     echo("Comparing databases:")
     echo(f"  Source: {source}")
