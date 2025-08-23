@@ -6,11 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Package Management
 - `uv sync` - Install all dependencies and sync the workspace
-- `uv pip install -e .` - Install main package in development mode
-- `uv pip install -e projects/archive` - Install specific subproject
-- `uv pip install -e projects/migrate` - Install migration tools (Windows only)
-- `uv pip install -e projects/scrape` - Install scraping tools
-- `uv pip install -e projects/compare` - Install database comparison tools
+- `uv sync --extra migrate` - Install with migration tools (Windows only)
+- `uv sync --extra schema` - Install with schema generation tools
+- `uv sync --extra compare` - Install with database comparison tools
+- `uv sync --extra scrape` - Install with web scraping tools
 
 ### Code Quality
 - `ruff check --fix` - Run linting and auto-fix issues
@@ -23,11 +22,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `uv run pytest projects/compare/tests/` - Run tests for specific subproject
 
 ### Application Commands
-- `dpm-toolkit versions` - List available database versions (new Typer CLI)
-- `dpm-toolkit download VERSION` - Download database version with options
-- `dpm-toolkit migrate SOURCE` - Migrate Access to SQLite (Windows only, target defaults to CWD)
-- `dpm-toolkit schema SOURCE` - Generate Python models from SQLite (output defaults to CWD)
-- `dpm-toolkit compare SOURCE TARGET` - Compare two SQLite databases (uses positional arguments)
+
+#### Version Management
+- `dpm-toolkit versions` - List release versions (default)
+- `dpm-toolkit versions --group all --json` - JSON output of all versions
+- `dpm-toolkit versions --latest` - Show only the latest release version
+
+#### Database Operations  
+- `dpm-toolkit download 4.1-final` - Download latest final release
+- `dpm-toolkit download 4.0-release --variant converted --output ./dbs/` - Download converted SQLite version
+- `dpm-toolkit migrate database.accdb --target output.sqlite` - Convert Access to SQLite (Windows only)
+- `dpm-toolkit schema database.sqlite --output models.py` - Generate SQLAlchemy models
+
+#### Database Comparison (POSIX-style)
+- `dpm-toolkit compare old.db new.db > changes.json` - JSON diff to file
+- `dpm-toolkit compare old.db new.db --output-format html > report.html` - HTML report
+- `dpm-toolkit compare old.db new.db | jq '.[] | select(.name=="users")` - Filter specific table changes
 
 ## Architecture Overview
 
@@ -53,14 +63,15 @@ The `compare` module uses a streaming, memory-efficient approach:
 - **`types.py`**: Type definitions using `NamedTuple` and `TypedDict` for performance
 - **`main.py`**: Core comparison logic with streaming row comparison algorithm
 - **Sorting Strategy**: Consistent key hierarchy (RowGUID > PKs > all columns) for reliable comparison
-- **Output Formats**: JSON and HTML reports with Jinja2 templating
+- **Output Formats**: JSON and HTML reports with Jinja2 templating, streamed to stdout for POSIX compatibility
 
 ### CLI Design Patterns
-- **Modern Typer**: Uses `Annotated` types and `typer.Option()` for clean command definitions
+- **Modern Typer**: Clean command definitions with focused functionality
 - **Type Safety**: Full type annotations with `TYPE_CHECKING` imports
 - **Error Handling**: Consistent `typer.Exit(1)` with proper error messages
 - **Optional Dependencies**: Graceful handling of missing subproject imports
-- **Consistent UX**: Standard `--quiet`, `--verbose`, and format options across commands
+- **POSIX Philosophy**: Stdout for data, stderr for messages, composable with pipes and redirection
+- **Core Functionality Focus**: Essential options only, avoiding feature bloat
 
 ### Key Design Patterns
 - **Workspace Architecture**: Uses UV workspace with `[tool.uv.workspace]` for managing multiple related packages
@@ -73,8 +84,8 @@ The `compare` module uses a streaming, memory-efficient approach:
 1. **Version Discovery**: `scrape` finds new EBA releases
 2. **Download Management**: `archive` handles version tracking and downloads with structured metadata
 3. **Migration Pipeline**: `migrate` transforms Access databases to SQLite with type-safe Python models
-4. **Comparison Engine**: `compare` provides schema and data change detection between database versions
-5. **CLI Coordination**: Main package orchestrates functionality across subprojects with modern Typer interface
+4. **Comparison Engine**: `compare` provides schema and data change detection, streaming output to stdout for composability
+5. **CLI Coordination**: Main package orchestrates functionality across subprojects following POSIX conventions
 
 ### Important Constraints
 - **Platform Dependency**: Migration requires Windows due to Microsoft Access ODBC drivers
