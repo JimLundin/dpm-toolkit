@@ -18,7 +18,7 @@ from archive import (
     get_versions_by_type,
     latest_version,
 )
-from typer import Exit, Typer, echo
+from typer import Exit, Option, Typer, echo
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -135,52 +135,46 @@ def schema(source: Path, output: Path = CWD) -> None:
 
 
 @app.command()
-def compare(
-    source: Path,
-    target: Path,
-    output: Path = CWD,
-    *,
-    html: bool = False,
-) -> None:
+def compare(old: Path, new: Path, *, output_format: str = "json") -> None:
     """Compare two SQLite databases."""
+    if output_format not in ("json", "html"):
+        echo(
+            f"Error: Invalid format '{output_format}'. Must be 'json' or 'html'",
+            err=True,
+        )
+        raise Exit(1)
+
     try:
         from compare import compare_dbs, comparisons_to_html, comparisons_to_json
     except ImportError as e:
         echo(f"Error: Compare functionality not available: {e}", err=True)
         raise Exit(1) from e
 
-    echo("Comparing databases:")
-    echo(f"  Source: {source}")
-    echo(f"  Target: {target}")
+    echo("Comparing databases:", err=True)
+    echo(f"  Old db: {old}", err=True)
+    echo(f"  New db: {new}", err=True)
 
     # Perform comparison
-    source_conn = connect(source)
-    target_conn = connect(target)
+    old_conn = connect(old)
+    new_conn = connect(new)
 
     try:
-        comparisons = compare_dbs(source_conn, target_conn)
+        comparisons = compare_dbs(old_conn, new_conn)
+
+        # Output to stdout in requested format
+        if output_format == "html":
+            html_stream = comparisons_to_html(comparisons)
+            for chunk in html_stream:
+                echo(chunk)
+        else:
+            json_output = comparisons_to_json(comparisons)
+            echo(json_output)
     except OperationalError as e:
         echo(f"Error during comparison: {e}", err=True)
         raise Exit(1) from e
     finally:
-        source_conn.close()
-        target_conn.close()
-
-    # Handle HTML output
-    if html:
-        output_path = output or Path("comparison_report.html")
-        comparisons_to_html(comparisons).dump(str(output_path), encoding="utf-8")
-        echo(f"HTML report saved to: {output_path}")
-        return
-
-    # Handle JSON output
-    formatted_output = comparisons_to_json(comparisons)
-
-    if output:
-        output.write_text(formatted_output, encoding="utf-8")
-        echo(f"Report saved to: {output}")
-    else:
-        print(formatted_output)
+        old_conn.close()
+        new_conn.close()
 
 
 def main() -> None:
