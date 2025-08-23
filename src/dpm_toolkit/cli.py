@@ -18,7 +18,7 @@ from archive import (
     get_versions_by_type,
     latest_version,
 )
-from typer import Exit, Option, Typer, echo
+from typer import Exit, Typer, echo
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -32,7 +32,6 @@ app = Typer(
 CWD = Path.cwd()
 
 VERSIONS = get_versions()
-VERSION_IDS = [v["id"] for v in VERSIONS]
 
 
 def date_serializer(obj: object) -> str | None:
