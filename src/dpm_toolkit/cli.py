@@ -11,6 +11,7 @@ from typing import Any
 from archive import (
     Group,
     SourceType,
+    Version,
     download_source,
     extract_archive,
     get_source,
@@ -67,6 +68,16 @@ def print_info(message: str) -> None:
     err_console.print(f"[bold blue]i[/] {message}")
 
 
+def format_version_table(version: Version) -> None:
+    """Format version information as a rich table."""
+    table = Table(show_header=False)
+    table.add_column("Key", style="bold blue")
+    table.add_column("Value")
+    for key, value in version.items():
+        table.add_row(key, str(value))
+    console.print(table)
+
+
 def format_comparison_table(json_data: list[dict[str, Any]], length: int = 100) -> None:
     """Format comparison results as a rich table."""
     if not json_data:
@@ -81,7 +92,7 @@ def format_comparison_table(json_data: list[dict[str, Any]], length: int = 100) 
     for comparison in json_data:
         details = str(comparison.get("details", ""))
         truncated_details = (
-            details[:length] + "..." if len(details) > length else details
+            f"{details[:length]}..." if len(details) > length else details
         )
         table.add_row(
             comparison.get("name", ""),
@@ -109,12 +120,7 @@ def versions(
             print_error("HTML format for versions is not yet implemented")
             raise Exit(1)
         else:  # TABLE format
-            table = Table(show_header=False)
-            table.add_column("Key", style="bold blue")
-            table.add_column("Value")
-            for key, value in version.items():
-                table.add_row(key, str(value))
-            console.print(table)
+            format_version_table(version)
         return
 
     if output_format == Formats.JSON:
@@ -127,12 +133,7 @@ def versions(
             if i > 0:
                 console.print()  # Add spacing between versions
 
-            table = Table(show_header=False, box=None)
-            table.add_column("Key", style="bold blue")
-            table.add_column("Value")
-            for key, value in version.items():
-                table.add_row(key, str(value))
-            console.print(table)
+            format_version_table(version)
             console.rule(style="dim")
 
 
