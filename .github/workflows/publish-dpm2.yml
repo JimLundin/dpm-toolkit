@@ -16,7 +16,7 @@ jobs:
     permissions:
       id-token: write # IMPORTANT: this permission is mandatory for trusted publishing
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install UV
         uses: astral-sh/setup-uv@v6
@@ -34,13 +34,13 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Download SQLite database
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: ${{ needs.build-database.outputs.database_artifact_name }}
           path: database/
 
       - name: Download generated schema
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: ${{ needs.build-database.outputs.schema_artifact_name }}
           path: schema/
