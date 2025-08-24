@@ -179,7 +179,7 @@ def download(
 
 
 @app.command()
-def migrate(source: Path, target: Path = CWD) -> None:
+def migrate(source: Path, target: Path) -> None:
     """Migrate Access databases to SQLite."""
     try:
         from migrate import migrate_to_sqlite, create_access_engine
@@ -187,10 +187,8 @@ def migrate(source: Path, target: Path = CWD) -> None:
         print_error("Migration requires [migrate] extra dependencies")
         raise Exit(1) from e
 
-    output_file = target / f"{source.stem}.sqlite"
-
     print_info(f"Source: {source}")
-    print_info(f"Output: {output_file}")
+    print_info(f"Output: {target}")
 
     access_db = create_access_engine(source)
 
@@ -202,7 +200,7 @@ def migrate(source: Path, target: Path = CWD) -> None:
         progress.add_task("Migrating database...", total=None)
         sqlite_db = migrate_to_sqlite(access_db)
         with sqlite_db as connection:
-            connection.execute(f"VACUUM INTO '{output_file}'")
+            connection.execute(f"VACUUM INTO '{target}'")
 
     print_success("Migration completed successfully")
 
