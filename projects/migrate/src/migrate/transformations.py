@@ -133,10 +133,10 @@ def parse_rows(
                 transformed_row[column_name],
             )
             transformed_row[column_name] = transformed_value
-            if is_enum(column_name):
-                enum_by_column_name[column_name].add(transformed_value)
             if transformed_value is None:
                 nullable_column_names.add(column_name)
+            elif is_enum(column_name):
+                enum_by_column_name[column_name].add(transformed_value)
 
         transformed_rows.append(transformed_row)
 
