@@ -1,10 +1,11 @@
 """Command line interface for DPM Toolkit."""
 
 from datetime import date
+from enum import StrEnum, auto
 from json import dumps
 from pathlib import Path
 from sqlite3 import OperationalError, connect
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from archive import (
     Group,
@@ -18,7 +19,11 @@ from archive import (
     get_versions_by_type,
     latest_version,
 )
-from typer import Exit, Typer, echo
+from rich.console import Console
+from rich.json import JSON
+from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.table import Table
+from typer import Exit, Typer
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -29,9 +34,13 @@ app = Typer(
     no_args_is_help=True,
 )
 
-CWD = Path.cwd()
 
-VERSIONS = get_versions()
+class Formats(StrEnum):
+    """Output format types."""
+
+    TABLE = auto()
+    JSON = auto()
+    HTML = auto()
 
 
 def date_serializer(obj: object) -> str | None:
@@ -41,30 +50,99 @@ def date_serializer(obj: object) -> str | None:
     return None
 
 
+console = Console()
+err_console = Console(stderr=True)
+
+# Constants
+CWD = Path.cwd()
+VERSIONS = get_versions()
+DETAILS_MAX_LENGTH = 100
+
+
+def print_error(message: str) -> None:
+    """Print error message to stderr."""
+    err_console.print(f"[bold red]Error:[/] {message}")
+
+
+def print_success(message: str) -> None:
+    """Print success message to stderr."""
+    err_console.print(f"[bold green]✓[/] {message}")
+
+
+def print_info(message: str) -> None:
+    """Print info message to stderr."""
+    err_console.print(f"[bold blue]i[/] {message}")
+
+
+def format_comparison_table(json_data: list[dict[str, Any]]) -> None:
+    """Format comparison results as a rich table."""
+    if not json_data:
+        console.print("No differences found between databases.")
+        return
+
+    table = Table(title="Database Comparison Results")
+    table.add_column("Table", style="bold cyan")
+    table.add_column("Change Type", style="bold yellow")
+    table.add_column("Details", style="dim")
+
+    for comparison in json_data:
+        details = str(comparison.get("details", ""))
+        truncated_details = (
+            details[:DETAILS_MAX_LENGTH] + "..."
+            if len(details) > DETAILS_MAX_LENGTH
+            else details
+        )
+        table.add_row(
+            comparison.get("name", ""),
+            comparison.get("change_type", ""),
+            truncated_details,
+        )
+
+    console.print(table)
+
+
 @app.command()
 def versions(
     group: Group = Group.RELEASE,
+    output_format: Formats = Formats.TABLE,
     *,
     latest: bool = False,
-    json: bool = False,
 ) -> None:
     """List available database versions."""
     version_group: Iterable[Version] = get_versions_by_type(VERSIONS, group)
     if latest:
         version = latest_version(version_group)
-        if json:
-            echo(dumps(version, default=date_serializer))
-        else:
-            echo("\n".join(f"{key}: {value}" for key, value in version.items()))
+        if output_format == Formats.JSON:
+            console.print(JSON(dumps(version, default=date_serializer)))
+        elif output_format == Formats.HTML:
+            print_error("HTML format for versions is not yet implemented")
+            raise Exit(1)
+        else:  # TABLE format
+            table = Table(show_header=False)
+            table.add_column("Key", style="bold blue")
+            table.add_column("Value")
+            for key, value in version.items():
+                table.add_row(key, str(value))
+            console.print(table)
         return
 
-    if json:
-        echo(dumps(list(version_group), default=date_serializer))
-    else:
-        for version in version_group:
+    if output_format == Formats.JSON:
+        console.print(JSON(dumps(list(version_group), default=date_serializer)))
+    elif output_format == Formats.HTML:
+        print_error("HTML format for versions is not yet implemented")
+        raise Exit(1)
+    else:  # TABLE format
+        for i, version in enumerate(version_group):
+            if i > 0:
+                console.print()  # Add spacing between versions
+
+            table = Table(show_header=False, box=None)
+            table.add_column("Key", style="bold blue")
+            table.add_column("Value")
             for key, value in version.items():
-                echo(f"{key}: {value}")
-            echo("\n" + "-" * 40 + "\n")
+                table.add_row(key, str(value))
+            console.print(table)
+            console.rule(style="dim")
 
 
 @app.command()
@@ -78,29 +156,38 @@ def download(
     """Download databases."""
     version_obj = get_version(VERSIONS, version_id)
     if not version_obj:
-        echo(f"Error: Invalid version '{version_id}'", err=True)
+        print_error(f"Invalid version '{version_id}'")
         raise Exit(1)
 
     version_id = version_obj["id"]
-    echo(f"Downloading version {version_id} ({variant})")
 
     # Get source
     db_source = get_source(version_obj, variant)
-
     target_folder = output / version_id
     target_folder.mkdir(parents=True, exist_ok=True)
 
-    echo(f"Downloading from: {db_source.get('url', 'unknown')}")
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=err_console,
+    ) as progress:
+        task = progress.add_task(
+            f"Downloading version {version_id} ({variant})",
+            total=None,
+        )
+        print_info(f"Source URL: {db_source.get('url', 'unknown')}")
 
-    archive = download_source(db_source)
+        archive = download_source(db_source)
 
-    if extract:
-        extract_archive(archive, target_folder)
-    else:
-        archive_path = target_folder / f"{version_id}.zip"
-        archive_path.write_bytes(archive.getbuffer())
+        progress.update(task, description="Processing archive...")
 
-    echo(f"Downloaded version {version_id} to {target_folder}")
+        if extract:
+            extract_archive(archive, target_folder)
+        else:
+            archive_path = target_folder / f"{version_id}.zip"
+            archive_path.write_bytes(archive.getbuffer())
+
+    print_success(f"Downloaded version {version_id} to {target_folder}")
 
 
 @app.command()
@@ -109,13 +196,21 @@ def migrate(source: Path, target: Path = CWD) -> None:
     try:
         from migrate import migrate_to_sqlite
     except ImportError as e:
-        echo("Error: Migration requires Windows with ODBC drivers", err=True)
+        print_error("Migration requires Windows with ODBC drivers")
         raise Exit(1) from e
 
-    echo(f"Migrating from: {source}")
-    echo(f"Migrating to: {target}")
+    print_info(f"Source: {source}")
+    print_info(f"Target: {target}")
 
-    migrate_to_sqlite(source, target)
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=err_console,
+    ) as progress:
+        progress.add_task("Migrating database...", total=None)
+        migrate_to_sqlite(source, target)
+
+    print_success("Migration completed successfully")
 
 
 @app.command()
@@ -124,52 +219,80 @@ def schema(source: Path, output: Path = CWD) -> None:
     try:
         from schema import generate_schema
     except ImportError as e:
-        echo("Error: Schema generation requires additional dependencies", err=True)
+        print_error("Schema generation requires additional dependencies")
         raise Exit(1) from e
 
-    echo(f"Generating schema from: {source}")
-    echo(f"Output to: {output}")
+    print_info(f"Source database: {source}")
+    print_info(f"Output directory: {output}")
 
-    generate_schema(source, output)
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=err_console,
+    ) as progress:
+        progress.add_task("Generating schema...", total=None)
+        generate_schema(source, output)
+
+    print_success("Schema generation completed successfully")
 
 
 @app.command()
-def compare(old: Path, new: Path, *, output_format: str = "json") -> None:
+def compare(old: Path, new: Path, output_format: Formats = Formats.TABLE) -> None:
     """Compare two SQLite databases."""
-    if output_format not in ("json", "html"):
-        echo(
-            f"Error: Invalid format '{output_format}'. Must be 'json' or 'html'",
-            err=True,
-        )
-        raise Exit(1)
-
     try:
         from compare import compare_dbs, comparisons_to_html, comparisons_to_json
     except ImportError as e:
-        echo(f"Error: Compare functionality not available: {e}", err=True)
+        print_error(f"Compare functionality not available: {e}")
         raise Exit(1) from e
 
-    echo("Comparing databases:", err=True)
-    echo(f"  Old db: {old}", err=True)
-    echo(f"  New db: {new}", err=True)
+    print_info(f"Old database: {old}")
+    print_info(f"New database: {new}")
+    print_info(f"Output format: {output_format}")
+
+    # Check if files exist
+    if not old.exists():
+        print_error(f"Old database file does not exist: {old}")
+        raise Exit(1)
+    if not new.exists():
+        print_error(f"New database file does not exist: {new}")
+        raise Exit(1)
 
     # Perform comparison
-    old_conn = connect(old)
-    new_conn = connect(new)
+    try:
+        old_conn = connect(old)
+        new_conn = connect(new)
+    except OperationalError as e:
+        print_error(f"Failed to open database files: {e}")
+        raise Exit(1) from e
 
     try:
-        comparisons = compare_dbs(old_conn, new_conn)
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=err_console,
+        ) as progress:
+            progress.add_task("Comparing databases...", total=None)
+            comparisons = compare_dbs(old_conn, new_conn)
 
-        # Output to stdout in requested format
-        if output_format == "html":
+        # Output to stdout in requested format (keep stdout clean for data)
+        if output_format == Formats.HTML:
             html_stream = comparisons_to_html(comparisons)
             for chunk in html_stream:
-                echo(chunk)
-        else:
+                console.print(chunk, end="")
+            return
+
+        if output_format == Formats.JSON:
             json_output = comparisons_to_json(comparisons)
-            echo(json_output)
+            console.print(json_output)
+            return
+
+        if output_format == Formats.TABLE:
+            # Convert JSON to rich table format for better readability
+            format_comparison_table(comparisons)
+            return
+
     except OperationalError as e:
-        echo(f"Error during comparison: {e}", err=True)
+        print_error(f"Database comparison failed: {e}")
         raise Exit(1) from e
     finally:
         old_conn.close()
