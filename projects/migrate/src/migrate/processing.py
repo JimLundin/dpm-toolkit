@@ -69,7 +69,10 @@ def schema_and_data(source_database: Engine) -> tuple[MetaData, TablesWithRows]:
     return schema, tables_with_rows
 
 
-def load_data(target_database: Engine, tables_with_rows: TablesWithRows) -> None:
+def load_data_into_database(
+    target_database: Engine,
+    tables_with_rows: TablesWithRows,
+) -> None:
     """Populate the target database with data from the source database."""
     with target_database.begin() as connection:
         for table, rows in tables_with_rows:
