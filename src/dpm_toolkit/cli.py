@@ -1,16 +1,16 @@
 """Command line interface for DPM Toolkit."""
 
+from collections.abc import Iterable
 from datetime import date
 from enum import StrEnum, auto
 from json import dumps
 from pathlib import Path
 from sqlite3 import OperationalError, connect
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from archive import (
     Group,
     SourceType,
-    Version,
     download_source,
     extract_archive,
     get_source,
@@ -20,19 +20,11 @@ from archive import (
     latest_version,
 )
 from rich.console import Console
-from rich.json import JSON
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 from typer import Exit, Typer
 
-if TYPE_CHECKING:
-    from collections.abc import Iterable
-
-app = Typer(
-    name="dpm-toolkit",
-    help="DPM Toolkit CLI tool",
-    no_args_is_help=True,
-)
+app = Typer(name="dpm-toolkit", help="DPM Toolkit CLI tool", no_args_is_help=True)
 
 
 class Formats(StrEnum):
@@ -43,8 +35,10 @@ class Formats(StrEnum):
     HTML = auto()
 
 
-def date_serializer(obj: object) -> str | None:
+def serializer[T](obj: date | Iterable[T]) -> str | tuple[T, ...] | None:
     """Convert date to ISO format."""
+    if isinstance(obj, Iterable):
+        return tuple(obj)
     if isinstance(obj, date):
         return obj.isoformat()
     return None
@@ -56,7 +50,6 @@ err_console = Console(stderr=True)
 # Constants
 CWD = Path.cwd()
 VERSIONS = get_versions()
-DETAILS_MAX_LENGTH = 100
 
 
 def print_error(message: str) -> None:
@@ -74,7 +67,7 @@ def print_info(message: str) -> None:
     err_console.print(f"[bold blue]i[/] {message}")
 
 
-def format_comparison_table(json_data: list[dict[str, Any]]) -> None:
+def format_comparison_table(json_data: list[dict[str, Any]], length: int = 100) -> None:
     """Format comparison results as a rich table."""
     if not json_data:
         console.print("No differences found between databases.")
@@ -88,9 +81,7 @@ def format_comparison_table(json_data: list[dict[str, Any]]) -> None:
     for comparison in json_data:
         details = str(comparison.get("details", ""))
         truncated_details = (
-            details[:DETAILS_MAX_LENGTH] + "..."
-            if len(details) > DETAILS_MAX_LENGTH
-            else details
+            details[:length] + "..." if len(details) > length else details
         )
         table.add_row(
             comparison.get("name", ""),
@@ -109,11 +100,11 @@ def versions(
     latest: bool = False,
 ) -> None:
     """List available database versions."""
-    version_group: Iterable[Version] = get_versions_by_type(VERSIONS, group)
+    version_group = get_versions_by_type(VERSIONS, group)
     if latest:
         version = latest_version(version_group)
         if output_format == Formats.JSON:
-            console.print(JSON(dumps(version, default=date_serializer)))
+            console.print_json(dumps(version, default=serializer))
         elif output_format == Formats.HTML:
             print_error("HTML format for versions is not yet implemented")
             raise Exit(1)
@@ -127,7 +118,7 @@ def versions(
         return
 
     if output_format == Formats.JSON:
-        console.print(JSON(dumps(list(version_group), default=date_serializer)))
+        console.print_json(dumps(tuple(version_group), default=serializer))
     elif output_format == Formats.HTML:
         print_error("HTML format for versions is not yet implemented")
         raise Exit(1)
@@ -282,8 +273,7 @@ def compare(old: Path, new: Path, output_format: Formats = Formats.TABLE) -> Non
             return
 
         if output_format == Formats.JSON:
-            json_output = comparisons_to_json(comparisons)
-            console.print(json_output)
+            console.print_json(dumps(comparisons, serializer=serializer))
             return
 
         if output_format == Formats.TABLE:
