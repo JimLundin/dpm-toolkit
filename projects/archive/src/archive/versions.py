@@ -1,19 +1,47 @@
 """Module for loading and managing version information."""
 
 from collections import defaultdict
+from collections.abc import Iterable
 from datetime import date
+from enum import StrEnum, auto
 from pathlib import Path
 from tomllib import load
-from typing import Literal, NotRequired, TypedDict
+from typing import NotRequired, TypedDict
 
 type VersionUrls = dict[str, set[str]]
+
+
+class VersionType(StrEnum):
+    """Enumeration for version types."""
+
+    SAMPLE = auto()
+    DRAFT = auto()
+    FINAL = auto()
+    RELEASE = auto()
+    ERRATA = auto()
+
+
+class Group(StrEnum):
+    """Enumeration for version groups."""
+
+    ALL = auto()
+    RELEASE = auto()
+    DRAFT = auto()
+
+
+class SourceType(StrEnum):
+    """Enumeration for source types."""
+
+    ORIGINAL = auto()
+    ARCHIVE = auto()
+    CONVERTED = auto()
 
 
 class Source(TypedDict):
     """Source of a database."""
 
     url: str
-    checksum: NotRequired[str]
+    checksum: str
 
 
 class Version(TypedDict):
@@ -22,14 +50,25 @@ class Version(TypedDict):
     id: str
     date: date
     version: str
-    type: Literal["sample", "draft", "final", "release", "errata"]
+    type: VersionType
     revision: NotRequired[int]
     original: Source
-    archive: NotRequired[Source]
-    converted: NotRequired[Source]
+    archive: Source
+    converted: Source
 
 
-type Versions = list[Version]
+def get_source(version: Version, source_type: SourceType) -> Source:
+    """Get source by type from version."""
+    if source_type == SourceType.ORIGINAL:
+        return version["original"]
+    if source_type == SourceType.ARCHIVE:
+        return version["archive"]
+    if source_type == SourceType.CONVERTED:
+        return version["converted"]
+    return None
+
+
+type Versions = Iterable[Version]
 
 VERSION_FILE = Path(__file__).parent / "versions.toml"
 
@@ -41,9 +80,16 @@ def get_versions() -> Versions:
         return versions
 
 
-def get_versions_by_type(versions: Versions, *version_types: str) -> Versions:
+def get_versions_by_type(versions: Versions, group: Group) -> Versions:
     """Get the versions of the given type."""
-    return [v for v in versions if v["type"] in version_types]
+    if group == "all":
+        return versions
+    if group == "release":
+        return (v for v in versions if v["type"] in ("release", "errata"))
+    if group == "draft":
+        return (v for v in versions if v["type"] in ("draft", "sample"))
+    msg = f"Unknown version group: {group}"
+    raise ValueError(msg)
 
 
 def latest_version(versions: Versions) -> Version:
@@ -61,7 +107,9 @@ def get_version_urls() -> VersionUrls:
     versions = get_versions()
     version_urls: VersionUrls = defaultdict(set)
     for version in versions:
-        version_urls[version["version"]].add(version["original"]["url"])
+        original_source = version.get("original")
+        if original_source:
+            version_urls[version["version"]].add(original_source["url"])
 
     return version_urls
 
