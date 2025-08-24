@@ -4,7 +4,7 @@ from sqlite3 import Connection
 
 from sqlalchemy import Engine, create_engine
 
-from migrate.processing import load_data, schema_and_data
+from migrate.processing import load_data_into_database, schema_and_data
 
 
 def access_to_sqlite(source_database: Engine) -> Connection:
@@ -17,10 +17,10 @@ def access_to_sqlite(source_database: Engine) -> Connection:
         Connection to the new SQLite database
 
     """
-    schema, tables_and_rows = schema_and_data(source_database)
+    schema, tables_with_rows = schema_and_data(source_database)
 
     sqlite_database = create_engine("sqlite://")
     schema.create_all(sqlite_database)
-    load_data(sqlite_database, tables_and_rows)
+    load_data_into_database(sqlite_database, tables_with_rows)
 
     return sqlite_database.raw_connection().connection
