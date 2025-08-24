@@ -201,7 +201,7 @@ def migrate(source_location: Path, target_location: Path) -> None:
     ) as progress:
         progress.add_task("Migrating database...", total=None)
         sqlite_database = access_to_sqlite(access_database)
-        with sqlite_database.connect() as connection:
+        with sqlite_database as connection:
             connection.execute(f"VACUUM INTO '{target_location}'")
 
     print_success("Migration completed successfully")
