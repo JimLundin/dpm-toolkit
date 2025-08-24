@@ -105,7 +105,7 @@ def format_comparison_table(json_data: list[dict[str, Any]], length: int = 100) 
 
 @app.command()
 def versions(
-    group: Group = Group.RELEASE,
+    group: Group = Group.ALL,
     output_format: Formats = Formats.TABLE,
     *,
     latest: bool = False,
