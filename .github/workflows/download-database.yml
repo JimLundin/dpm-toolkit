@@ -45,7 +45,7 @@ jobs:
       - name: Download database files
         if: steps.cache-dbs.outputs.cache-hit != 'true'
         run: |
-          uv run dpm-toolkit download --version "${{ inputs.version_id }}" --type "${{ inputs.database_type }}" --target download-temp
+          uv run dpm-toolkit download "${{ inputs.version_id }}" --output download-temp --variant "${{ inputs.database_type }}"
 
       - name: Upload database artifact
         uses: actions/upload-artifact@v4
