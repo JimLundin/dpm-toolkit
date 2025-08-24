@@ -1,6 +1,5 @@
 """Database processing utilities for handling multiple Access databases."""
 
-from logging import getLogger
 from pathlib import Path
 
 from sqlalchemy import Engine, MetaData, Table, create_engine, event, insert, select
@@ -13,8 +12,6 @@ from migrate.transformations import (
     mark_non_nullable,
     parse,
 )
-
-logger = getLogger(__name__)
 
 type TableDataMap = list[tuple[Table, TableData]]
 
@@ -34,7 +31,7 @@ def reflect_schema(source: Engine) -> MetaData:
     return metadata
 
 
-def extract_schema_and_data(source: Engine) -> tuple[MetaData, TableDataMap]:
+def schema_and_data(source: Engine) -> tuple[MetaData, TableDataMap]:
     """Extract data and schema from a single Access database.
 
     Args:
