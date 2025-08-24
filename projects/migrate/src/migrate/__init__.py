@@ -1,5 +1,5 @@
 """Convert module for DPM Toolkit."""
 
-from migrate.main import create_access_engine, migrate_to_sqlite
+from migrate.main import access_engine, access_to_sqlite
 
-__all__ = ["create_access_engine", "migrate_to_sqlite"]
+__all__ = ["access_engine", "access_to_sqlite"]

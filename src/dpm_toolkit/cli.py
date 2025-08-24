@@ -28,7 +28,7 @@ from typer import Exit, Typer
 app = Typer(name="dpm-toolkit", help="DPM Toolkit CLI tool", no_args_is_help=True)
 
 
-class Formats(StrEnum):
+class OutputFormats(StrEnum):
     """Output format types."""
 
     TABLE = auto()
@@ -78,7 +78,9 @@ def format_version_table(version: Version) -> None:
     console.print(table)
 
 
-def format_comparison_table(json_data: list[dict[str, Any]], length: int = 100) -> None:
+def format_comparison_table(
+    json_data: Iterable[dict[str, Any]], length: int = 100
+) -> None:
     """Format comparison results as a rich table."""
     if not json_data:
         console.print("No differences found between databases.")
@@ -106,7 +108,7 @@ def format_comparison_table(json_data: list[dict[str, Any]], length: int = 100) 
 @app.command()
 def versions(
     group: Group = Group.ALL,
-    output_format: Formats = Formats.TABLE,
+    output_format: OutputFormats = OutputFormats.TABLE,
     *,
     latest: bool = False,
 ) -> None:
@@ -114,21 +116,21 @@ def versions(
     version_group = get_versions_by_type(VERSIONS, group)
     if latest:
         version = latest_version(version_group)
-        if output_format == Formats.JSON:
+        if output_format == OutputFormats.JSON:
             console.print_json(dumps(version, default=serializer))
-        elif output_format == Formats.HTML:
+        elif output_format == OutputFormats.HTML:
             print_error("HTML format for versions is not yet implemented")
             raise Exit(1)
-        else:  # TABLE format
+        elif output_format == OutputFormats.TABLE:
             format_version_table(version)
         return
 
-    if output_format == Formats.JSON:
+    if output_format == OutputFormats.JSON:
         console.print_json(dumps(tuple(version_group), default=serializer))
-    elif output_format == Formats.HTML:
+    elif output_format == OutputFormats.HTML:
         print_error("HTML format for versions is not yet implemented")
         raise Exit(1)
-    else:  # TABLE format
+    elif output_format == OutputFormats.TABLE:
         for version in version_group:
             format_version_table(version)
 
@@ -179,20 +181,18 @@ def download(
 
 
 @app.command()
-def migrate(source: Path, target: Path = CWD) -> None:
+def migrate(source_location: Path, target_location: Path) -> None:
     """Migrate Access databases to SQLite."""
     try:
-        from migrate import migrate_to_sqlite, create_access_engine
+        from migrate import access_engine, access_to_sqlite
     except ImportError as e:
         print_error("Migration requires [migrate] extra dependencies")
         raise Exit(1) from e
 
-    output_file = target / f"{source.stem}.sqlite"
+    print_info(f"Source: {source_location}")
+    print_info(f"Target: {target_location}")
 
-    print_info(f"Source: {source}")
-    print_info(f"Output: {output_file}")
-
-    access_db = create_access_engine(source)
+    access_database = access_engine(source_location)
 
     with Progress(
         SpinnerColumn(),
@@ -200,15 +200,15 @@ def migrate(source: Path, target: Path = CWD) -> None:
         console=err_console,
     ) as progress:
         progress.add_task("Migrating database...", total=None)
-        sqlite_db = migrate_to_sqlite(access_db)
-        with sqlite_db.connect() as conn:
-            conn.execute(f"VACUUM INTO '{output_file}'")
+        sqlite_database = access_to_sqlite(access_database)
+        with sqlite_database.connect() as connection:
+            connection.execute(f"VACUUM INTO '{target_location}'")
 
     print_success("Migration completed successfully")
 
 
 @app.command()
-def schema(source: Path, output: Path = CWD) -> None:
+def schema(source_location: Path, output_location: Path = CWD) -> None:
     """Generate SQLAlchemy schema from SQLite database."""
     try:
         from schema import generate_schema
@@ -216,8 +216,8 @@ def schema(source: Path, output: Path = CWD) -> None:
         print_error("Schema generation requires [schema] extra dependencies")
         raise Exit(1) from e
 
-    print_info(f"Source database: {source}")
-    print_info(f"Output directory: {output}")
+    print_info(f"Source database: {source_location}")
+    print_info(f"Output directory: {output_location}")
 
     with Progress(
         SpinnerColumn(),
@@ -225,36 +225,40 @@ def schema(source: Path, output: Path = CWD) -> None:
         console=err_console,
     ) as progress:
         progress.add_task("Generating schema...", total=None)
-        generate_schema(source, output)
+        generate_schema(source_location, output_location)
 
     print_success("Schema generation completed successfully")
 
 
 @app.command()
-def compare(old: Path, new: Path, output_format: Formats = Formats.TABLE) -> None:
+def compare(
+    old_location: Path,
+    new_location: Path,
+    output_format: OutputFormats = OutputFormats.TABLE,
+) -> None:
     """Compare two SQLite databases."""
     try:
-        from compare import compare_dbs, comparisons_to_html
+        from compare import compare_databases, comparisons_to_html
     except ImportError as e:
         print_error("Comparison requires [compare] extra dependencies")
         raise Exit(1) from e
 
-    print_info(f"Old database: {old}")
-    print_info(f"New database: {new}")
+    print_info(f"Old database: {old_location}")
+    print_info(f"New database: {new_location}")
     print_info(f"Output format: {output_format}")
 
     # Check if files exist
-    if not old.exists():
-        print_error(f"Old database file does not exist: {old}")
+    if not old_location.exists():
+        print_error(f"Old database file does not exist: {old_location}")
         raise Exit(1)
-    if not new.exists():
-        print_error(f"New database file does not exist: {new}")
+    if not new_location.exists():
+        print_error(f"New database file does not exist: {new_location}")
         raise Exit(1)
 
     # Perform comparison
     try:
-        old_conn = connect(old)
-        new_conn = connect(new)
+        old_database = connect(old_location)
+        new_database = connect(new_location)
     except OperationalError as e:
         print_error(f"Failed to open database files: {e}")
         raise Exit(1) from e
@@ -266,20 +270,20 @@ def compare(old: Path, new: Path, output_format: Formats = Formats.TABLE) -> Non
             console=err_console,
         ) as progress:
             progress.add_task("Comparing databases...", total=None)
-            comparisons = compare_dbs(old_conn, new_conn)
+            comparisons = compare_databases(old_database, new_database)
 
         # Output to stdout in requested format (keep stdout clean for data)
-        if output_format == Formats.HTML:
+        if output_format == OutputFormats.HTML:
             html_stream = comparisons_to_html(comparisons)
             for chunk in html_stream:
                 console.print(chunk, end="")
             return
 
-        if output_format == Formats.JSON:
-            console.print_json(dumps(comparisons, serializer=serializer))
+        if output_format == OutputFormats.JSON:
+            console.print_json(dumps(comparisons, default=serializer))
             return
 
-        if output_format == Formats.TABLE:
+        if output_format == OutputFormats.TABLE:
             format_comparison_table(comparisons)
             return
 
@@ -287,8 +291,8 @@ def compare(old: Path, new: Path, output_format: Formats = Formats.TABLE) -> Non
         print_error(f"Database comparison failed: {e}")
         raise Exit(1) from e
     finally:
-        old_conn.close()
-        new_conn.close()
+        old_database.close()
+        new_database.close()
 
 
 def main() -> None:
