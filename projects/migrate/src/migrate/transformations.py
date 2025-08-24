@@ -1,7 +1,7 @@
 """Schema transformation utilities for database conversion."""
 
 from collections import defaultdict
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator
 from datetime import date, datetime
 from typing import Any, NotRequired, TypedDict
 
@@ -21,11 +21,10 @@ from sqlalchemy.engine.interfaces import ReflectedColumn
 from sqlalchemy.types import TypeEngine
 
 type FieldValue = str | int | bool | date | datetime | None
-type TableRow = dict[str, FieldValue]
-type TableData = list[TableRow]
+type TransformedRow = dict[str, FieldValue]
+type TransformedRows = list[TransformedRow]
 type ColumnNames = set[str]
-type ColumnEnumMap = dict[str, set[str]]
-type Rows = Sequence[Row[Any]]
+type EnumByColumnName = dict[str, set[str]]
 
 
 class ColumnType(TypedDict):
@@ -44,24 +43,24 @@ COLUMN_TYPE_OVERRIDES: dict[str, ColumnType] = {
 }
 
 
-def is_guid(column: str) -> bool:
+def is_guid(column_name: str) -> bool:
     """Check if a column is a GUID column."""
-    return column.lower().endswith("guid")
+    return column_name.lower().endswith("guid")
 
 
-def is_bool(column: str) -> bool:
+def is_bool(column_name: str) -> bool:
     """Check if a column is a boolean column."""
-    return column.lower().startswith(("is", "has"))
+    return column_name.lower().startswith(("is", "has"))
 
 
-def is_date(column: str) -> bool:
+def is_date(column_name: str) -> bool:
     """Check if a column is a date column."""
-    return column.lower().endswith("date")
+    return column_name.lower().endswith("date")
 
 
-def is_enum(column: str) -> bool:
+def is_enum(column_name: str) -> bool:
     """Check if a column is an enum column."""
-    return column.lower().endswith(
+    return column_name.lower().endswith(
         (
             "type",
             "status",
@@ -104,63 +103,76 @@ def genericize(_i: Inspector, _t: str, column: ReflectedColumn) -> None:
     column["type"] = column_type
 
 
-def cast_value(column: str, value: FieldValue) -> FieldValue:
+def transform_value(column_name: str, value: FieldValue) -> FieldValue:
     """Transform row values to appropriate Python types."""
     if value is None:
         return None
-    if column in COLUMN_TYPE_OVERRIDES and (
-        caster := COLUMN_TYPE_OVERRIDES[column].get("python")
+    if column_name in COLUMN_TYPE_OVERRIDES and (
+        caster := COLUMN_TYPE_OVERRIDES[column_name].get("python")
     ):
         return caster(value)
-    if is_date(column) and isinstance(value, str):
+    if is_date(column_name) and isinstance(value, str):
         return date.fromisoformat(value)
-    if is_bool(column):
+    if is_bool(column_name):
         return bool(value)
     return value
 
 
-def parse(table_rows: Rows) -> tuple[TableData, ColumnEnumMap, ColumnNames]:
+def parse_rows(
+    rows: Iterator[Row],
+) -> tuple[TransformedRows, EnumByColumnName, ColumnNames]:
     """Transform row values to appropriate Python types."""
-    rows: TableData = []
-    enums: ColumnEnumMap = defaultdict(set)
-    nullables: ColumnNames = set()
-    for table_row in table_rows:
-        row = table_row._asdict()  # pyright: ignore[reportPrivateUsage]
-        rows.append(row)
-        for column in row:
-            new_value = cast_value(column, row[column])
-            row[column] = new_value
-            if is_enum(column) and isinstance(new_value, str):
-                enums[column].add(new_value)
-            if new_value is None:
-                nullables.add(column)
+    transformed_rows: TransformedRows = []
+    enum_by_column_name: EnumByColumnName = defaultdict(set)
+    nullable_column_names: ColumnNames = set()
+    for row in rows:
+        transformed_row = row._asdict()  # pyright: ignore[reportPrivateUsage]
+        for column_name in transformed_row:
+            transformed_value = transform_value(
+                column_name,
+                transformed_row[column_name],
+            )
+            transformed_row[column_name] = transformed_value
+            if is_enum(column_name):
+                enum_by_column_name[column_name].add(transformed_value)
+            if transformed_value is None:
+                nullable_column_names.add(column_name)
 
-    return rows, enums, nullables
+        transformed_rows.append(transformed_row)
+
+    return transformed_rows, enum_by_column_name, nullable_column_names
 
 
-def apply_enums(table: Table, enums: ColumnEnumMap) -> None:
+def apply_enums_to_table(table: Table, enum_by_column_name: EnumByColumnName) -> None:
     """Set enum columns for a table."""
     for column in table.columns:
-        if column.name in enums:
-            column.type = Enum(*enums[column.name])
+        if column.name in enum_by_column_name:
+            column.type = Enum(*enum_by_column_name[column.name])
 
 
-def mark_non_nullable(table: Table, nullables: ColumnNames) -> None:
+def set_table_nullable_column_names(
+    table: Table,
+    nullable_column_names: ColumnNames,
+) -> None:
     """Set nullable status for columns based on data analysis."""
     for column in table.columns:
-        if column.name not in nullables:
+        if column.name not in nullable_column_names:
             column.nullable = False
 
 
-def add_foreign_key(source_column: str, target_column: str, table: Table) -> None:
+def add_foreign_key_to_table(
+    table: Table,
+    source_column_name: str,
+    target_relationship: str,
+) -> None:
     """Set missing foreign keys."""
-    column = table.columns.get(source_column)
+    column = table.columns.get(source_column_name)
     if column is None or column.foreign_keys:
         return
-    column.append_foreign_key(ForeignKey(target_column))
+    column.append_foreign_key(ForeignKey(target_relationship))
 
 
-def add_foreign_keys(table: Table) -> None:
+def add_foreign_keys_to_table(table: Table) -> None:
     """Set missing foreign keys."""
-    add_foreign_key("RowGUID", "Concept.ConceptGUID", table)
-    add_foreign_key("ParentItemID", "Item.ItemID", table)
+    add_foreign_key_to_table(table, "RowGUID", "Concept.ConceptGUID")
+    add_foreign_key_to_table(table, "ParentItemID", "Item.ItemID")
