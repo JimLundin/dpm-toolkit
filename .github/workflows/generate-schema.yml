@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install UV
         uses: astral-sh/setup-uv@v6
@@ -29,7 +29,7 @@ jobs:
         run: uv sync --extra schema --dev
 
       - name: Download SQLite database artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: ${{ inputs.sqlite_artifact_name }}
 
