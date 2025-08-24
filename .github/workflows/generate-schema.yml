@@ -36,7 +36,7 @@ jobs:
       - name: Generate SQLAlchemy schema
         run: |
           SQLITE_FILE=$(find . -name "*.sqlite" -type f | head -1)
-          uv run dpm-toolkit schema "$SQLITE_FILE" --output ${{ inputs.sqlite_artifact_name }}.py
+          uv run dpm-toolkit schema "$SQLITE_FILE" --output-location ${{ inputs.sqlite_artifact_name }}.py
 
       - name: Format generated models with ruff
         run: |
