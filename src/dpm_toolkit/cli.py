@@ -129,12 +129,8 @@ def versions(
         print_error("HTML format for versions is not yet implemented")
         raise Exit(1)
     else:  # TABLE format
-        for i, version in enumerate(version_group):
-            if i > 0:
-                console.print()  # Add spacing between versions
-
+        for version in version_group:
             format_version_table(version)
-            console.rule(style="dim")
 
 
 @app.command()
@@ -186,13 +182,17 @@ def download(
 def migrate(source: Path, target: Path = CWD) -> None:
     """Migrate Access databases to SQLite."""
     try:
-        from migrate import migrate_to_sqlite
+        from migrate import migrate_to_sqlite, create_access_engine
     except ImportError as e:
-        print_error("Migration requires Windows with ODBC drivers")
+        print_error("Migration requires [migrate] extra dependencies")
         raise Exit(1) from e
 
+    output_file = target / f"{source.stem}.sqlite"
+
     print_info(f"Source: {source}")
-    print_info(f"Target: {target}")
+    print_info(f"Output: {output_file}")
+
+    access_db = create_access_engine(source)
 
     with Progress(
         SpinnerColumn(),
@@ -200,7 +200,9 @@ def migrate(source: Path, target: Path = CWD) -> None:
         console=err_console,
     ) as progress:
         progress.add_task("Migrating database...", total=None)
-        migrate_to_sqlite(source, target)
+        sqlite = migrate_to_sqlite(access_db)
+        with sqlite.connect() as conn:
+            conn.execute(f"VACUUM INTO '{output_file}'")
 
     print_success("Migration completed successfully")
 
@@ -211,7 +213,7 @@ def schema(source: Path, output: Path = CWD) -> None:
     try:
         from schema import generate_schema
     except ImportError as e:
-        print_error("Schema generation requires additional dependencies")
+        print_error("Schema generation requires [schema] extra dependencies")
         raise Exit(1) from e
 
     print_info(f"Source database: {source}")
@@ -232,9 +234,9 @@ def schema(source: Path, output: Path = CWD) -> None:
 def compare(old: Path, new: Path, output_format: Formats = Formats.TABLE) -> None:
     """Compare two SQLite databases."""
     try:
-        from compare import compare_dbs, comparisons_to_html, comparisons_to_json
+        from compare import compare_dbs, comparisons_to_html
     except ImportError as e:
-        print_error(f"Compare functionality not available: {e}")
+        print_error("Comparison requires [compare] extra dependencies")
         raise Exit(1) from e
 
     print_info(f"Old database: {old}")
@@ -278,7 +280,6 @@ def compare(old: Path, new: Path, output_format: Formats = Formats.TABLE) -> Non
             return
 
         if output_format == Formats.TABLE:
-            # Convert JSON to rich table format for better readability
             format_comparison_table(comparisons)
             return
 
