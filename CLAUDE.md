@@ -100,3 +100,12 @@ The `compare` module uses a streaming, memory-efficient approach:
 - Generated artifacts are published as GitHub releases
 - CLI provides both direct download and release-based distribution
 - Individual subprojects have their own test suites
+
+## Documentation Maintenance
+
+### Schema Module Documentation
+When refactoring the schema module, always update the corresponding README.md file to reflect:
+- Current API functions (`sqlite_read_only()`, `sqlite_to_sqlalchemy_schema()`)
+- Correct usage examples with actual function signatures
+- Generated code structure (snake_case attributes, mapped_column usage)
+- Import paths and module organization
