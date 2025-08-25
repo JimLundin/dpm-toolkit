@@ -190,10 +190,10 @@ def migrate(source_location: Path, target_location: Path) -> None:
         raise Exit(1) from e
 
     if not source_location.exists():
-        print_error(f"Source database file does not exist: {source}")
+        print_error(f"Source database file does not exist: {source_location}")
         raise Exit(1)
     if target_location.exists():
-        print_error(f"Target database file already exists: {target}")
+        print_error(f"Target database file already exists: {target_location}")
         raise Exit(1)
 
     if source_location.suffix.lower() not in {".mdb", ".accdb"}:
