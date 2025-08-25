@@ -138,7 +138,7 @@ requires-dist = [
     { name = "archive", editable = "projects/archive" },
     { name = "compare", marker = "extra == 'compare'", editable = "projects/compare" },
     { name = "migrate", marker = "extra == 'migrate'", virtual = "projects/migrate" },
-    { name = "schema", marker = "extra == 'schema'", virtual = "projects/schema" },
+    { name = "schema", marker = "extra == 'schema'", editable = "projects/schema" },
     { name = "scrape", marker = "extra == 'scrape'", virtual = "projects/scrape" },
     { name = "typer", specifier = ">=0.16.1" },
 ]
@@ -434,7 +434,7 @@ wheels = [
 [[package]]
 name = "schema"
 version = "0.0.0"
-source = { virtual = "projects/schema" }
+source = { editable = "projects/schema" }
 dependencies = [
     { name = "sqlalchemy" },
 ]

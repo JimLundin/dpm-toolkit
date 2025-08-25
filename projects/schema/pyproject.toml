@@ -19,3 +19,7 @@ strict = true
 
 [tool.pyright]
 typeCheckingMode = "strict"
+
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
