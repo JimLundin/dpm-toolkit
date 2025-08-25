@@ -1,5 +1,5 @@
 """Schema generation module for DPM Toolkit."""
 
-from schema.main import generate_schema
+from schema.main import sqlite_to_sqlalchemy_schema, sqlite_read_only_engine
 
-__all__ = ["generate_schema"]
+__all__ = ["sqlite_to_sqlalchemy_schema", "sqlite_read_only_engine"]
