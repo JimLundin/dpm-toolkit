@@ -79,7 +79,8 @@ def format_version_table(version: Version) -> None:
 
 
 def format_comparison_table(
-    json_data: Iterable[dict[str, Any]], length: int = 100
+    json_data: Iterable[dict[str, Any]],
+    length: int = 100,
 ) -> None:
     """Format comparison results as a rich table."""
     if not json_data:
