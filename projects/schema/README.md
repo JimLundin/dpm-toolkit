@@ -12,18 +12,25 @@ The schema module provides:
 
 ## Key Functions
 
-- `generate_schema()` - Generate Python models from SQLite database schema
+- `sqlite_read_only()` - Create read-only SQLAlchemy engine for SQLite database
+- `sqlite_to_sqlalchemy_schema()` - Generate SQLAlchemy schema from migrated SQLite database
 
 ## Usage
 
 ```python
-from schema import generate_schema
+from pathlib import Path
+from schema.main import sqlite_read_only, sqlite_to_sqlalchemy_schema
+
+# Create read-only database connection
+database_path = Path("/path/to/database.sqlite")
+engine = sqlite_read_only(database_path)
 
 # Generate Python models from SQLite database
-generate_schema(
-    database_path="/path/to/database.sqlite",
-    output_path="/path/to/models.py"
-)
+schema_code = sqlite_to_sqlalchemy_schema(engine)
+
+# Write to file
+with open("/path/to/models.py", "w") as f:
+    f.write(schema_code)
 ```
 
 ## Generated Features
@@ -38,15 +45,15 @@ generate_schema(
 
 ```python
 class TableVersionCell(DPM):
-    """Auto-generated model for TableVersionCell table."""
+    """Auto-generated model for the TableVersionCell table."""
     __tablename__ = "TableVersionCell"
-    
-    CellID: Mapped[str] = mapped_column(primary_key=True)
-    CellContent: Mapped[str | None]
-    IsActive: Mapped[bool]
+
+    cell_id: Mapped[str] = mapped_column("CellID", primary_key=True)
+    cell_content: Mapped[str | None] = mapped_column("CellContent")
+    is_active: Mapped[bool] = mapped_column("IsActive")
     
     # Auto-generated relationships
-    Cell: Mapped[Cell] = relationship(foreign_keys=[CellID])
+    cell: Mapped[Cell] = relationship(foreign_keys=cell_id)
 ```
 
 This is an internal DPM Toolkit component - generated models are distributed via the `dpm2` package.
