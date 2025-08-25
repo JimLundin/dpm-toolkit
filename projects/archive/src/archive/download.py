@@ -6,14 +6,11 @@ from hashlib import sha256
 from io import BytesIO
 from logging import getLogger
 from typing import TYPE_CHECKING
-from zipfile import ZipFile
 
 from requests import get
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
-    from archive import Source
+    from archive.versions import Source
 
 logger = getLogger(__name__)
 
@@ -39,10 +36,3 @@ def download_source(source: Source) -> BytesIO:
         logger.warning("No checksum provided")
 
     return BytesIO(response.content)
-
-
-def extract_archive(archive: BytesIO, target: Path) -> None:
-    """Extract files from the archive to the target with the given name."""
-    with ZipFile(archive) as zip_file:
-        target.mkdir(parents=True, exist_ok=True)
-        zip_file.extractall(target)
