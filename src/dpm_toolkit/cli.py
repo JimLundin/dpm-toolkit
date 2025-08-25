@@ -6,6 +6,7 @@ from enum import StrEnum, auto
 from json import dumps
 from pathlib import Path
 from sqlite3 import OperationalError, connect
+from sys import stdout
 from typing import Any
 
 from archive import (
@@ -13,7 +14,6 @@ from archive import (
     SourceType,
     Version,
     download_source,
-    extract_archive,
     get_source,
     get_version,
     get_versions,
@@ -78,12 +78,9 @@ def format_version_table(version: Version) -> None:
     console.print(table)
 
 
-def format_comparison_table(
-    json_data: Iterable[dict[str, Any]],
-    length: int = 100,
-) -> None:
+def format_comparison_table(data: Iterable[dict[str, Any]], length: int = 100) -> None:
     """Format comparison results as a rich table."""
-    if not json_data:
+    if not data:
         console.print("No differences found between databases.")
         return
 
@@ -92,7 +89,7 @@ def format_comparison_table(
     table.add_column("Change Type", style="bold yellow")
     table.add_column("Details", style="dim")
 
-    for comparison in json_data:
+    for comparison in data:
         details = str(comparison.get("details", ""))
         truncated_details = (
             f"{details[:length]}..." if len(details) > length else details
@@ -127,7 +124,7 @@ def versions(
         return
 
     if output_format == OutputFormats.JSON:
-        console.print_json(dumps(tuple(version_group), default=serializer))
+        console.print_json(dumps(version_group, default=serializer))
     elif output_format == OutputFormats.HTML:
         print_error("HTML format for versions is not yet implemented")
         raise Exit(1)
@@ -137,25 +134,17 @@ def versions(
 
 
 @app.command()
-def download(
-    version_id: str,
-    output: Path = CWD,
-    variant: SourceType = SourceType.ORIGINAL,
-    *,
-    extract: bool = True,
-) -> None:
+def download(version_id: str, variant: SourceType = SourceType.ORIGINAL) -> None:
     """Download databases."""
-    version_obj = get_version(VERSIONS, version_id)
-    if not version_obj:
+    version = get_version(VERSIONS, version_id)
+    if not version:
         print_error(f"Invalid version '{version_id}'")
         raise Exit(1)
 
-    version_id = version_obj["id"]
+    version_id = version["id"]
 
     # Get source
-    db_source = get_source(version_obj, variant)
-    target_folder = output / version_id
-    target_folder.mkdir(parents=True, exist_ok=True)
+    database_source = get_source(version, variant)
 
     with Progress(
         SpinnerColumn(),
@@ -166,19 +155,15 @@ def download(
             f"Downloading version {version_id} ({variant})",
             total=None,
         )
-        print_info(f"Source URL: {db_source.get('url', 'unknown')}")
+        print_info(f"Source URL: {database_source.get('url', 'unknown')}")
 
-        archive = download_source(db_source)
+        archive = download_source(database_source)
 
         progress.update(task, description="Processing archive...")
 
-        if extract:
-            extract_archive(archive, target_folder)
-        else:
-            archive_path = target_folder / f"{version_id}.zip"
-            archive_path.write_bytes(archive.getbuffer())
+        stdout.buffer.write(archive.getbuffer())
 
-    print_success(f"Downloaded version {version_id} to {target_folder}")
+    print_success(f"Downloaded version {version_id} ({variant})")
 
 
 @app.command()
