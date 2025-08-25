@@ -5,15 +5,15 @@ from pathlib import Path
 from sqlalchemy import Engine, MetaData, Table, create_engine, event, insert, select
 
 from migrate.transformations import (
-    TransformedRows,
+    CastedRows,
     add_foreign_keys_to_table,
     apply_enums_to_table,
     genericize,
     parse_rows,
-    set_table_nullable_column_names,
+    mark_nullable_columns_in_table,
 )
 
-type TableWithRows = tuple[Table, TransformedRows]
+type TableWithRows = tuple[Table, CastedRows]
 type TablesWithRows = list[TableWithRows]
 
 
@@ -49,9 +49,7 @@ def schema_and_data(source_database: Engine) -> tuple[MetaData, TablesWithRows]:
     with source_database.begin() as connection:
         for table in schema.tables.values():
             rows = connection.execute(select(table))
-            transformed_rows, enum_by_column_name, nullable_column_names = parse_rows(
-                rows
-            )
+            casted_rows, enum_by_column_name, nullable_column_names = parse_rows(rows)
 
             # Clear indexes to avoid name collisions and save space
             table.indexes.clear()
@@ -60,16 +58,16 @@ def schema_and_data(source_database: Engine) -> tuple[MetaData, TablesWithRows]:
                 table.kwargs["sqlite_with_rowid"] = False
 
             apply_enums_to_table(table, enum_by_column_name)
-            set_table_nullable_column_names(table, nullable_column_names)
+            mark_nullable_columns_in_table(table, nullable_column_names)
             add_foreign_keys_to_table(table)
 
-            if transformed_rows:
-                tables_with_rows.append((table, transformed_rows))
+            if casted_rows:
+                tables_with_rows.append((table, casted_rows))
 
     return schema, tables_with_rows
 
 
-def load_data_into_database(
+def load_data_to_database(
     target_database: Engine,
     tables_with_rows: TablesWithRows,
 ) -> None:
