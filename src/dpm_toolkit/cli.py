@@ -68,6 +68,25 @@ def print_info(message: str) -> None:
     err_console.print(f"[bold blue]i[/] {message}")
 
 
+def validate_database_location(
+    database_location: Path,
+    file_extensions: Iterable[str],
+    *,
+    exists: bool = True,
+) -> None:
+    """Validate database location."""
+    if exists != database_location.exists():
+        print_error(
+            f"Database file {"does not exist" if exists else "already exists"}: {database_location}"
+        )
+        raise Exit(1)
+    if database_location.suffix.lower() not in file_extensions:
+        print_error(
+            f"Database file has invalid extension: {', '.join(file_extensions)}",
+        )
+        raise Exit(1)
+
+
 def format_version_table(version: Version) -> None:
     """Format version information as a rich table."""
     table = Table(show_header=False)
@@ -161,29 +180,26 @@ def download(version_id: str, variant: SourceType = SourceType.ORIGINAL) -> None
 
 @app.command()
 def migrate(access_location: Path, sqlite_location: Path) -> None:
-    """Migrate Access databases to SQLite."""
+    """Migrate Access database to SQLite."""
     try:
         from migrate import access, access_to_sqlite
     except ImportError as e:
         print_error("Migration requires [migrate] extra dependencies")
         raise Exit(1) from e
 
-    if not access_location.exists():
-        print_error(f"Source database file does not exist: {access_location}")
-        raise Exit(1)
-    if access_location.suffix.lower() not in {".mdb", ".accdb"}:
-        print_error("Source file must have an Access extension: .mdb, .accdb")
-        raise Exit(1)
+    validate_database_location(
+        access_location,
+        {".mdb", ".accdb"},
+        exists=True,
+    )
+    validate_database_location(
+        sqlite_location,
+        {".sqlite", ".db", ".sqlite3"},
+        exists=False,
+    )
 
-    if sqlite_location.suffix.lower() not in {".sqlite", ".db", ".sqlite3"}:
-        print_error("Target file must have a SQLite extension: .sqlite, .db, .sqlite3")
-        raise Exit(1)
-    if sqlite_location.exists():
-        print_error(f"Target database file already exists: {sqlite_location}")
-        raise Exit(1)
-
-    print_info(f"Source: {access_location}")
-    print_info(f"Output: {sqlite_location}")
+    print_info(f"Access: {access_location}")
+    print_info(f"SQLite: {sqlite_location}")
 
     access_database = access(access_location)
 
@@ -209,9 +225,11 @@ def schema(sqlite_location: Path) -> None:
         print_error("Schema generation requires [schema] extra dependencies")
         raise Exit(1) from e
 
-    if not sqlite_location.exists():
-        print_error(f"Source database file does not exist: {sqlite_location}")
-        raise Exit(1)
+    validate_database_location(
+        sqlite_location,
+        {".sqlite", ".db", ".sqlite3"},
+        exists=True,
+    )
 
     print_info(f"Source database: {sqlite_location}")
 
@@ -223,7 +241,7 @@ def schema(sqlite_location: Path) -> None:
         progress.add_task("Generating schema...", total=None)
         sqlite_database = read_only_sqlite(sqlite_location)
         sqlalchemy_schema = sqlite_to_sqlalchemy_schema(sqlite_database)
-        print(sqlalchemy_schema)
+        stdout.write(sqlalchemy_schema)
 
     print_success("Schema generation completed successfully")
 
