@@ -130,7 +130,7 @@ def parse_rows(rows: Iterator[Row]) -> tuple[CastedRows, EnumByColumnName, Colum
             casted_row[column_name] = casted_value
             if casted_value is None:
                 nullable_column_names.add(column_name)
-            elif is_enum(column_name):
+            elif is_enum(column_name) and isinstance(casted_value, str):
                 enum_by_column_name[column_name].add(casted_value)
 
         casted_rows.append(casted_row)

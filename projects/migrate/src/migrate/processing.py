@@ -9,8 +9,8 @@ from migrate.transformations import (
     add_foreign_keys_to_table,
     apply_enums_to_table,
     genericize,
-    parse_rows,
     mark_nullable_columns_in_table,
+    parse_rows,
 )
 
 type TableWithRows = tuple[Table, CastedRows]
