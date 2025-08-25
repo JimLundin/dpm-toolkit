@@ -14,7 +14,7 @@ def sqlite_read_only(sqlite_location: Path) -> Engine:
         sqlite_location: Path to SQLite database file
 
     """
-    connection_string = f"sqlite:///file:{sqlite_location}?mode=ro"
+    connection_string = f"sqlite:///{sqlite_location}?mode=ro"
     return create_engine(connection_string, connect_args={"uri": True})
 
 
