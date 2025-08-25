@@ -11,7 +11,7 @@ def access_to_sqlite(source_database: Engine) -> Connection:
     """Migrate Access database to SQLite.
 
     Args:
-        source_database: Directory or path to Access database
+        source_database: Engine of the source Access database
 
     Returns:
         Connection to the new SQLite database
