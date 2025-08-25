@@ -224,16 +224,19 @@ def migrate(source_location: Path, target_location: Path) -> None:
 
 
 @app.command()
-def schema(source_location: Path, output_location: Path = CWD) -> None:
+def schema(sqlite_location: Path) -> None:
     """Generate SQLAlchemy schema from SQLite database."""
     try:
-        from schema import generate_schema
+        from schema import sqlite_read_only, sqlite_to_sqlalchemy_schema
     except ImportError as e:
         print_error("Schema generation requires [schema] extra dependencies")
         raise Exit(1) from e
 
-    print_info(f"Source database: {source_location}")
-    print_info(f"Output directory: {output_location}")
+    if not sqlite_location.exists():
+        print_error(f"Source database file does not exist: {sqlite_location}")
+        raise Exit(1)
+
+    print_info(f"Source database: {sqlite_location}")
 
     with Progress(
         SpinnerColumn(),
@@ -241,7 +244,9 @@ def schema(source_location: Path, output_location: Path = CWD) -> None:
         console=err_console,
     ) as progress:
         progress.add_task("Generating schema...", total=None)
-        generate_schema(source_location, output_location)
+        sqlite_database = sqlite_read_only(sqlite_location)
+        sqlalchemy_schema = sqlite_to_sqlalchemy_schema(sqlite_database)
+        print(sqlalchemy_schema)
 
     print_success("Schema generation completed successfully")
 
