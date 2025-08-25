@@ -246,7 +246,7 @@ def schema(sqlite_location: Path) -> None:
         progress.add_task("Generating schema...", total=None)
         sqlite_database = sqlite_read_only(sqlite_location)
         sqlalchemy_schema = sqlite_to_sqlalchemy_schema(sqlite_database)
-        console.print(sqlalchemy_schema)
+        print(sqlalchemy_schema)
 
     print_success("Schema generation completed successfully")
 
