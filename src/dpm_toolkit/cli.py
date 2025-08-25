@@ -160,33 +160,32 @@ def download(version_id: str, variant: SourceType = SourceType.ORIGINAL) -> None
 
 
 @app.command()
-def migrate(source_location: Path, target_location: Path) -> None:
+def migrate(access_location: Path, sqlite_location: Path) -> None:
     """Migrate Access databases to SQLite."""
     try:
-        from migrate import access_engine, access_to_sqlite
+        from migrate import access, access_to_sqlite
     except ImportError as e:
         print_error("Migration requires [migrate] extra dependencies")
         raise Exit(1) from e
 
-    if not source_location.exists():
-        print_error(f"Source database file does not exist: {source_location}")
+    if not access_location.exists():
+        print_error(f"Source database file does not exist: {access_location}")
         raise Exit(1)
-    if target_location.exists():
-        print_error(f"Target database file already exists: {target_location}")
-        raise Exit(1)
-
-    if source_location.suffix.lower() not in {".mdb", ".accdb"}:
+    if access_location.suffix.lower() not in {".mdb", ".accdb"}:
         print_error("Source file must have an Access extension: .mdb, .accdb")
         raise Exit(1)
 
-    if target_location.suffix.lower() not in {".sqlite", ".db", ".sqlite3"}:
+    if sqlite_location.suffix.lower() not in {".sqlite", ".db", ".sqlite3"}:
         print_error("Target file must have a SQLite extension: .sqlite, .db, .sqlite3")
         raise Exit(1)
+    if sqlite_location.exists():
+        print_error(f"Target database file already exists: {sqlite_location}")
+        raise Exit(1)
 
-    print_info(f"Source: {source_location}")
-    print_info(f"Output: {target_location}")
+    print_info(f"Source: {access_location}")
+    print_info(f"Output: {sqlite_location}")
 
-    access_database = access_engine(source_location)
+    access_database = access(access_location)
 
     with Progress(
         SpinnerColumn(),
@@ -196,7 +195,7 @@ def migrate(source_location: Path, target_location: Path) -> None:
         progress.add_task("Migrating database...", total=None)
         sqlite_database = access_to_sqlite(access_database)
         with sqlite_database as connection:
-            connection.execute(f"VACUUM INTO '{target_location}'")
+            connection.execute(f"VACUUM INTO '{sqlite_location}'")
 
     print_success("Migration completed successfully")
 

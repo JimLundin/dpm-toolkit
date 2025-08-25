@@ -17,10 +17,10 @@ type TableWithRows = tuple[Table, CastedRows]
 type TablesWithRows = list[TableWithRows]
 
 
-def access_engine(database_location: Path) -> Engine:
+def access(access_location: Path) -> Engine:
     """Get an engine to an Access database."""
     driver = "{Microsoft Access Driver (*.mdb, *.accdb)}"
-    connection_string = f"DRIVER={driver};DBQ={database_location}"
+    connection_string = f"DRIVER={driver};DBQ={access_location}"
     return create_engine(f"access+pyodbc:///?odbc_connect={connection_string}")
 
 
@@ -32,21 +32,21 @@ def reflect_schema(source_database: Engine) -> MetaData:
     return schema
 
 
-def schema_and_data(source_database: Engine) -> tuple[MetaData, TablesWithRows]:
+def schema_and_data(access_database: Engine) -> tuple[MetaData, TablesWithRows]:
     """Extract data and schema from a single Access database.
 
     Args:
-        source: Engine to the source Access database
+        access_database: Engine to the source Access database
 
     Returns:
         MetaData: Database metadata
-        TableData: Table rows
+        TablesWithRows: Table rows
 
     """
-    schema = reflect_schema(source_database)
+    schema = reflect_schema(access_database)
 
     tables_with_rows: TablesWithRows = []
-    with source_database.begin() as connection:
+    with access_database.begin() as connection:
         for table in schema.tables.values():
             rows = connection.execute(select(table))
             casted_rows, enum_by_column_name, nullable_column_names = parse_rows(rows)

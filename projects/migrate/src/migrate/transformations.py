@@ -118,7 +118,9 @@ def cast_value(column_name: str, value: FieldValue) -> FieldValue:
     return value
 
 
-def parse_rows(rows: Iterator[Row]) -> tuple[CastedRows, EnumByColumnName, ColumnNames]:
+def parse_rows(
+    rows: Iterator[Row[Any]],
+) -> tuple[CastedRows, EnumByColumnName, ColumnNames]:
     """Transform row values to appropriate Python types."""
     casted_rows: CastedRows = []
     enum_by_column_name: EnumByColumnName = defaultdict(set)
