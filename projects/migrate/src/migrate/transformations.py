@@ -21,8 +21,8 @@ from sqlalchemy.engine.interfaces import ReflectedColumn
 from sqlalchemy.types import TypeEngine
 
 type FieldValue = str | int | bool | date | datetime | None
-type TransformedRow = dict[str, FieldValue]
-type TransformedRows = list[TransformedRow]
+type CastedRow = dict[str, FieldValue]
+type CastedRows = list[CastedRow]
 type ColumnNames = set[str]
 type EnumByColumnName = dict[str, set[str]]
 
@@ -103,7 +103,7 @@ def genericize(_i: Inspector, _t: str, column: ReflectedColumn) -> None:
     column["type"] = column_type
 
 
-def transform_value(column_name: str, value: FieldValue) -> FieldValue:
+def cast_value(column_name: str, value: FieldValue) -> FieldValue:
     """Transform row values to appropriate Python types."""
     if value is None:
         return None
@@ -118,29 +118,24 @@ def transform_value(column_name: str, value: FieldValue) -> FieldValue:
     return value
 
 
-def parse_rows(
-    rows: Iterator[Row],
-) -> tuple[TransformedRows, EnumByColumnName, ColumnNames]:
+def parse_rows(rows: Iterator[Row]) -> tuple[CastedRows, EnumByColumnName, ColumnNames]:
     """Transform row values to appropriate Python types."""
-    transformed_rows: TransformedRows = []
+    casted_rows: CastedRows = []
     enum_by_column_name: EnumByColumnName = defaultdict(set)
     nullable_column_names: ColumnNames = set()
     for row in rows:
-        transformed_row = row._asdict()  # pyright: ignore[reportPrivateUsage]
-        for column_name in transformed_row:
-            transformed_value = transform_value(
-                column_name,
-                transformed_row[column_name],
-            )
-            transformed_row[column_name] = transformed_value
-            if transformed_value is None:
+        casted_row = row._asdict()  # pyright: ignore[reportPrivateUsage]
+        for column_name in casted_row:
+            casted_value = cast_value(column_name, casted_row[column_name])
+            casted_row[column_name] = casted_value
+            if casted_value is None:
                 nullable_column_names.add(column_name)
             elif is_enum(column_name):
-                enum_by_column_name[column_name].add(transformed_value)
+                enum_by_column_name[column_name].add(casted_value)
 
-        transformed_rows.append(transformed_row)
+        casted_rows.append(casted_row)
 
-    return transformed_rows, enum_by_column_name, nullable_column_names
+    return casted_rows, enum_by_column_name, nullable_column_names
 
 
 def apply_enums_to_table(table: Table, enum_by_column_name: EnumByColumnName) -> None:
@@ -150,7 +145,7 @@ def apply_enums_to_table(table: Table, enum_by_column_name: EnumByColumnName) ->
             column.type = Enum(*enum_by_column_name[column.name])
 
 
-def set_table_nullable_column_names(
+def mark_nullable_columns_in_table(
     table: Table,
     nullable_column_names: ColumnNames,
 ) -> None:
