@@ -1,6 +1,6 @@
 """Module for loading and managing version information."""
 
-from archive.download import download_source, extract_archive
+from archive.download import download_source
 from archive.versions import (
     Group,
     Source,
@@ -20,7 +20,6 @@ __all__ = [
     "SourceType",
     "Version",
     "download_source",
-    "extract_archive",
     "get_source",
     "get_version",
     "get_version_urls",
