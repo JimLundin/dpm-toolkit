@@ -56,9 +56,11 @@ class Model:
             sorted_tables = self.metadata.sorted_tables
 
         models = [
-            self._generate_class(table)
-            if table.primary_key or "RowGUID" in table.columns
-            else self._generate_table(table)
+            (
+                self._generate_class(table)
+                if table.primary_key or "RowGUID" in table.columns
+                else self._generate_table(table)
+            )
             for table in sorted_tables
         ]
 
@@ -120,7 +122,10 @@ class Model:
         sql_type = column.type.__class__.__name__
         self.imports["sqlalchemy"].add(sql_type)
         if isinstance(column.type, Enum):
-            enum_values = (f'"{value}"' for value in column.type.enums)  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+            enum_values = (
+                f'"{value}"'
+                for value in column.type.enums  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+            )
             sql_type = f"Enum({', '.join(sorted(enum_values))})"
         self.imports["sqlalchemy"].add("Column")
         return (
@@ -136,13 +141,17 @@ class Model:
                 f"class {pascal_case(table.name)}({self.base}):",
                 f'{INDENT}"""Auto-generated model for the {table.name} table."""',
                 f'{INDENT}__tablename__ = "{table.name}"\n',
-                f"{INDENT}# We quote the references to avoid circular dependencies"
-                if table.name == "Concept"
-                else "",
+                (
+                    f"{INDENT}# We quote the references to avoid circular dependencies"
+                    if table.name == "Concept"
+                    else ""
+                ),
                 *(self._generate_mapped_column(column) for column in table.columns),
-                f"\n{INDENT}{self._generate_mapper_args(table)}"
-                if not table.primary_key
-                else "",
+                (
+                    f"\n{INDENT}{self._generate_mapper_args(table)}"
+                    if not table.primary_key
+                    else ""
+                ),
                 *self._generate_relationships(table),
             ),
         )
@@ -196,7 +205,10 @@ class Model:
 
         if isinstance(column_type, Enum):
             self.imports["typing"].add("Literal")
-            enum_values = [f'"{enum}"' for enum in column_type.enums]  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+            enum_values = [
+                f'"{enum}"'
+                for enum in column_type.enums  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+            ]
             python_type_name = f"Literal[{', '.join(sorted(enum_values))}]"
 
         return f"{python_type_name} | None" if column.nullable else python_type_name
@@ -226,9 +238,11 @@ class Model:
         else:
             # Self referential FKs
             foreign_keys.extend(
-                f'"{snake_case(fk.column.name)}"'
-                if fk.column.name == column.name
-                else snake_case(fk.column.name)
+                (
+                    f'"{snake_case(fk.column.name)}"'
+                    if fk.column.name == column.name
+                    else snake_case(fk.column.name)
+                )
                 for fk in column.foreign_keys
                 if fk.column.table == column.table
             )
