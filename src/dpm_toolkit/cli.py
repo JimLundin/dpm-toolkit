@@ -141,11 +141,7 @@ def download(version_id: str, variant: SourceType = SourceType.ORIGINAL) -> None
         print_error(f"Invalid version '{version_id}'")
         raise Exit(1)
 
-    version_id = version["id"]
-
-    # Get source
     database_source = get_source(version, variant)
-
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
@@ -156,13 +152,10 @@ def download(version_id: str, variant: SourceType = SourceType.ORIGINAL) -> None
             total=None,
         )
         print_info(f"Source URL: {database_source.get('url', 'unknown')}")
-
         archive = download_source(database_source)
-
         progress.update(task, description="Processing archive...")
 
-        stdout.buffer.write(archive.getbuffer())
-
+    stdout.buffer.write(archive.getbuffer())
     print_success(f"Downloaded version {version_id} ({variant})")
 
 
