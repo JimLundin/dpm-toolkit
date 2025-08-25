@@ -7,7 +7,7 @@ from sqlalchemy import Engine, MetaData, create_engine
 from schema.generation import Model
 
 
-def sqlite_read_only(sqlite_location: Path) -> Engine:
+def read_only_sqlite(sqlite_location: Path) -> Engine:
     """Create a read-only SQLAlchemy engine for SQLite database.
 
     Args:
