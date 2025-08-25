@@ -1,6 +1,6 @@
 """Convert module for DPM Toolkit."""
 
 from migrate.main import access_to_sqlite
-from migrate.processing import access_engine
+from migrate.processing import access
 
-__all__ = ["access_engine", "access_to_sqlite"]
+__all__ = ["access", "access_to_sqlite"]
