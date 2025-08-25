@@ -189,8 +189,23 @@ def migrate(source_location: Path, target_location: Path) -> None:
         print_error("Migration requires [migrate] extra dependencies")
         raise Exit(1) from e
 
+    if not source_location.exists():
+        print_error(f"Source database file does not exist: {source}")
+        raise Exit(1)
+    if target_location.exists():
+        print_error(f"Target database file already exists: {target}")
+        raise Exit(1)
+
+    if source_location.suffix.lower() not in {".mdb", ".accdb"}:
+        print_error("Source file must have an Access extension: .mdb, .accdb")
+        raise Exit(1)
+
+    if target_location.suffix.lower() not in {".sqlite", ".db", ".sqlite3"}:
+        print_error("Target file must have a SQLite extension: .sqlite, .db, .sqlite3")
+        raise Exit(1)
+
     print_info(f"Source: {source_location}")
-    print_info(f"Target: {target_location}")
+    print_info(f"Output: {target_location}")
 
     access_database = access_engine(source_location)
 
