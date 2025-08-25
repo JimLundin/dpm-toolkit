@@ -1,51 +1,31 @@
 """Main module for schema generation."""
 
-from datetime import UTC, datetime
-from logging import getLogger
 from pathlib import Path
 
-from sqlalchemy import MetaData, create_engine
+from sqlalchemy import Engine, MetaData, create_engine
 
 from schema.generation import Model
 
-logger = getLogger(__name__)
+
+def sqlite_read_only(sqlite_location: Path) -> Engine:
+    """Create a read-only SQLAlchemy engine for SQLite database.
+
+    Args:
+        sqlite_location: Path to SQLite database file
+
+    """
+    connection_string = f"sqlite:///{sqlite_location}?mode=ro"
+    return create_engine(connection_string, connect_args={"uri": True})
 
 
-def generate_schema(source: Path, target: Path) -> None:
+def sqlite_to_sqlalchemy_schema(sqlite_database: Engine) -> str:
     """Generate SQLAlchemy schema from migrated SQLite database.
 
     Args:
-        source: Path to SQLite database
-        target: Directory to save SQLAlchemy schema file
-        name: Desired name of the output schema file
+        sqlite_database: Engine of the SQLite database
 
     """
-    start_time = datetime.now(UTC)
+    schema = MetaData()
+    schema.reflect(bind=sqlite_database)
 
-    if not source.is_file():
-        logger.error("%s must exist", source)
-        return
-    if source.suffix not in (".sqlite", ".db"):
-        logger.error("%s must be a SQLite database file", source)
-        return
-
-    if target.exists():
-        logger.error("%s already exists", target)
-        return
-    if target.suffix != ".py":
-        logger.error("Target %s must be a python file", target)
-        return
-
-    database = create_engine(f"sqlite:///{source}?mode=ro", connect_args={"uri": True})
-    metadata = MetaData()
-    metadata.reflect(bind=database)
-
-    logger.info("Processing: %s", source.stem)
-
-    target.parent.mkdir(parents=True, exist_ok=True)
-    with target.open("w") as model_file:
-        schema = Model(metadata).render()
-        model_file.write(schema)
-
-    stop_time = datetime.now(UTC)
-    logger.info("Generated schema in %s", stop_time - start_time)
+    return Model(schema).render()
