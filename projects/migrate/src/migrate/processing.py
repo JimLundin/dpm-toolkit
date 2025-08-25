@@ -5,33 +5,34 @@ from pathlib import Path
 from sqlalchemy import Engine, MetaData, Table, create_engine, event, insert, select
 
 from migrate.transformations import (
-    TableData,
-    add_foreign_keys,
-    apply_enums,
+    CastedRows,
+    add_foreign_keys_to_table,
+    apply_enums_to_table,
     genericize,
-    mark_non_nullable,
-    parse,
+    mark_nullable_columns_in_table,
+    parse_rows,
 )
 
-type TableDataMap = list[tuple[Table, TableData]]
+type TableWithRows = tuple[Table, CastedRows]
+type TablesWithRows = list[TableWithRows]
 
 
-def create_access_engine(db: Path) -> Engine:
+def access_engine(database_location: Path) -> Engine:
     """Get an engine to an Access database."""
     driver = "{Microsoft Access Driver (*.mdb, *.accdb)}"
-    conn_str = f"DRIVER={driver};DBQ={db}"
-    return create_engine(f"access+pyodbc:///?odbc_connect={conn_str}")
+    connection_string = f"DRIVER={driver};DBQ={database_location}"
+    return create_engine(f"access+pyodbc:///?odbc_connect={connection_string}")
 
 
-def reflect_schema(source: Engine) -> MetaData:
+def reflect_schema(source_database: Engine) -> MetaData:
     """Reflect a database schema."""
-    metadata = MetaData()
-    event.listen(metadata, "column_reflect", genericize)
-    metadata.reflect(bind=source)
-    return metadata
+    schema = MetaData()
+    event.listen(schema, "column_reflect", genericize)
+    schema.reflect(bind=source_database)
+    return schema
 
 
-def schema_and_data(source: Engine) -> tuple[MetaData, TableDataMap]:
+def schema_and_data(source_database: Engine) -> tuple[MetaData, TablesWithRows]:
     """Extract data and schema from a single Access database.
 
     Args:
@@ -42,13 +43,13 @@ def schema_and_data(source: Engine) -> tuple[MetaData, TableDataMap]:
         TableData: Table rows
 
     """
-    metadata = reflect_schema(source)
+    schema = reflect_schema(source_database)
 
-    tables: TableDataMap = []
-    with source.begin() as connection:
-        for table in metadata.tables.values():
-            data = connection.execute(select(table)).all()
-            rows, enums, nullables = parse(data)
+    tables_with_rows: TablesWithRows = []
+    with source_database.begin() as connection:
+        for table in schema.tables.values():
+            rows = connection.execute(select(table))
+            casted_rows, enum_by_column_name, nullable_column_names = parse_rows(rows)
 
             # Clear indexes to avoid name collisions and save space
             table.indexes.clear()
@@ -56,18 +57,21 @@ def schema_and_data(source: Engine) -> tuple[MetaData, TableDataMap]:
             if table.primary_key:
                 table.kwargs["sqlite_with_rowid"] = False
 
-            apply_enums(table, enums)
-            mark_non_nullable(table, nullables)
-            add_foreign_keys(table)
+            apply_enums_to_table(table, enum_by_column_name)
+            mark_nullable_columns_in_table(table, nullable_column_names)
+            add_foreign_keys_to_table(table)
 
-            if rows:
-                tables.append((table, rows))
+            if casted_rows:
+                tables_with_rows.append((table, casted_rows))
 
-    return metadata, tables
+    return schema, tables_with_rows
 
 
-def load_data(target: Engine, tables: TableDataMap) -> None:
+def load_data_to_database(
+    target_database: Engine,
+    tables_with_rows: TablesWithRows,
+) -> None:
     """Populate the target database with data from the source database."""
-    with target.begin() as connection:
-        for table, data in tables:
-            connection.execute(insert(table), data)
+    with target_database.begin() as connection:
+        for table, rows in tables_with_rows:
+            connection.execute(insert(table), rows)

@@ -202,7 +202,7 @@ def removed_table(name: str, old: Inspector) -> Comparison:
     )
 
 
-def compare_dbs(old: Connection, new: Connection) -> Iterator[Comparison]:
+def compare_databases(old: Connection, new: Connection) -> Iterator[Comparison]:
     """Compare two SQLite databases and return differences."""
     old_inspector = Inspector(old)
     new_inspector = Inspector(new)
