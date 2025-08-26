@@ -94,6 +94,14 @@ jobs:
         run: |
           OLD_DB=$(find ./old-db -name "*.sqlite" | head -1)
           NEW_DB=$(find ./new-db -name "*.sqlite" | head -1)
+          if [[ -z "$OLD_DB" ]]; then
+            echo "Error: No .sqlite file found in ./old-db" >&2
+            exit 1
+          fi
+          if [[ -z "$NEW_DB" ]]; then
+            echo "Error: No .sqlite file found in ./new-db" >&2
+            exit 1
+          fi
           echo "old_db=$OLD_DB" >> $GITHUB_OUTPUT
           echo "new_db=$NEW_DB" >> $GITHUB_OUTPUT
           echo "Found old database: $OLD_DB"
