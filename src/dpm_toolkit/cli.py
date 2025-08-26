@@ -286,7 +286,7 @@ def compare(
         if output_format == OutputFormats.HTML:
             html_stream = comparisons_to_html(comparisons)
             for chunk in html_stream:
-                console.print(chunk, end="")
+                stdout.write(chunk)
             return
 
         if output_format == OutputFormats.JSON:
