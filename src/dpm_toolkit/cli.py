@@ -50,6 +50,8 @@ err_console = Console(stderr=True)
 
 # Constants
 CWD = Path.cwd()
+ACCESS_EXTENSIONS = {".mdb", ".accdb"}
+SQLITE_EXTENSIONS = {".sqlite", ".db", ".sqlite3"}
 VERSIONS = get_versions()
 
 
@@ -68,18 +70,22 @@ def print_info(message: str) -> None:
     err_console.print(f"[bold blue]i[/] {message}")
 
 
-def validate_database_location(
-    database_location: Path,
-    file_extensions: Iterable[str],
-    *,
-    exists: bool = True,
-) -> None:
+def validate_database_location(database_location: Path, *, exists: bool = True) -> None:
     """Validate database location."""
     if exists != database_location.exists():
         print_error(
-            f"Database file {"does not exist" if exists else "already exists"}: {database_location}"
+            f"Database file "
+            f"{"does not exist" if exists else "already exists"}: "
+            f"{database_location}",
         )
         raise Exit(1)
+
+
+def validate_database_extension(
+    database_location: Path,
+    file_extensions: Iterable[str],
+) -> None:
+    """Validate database file extension."""
     if database_location.suffix.lower() not in file_extensions:
         print_error(
             f"Database file has invalid extension: {', '.join(file_extensions)}",
@@ -187,18 +193,12 @@ def migrate(access_location: Path, sqlite_location: Path) -> None:
         print_error("Migration requires [migrate] extra dependencies")
         raise Exit(1) from e
 
-    validate_database_location(
-        access_location,
-        {".mdb", ".accdb"},
-        exists=True,
-    )
-    validate_database_location(
-        sqlite_location,
-        {".sqlite", ".db", ".sqlite3"},
-        exists=False,
-    )
-
+    validate_database_location(access_location, exists=True)
+    validate_database_extension(access_location, ACCESS_EXTENSIONS)
     print_info(f"Access: {access_location}")
+
+    validate_database_location(sqlite_location, exists=False)
+    validate_database_extension(sqlite_location, SQLITE_EXTENSIONS)
     print_info(f"SQLite: {sqlite_location}")
 
     access_database = access(access_location)
@@ -225,12 +225,8 @@ def schema(sqlite_location: Path) -> None:
         print_error("Schema generation requires [schema] extra dependencies")
         raise Exit(1) from e
 
-    validate_database_location(
-        sqlite_location,
-        {".sqlite", ".db", ".sqlite3"},
-        exists=True,
-    )
-
+    validate_database_location(sqlite_location, exists=True)
+    validate_database_extension(sqlite_location, SQLITE_EXTENSIONS)
     print_info(f"Source database: {sqlite_location}")
 
     with Progress(
@@ -259,17 +255,15 @@ def compare(
         print_error("Comparison requires [compare] extra dependencies")
         raise Exit(1) from e
 
+    validate_database_location(old_location, exists=True)
+    validate_database_extension(old_location, SQLITE_EXTENSIONS)
     print_info(f"Old database: {old_location}")
-    print_info(f"New database: {new_location}")
-    print_info(f"Output format: {output_format}")
 
-    # Check if files exist
-    if not old_location.exists():
-        print_error(f"Old database file does not exist: {old_location}")
-        raise Exit(1)
-    if not new_location.exists():
-        print_error(f"New database file does not exist: {new_location}")
-        raise Exit(1)
+    validate_database_location(new_location, exists=True)
+    validate_database_extension(new_location, SQLITE_EXTENSIONS)
+    print_info(f"New database: {new_location}")
+
+    print_info(f"Output format: {output_format}")
 
     # Perform comparison
     try:
