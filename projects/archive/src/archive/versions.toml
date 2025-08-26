@@ -12,6 +12,7 @@ converted = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/
 
 [[versions]]
 id = "3.5-sample"
+previous = "3.2-sample"
 version = "3.5"
 type = "sample"
 semver = "3.5.0-alpha.1"
@@ -22,6 +23,7 @@ converted = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/
 
 [[versions]]
 id = "4.0-draft"
+previous = "3.5-sample"
 version = "4.0"
 type = "draft"
 semver = "4.0.0-beta.1"
@@ -32,6 +34,7 @@ converted = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/
 
 [[versions]]
 id = "4.0-release"
+previous = "4.0-draft"
 version = "4.0"
 type = "release"
 semver = "4.0.0"
@@ -42,6 +45,7 @@ converted = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/
 
 [[versions]]
 id = "4.0-errata-4"
+previous = "4.0-release"
 version = "4.0"
 type = "errata"
 semver = "4.0.4"
@@ -53,6 +57,7 @@ converted = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/
 
 [[versions]]
 id = "4.0-errata-5"
+previous = "4.0-errata-4"
 version = "4.0"
 type = "errata"
 semver = "4.0.5"
@@ -64,6 +69,7 @@ converted = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/
 
 [[versions]]
 id = "4.1-draft"
+previous = "4.0-errata-5"
 version = "4.1"
 type = "draft"
 semver = "4.1.0-beta.1"
@@ -74,6 +80,7 @@ converted = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/
 
 [[versions]]
 id = "4.1-final"
+previous = "4.1-draft"
 version = "4.1"
 type = "final"
 semver = "4.1.0"
@@ -84,6 +91,7 @@ converted = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/
 
 [[versions]]
 id = "4.1-errata-1"
+previous = "4.1-final"
 version = "4.1"
 type = "errata"
 semver = "4.1.1"

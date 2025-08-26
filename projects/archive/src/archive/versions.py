@@ -48,9 +48,11 @@ class Version(TypedDict):
     """Version of a database."""
 
     id: str
-    date: date
+    previous: NotRequired[str]
     version: str
     type: VersionType
+    semver: str
+    date: date
     revision: NotRequired[int]
     original: Source
     archive: Source
