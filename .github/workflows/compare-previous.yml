@@ -46,8 +46,16 @@ jobs:
           ')
           echo "previous_version=$PREVIOUS" >> $GITHUB_OUTPUT
 
-  compare:
+  download-previous:
     needs: get-previous-version
+    if: needs.get-previous-version.outputs.previous_version != ''
+    uses: ./.github/workflows/download-database.yml
+    with:
+      version_id: ${{ needs.get-previous-version.outputs.previous_version }}
+      database_type: "converted"
+
+  compare:
+    needs: [get-previous-version, download-previous]
     if: needs.get-previous-version.outputs.previous_version != ''
     runs-on: ubuntu-latest
     outputs:
@@ -68,16 +76,16 @@ jobs:
       - name: Install dependencies
         run: uv sync --extra compare
 
-      - name: Download old database artifact
+      - name: Download previous database artifact
         uses: actions/download-artifact@v4
         with:
-          name: ${{ needs.get-previous-version.outputs.previous_version }}-converted
+          name: ${{ needs.download-previous.outputs.artifact_name }}
           path: ./old-db/
 
-      - name: Download new database artifact  
+      - name: Download current database artifact  
         uses: actions/download-artifact@v4
         with:
-          name: ${{ inputs.version_id }}-converted
+          name: ${{ inputs.version_id }}-sqlite
           path: ./new-db/
 
       - name: Find database files
