@@ -1,0 +1,67 @@
+name: Compare with Previous Version
+
+on:
+  workflow_call:
+    inputs:
+      version_id:
+        description: "The version ID to compare against its predecessor"
+        required: true
+        type: string
+      output_format:
+        description: "Output format for comparison"
+        required: false
+        type: string
+        default: "json"
+    outputs:
+      comparison_artifact_name:
+        description: "The name of the uploaded artifact containing the comparison results"
+        value: ${{ jobs.compare.outputs.comparison_artifact_name }}
+
+jobs:
+  get-previous-version:
+    runs-on: ubuntu-latest
+    outputs:
+      previous_version: ${{ steps.version.outputs.previous_version }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Find previous version
+        id: version
+        run: |
+          PREVIOUS=$(uv run dpm-toolkit versions --output-format json | jq -r --arg version "${{ inputs.version_id }}" '
+            map(select(.id == $version)) | .[0].previous // empty
+          ')
+          echo "previous_version=$PREVIOUS" >> $GITHUB_OUTPUT
+
+  compare:
+    needs: get-previous-version
+    if: needs.get-previous-version.outputs.previous_version != ''
+    uses: ./.github/workflows/compare-databases.yml
+    with:
+      old_version: ${{ needs.get-previous-version.outputs.previous_version }}
+      new_version: ${{ inputs.version_id }}
+      output_format: ${{ inputs.output_format }}
+
+  skip-comparison:
+    needs: get-previous-version
+    if: needs.get-previous-version.outputs.previous_version == ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log skip reason
+        run: |
+          echo "## Comparison Skipped" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "No previous version found for **${{ inputs.version_id }}** - this might be the first version in the series." >> $GITHUB_STEP_SUMMARY
