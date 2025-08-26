@@ -82,10 +82,10 @@ jobs:
           name: ${{ needs.download-previous.outputs.artifact_name }}
           path: ./old-db/
 
-      - name: Download current database artifact  
+      - name: Download current database artifact
         uses: actions/download-artifact@v4
         with:
-          name: ${{ inputs.version_id }}-sqlite
+          name: ${{ inputs.version_id }}-original-sqlite
           path: ./new-db/
 
       - name: Find database files
