@@ -9,7 +9,7 @@ on:
         type: string
     outputs:
       database_artifact_name:
-        description: "The name of the uploaded artifact containing the SQLite database"  
+        description: "The name of the uploaded artifact containing the SQLite database"
         value: ${{ jobs.migrate.outputs.artifact_name }}
       schema_artifact_name:
         description: "The name of the uploaded artifact containing the generated schema"
@@ -33,3 +33,10 @@ jobs:
     uses: ./.github/workflows/generate-schema.yml
     with:
       sqlite_artifact_name: ${{ needs.migrate.outputs.artifact_name }}
+
+  compare:
+    needs: migrate
+    uses: ./.github/workflows/compare-previous.yml
+    with:
+      version_id: ${{ inputs.version_id }}
+      output_format: "html"
