@@ -54,5 +54,4 @@ jobs:
         with:
           name: ${{ inputs.version_id }}-${{ inputs.database_type }}
           path: download-temp/
-          overwrite: true
           retention-days: 90
