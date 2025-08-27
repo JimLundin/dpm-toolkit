@@ -10,7 +10,7 @@ from typing import Any
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from jinja2.environment import TemplateStream
 
-from compare.inspector import TABLE_INFO_COLS, Inspector
+from compare.inspector import TABLE_INFO_COLUMNS, Inspector
 from compare.types import (
     Change,
     ChangeSet,
@@ -52,12 +52,12 @@ def comparisons_to_html(comparisons: Iterable[Comparison]) -> TemplateStream:
 
 
 def name_diff(
-    old: Iterable[str],
-    new: Iterable[str],
+    old_tables: Iterable[str],
+    new_tables: Iterable[str],
 ) -> tuple[frozenset[str], frozenset[str], frozenset[str]]:
     """Return sets of added, removed, and common names between iterables of strings."""
-    old_names = frozenset(old)
-    new_names = frozenset(new)
+    old_names = frozenset(old_tables)
+    new_names = frozenset(new_tables)
 
     added = new_names - old_names
     removed = old_names - new_names
@@ -71,22 +71,22 @@ def compare_columns(
     new_columns: Iterable[Row],
 ) -> Iterator[Change]:
     """Compare column definitions and return modifications, additions, and removals."""
-    old_column_names = {col["name"]: col for col in old_columns}
-    new_column_names = {col["name"]: col for col in new_columns}
+    old_column_by_name = {col["name"]: col for col in old_columns}
+    new_column_by_name = {col["name"]: col for col in new_columns}
 
     return chain(
         (
-            Change(new_column_names[name], old_column_names[name])
-            for name in old_column_names.keys() & new_column_names.keys()
-            if old_column_names[name] != new_column_names[name]
+            Change(new_column_by_name[name], old_column_by_name[name])
+            for name in old_column_by_name.keys() & new_column_by_name.keys()
+            if old_column_by_name[name] != new_column_by_name[name]
         ),
         (
-            Change(new=new_column_names[name])
-            for name in new_column_names.keys() - old_column_names.keys()
+            Change(new=new_column_by_name[name])
+            for name in new_column_by_name.keys() - old_column_by_name.keys()
         ),
         (
-            Change(old=old_column_names[name])
-            for name in old_column_names.keys() - new_column_names.keys()
+            Change(old=old_column_by_name[name])
+            for name in old_column_by_name.keys() - new_column_by_name.keys()
         ),
     )
 
@@ -177,7 +177,7 @@ def common_table(table_name: str, old: Inspector, new: Inspector) -> Comparison:
     return Comparison(
         name=table_name,
         cols=ChangeSet(
-            headers=Header(TABLE_INFO_COLS, TABLE_INFO_COLS),
+            headers=Header(TABLE_INFO_COLUMNS, TABLE_INFO_COLUMNS),
             changes=(compare_columns(old.columns(table_name), new.columns(table_name))),
         ),
         rows=ChangeSet(
@@ -190,40 +190,43 @@ def common_table(table_name: str, old: Inspector, new: Inspector) -> Comparison:
     )
 
 
-def added_table(name: str, new: Inspector) -> Comparison:
+def added_table(table_name: str, new: Inspector) -> Comparison:
     """Handle a table that was added to the target database."""
     return Comparison(
-        name=name,
+        name=table_name,
         cols=ChangeSet(
-            headers=Header(new=TABLE_INFO_COLS),
-            changes=(Change(new=col) for col in new.columns(name)),
+            headers=Header(new=TABLE_INFO_COLUMNS),
+            changes=(Change(new=col) for col in new.columns(table_name)),
         ),
         rows=ChangeSet(
-            headers=Header(new=(col["name"] for col in new.columns(name))),
-            changes=(Change(new=row) for row in new.rows(name)),
+            headers=Header(new=(col["name"] for col in new.columns(table_name))),
+            changes=(Change(new=row) for row in new.rows(table_name)),
         ),
     )
 
 
-def removed_table(name: str, old: Inspector) -> Comparison:
+def removed_table(table_name: str, old: Inspector) -> Comparison:
     """Handle a table that was removed from the source database."""
     return Comparison(
-        name=name,
+        name=table_name,
         cols=ChangeSet(
-            headers=Header(old=TABLE_INFO_COLS),
-            changes=(Change(old=col) for col in old.columns(name)),
+            headers=Header(old=TABLE_INFO_COLUMNS),
+            changes=(Change(old=col) for col in old.columns(table_name)),
         ),
         rows=ChangeSet(
-            headers=Header(old=(col["name"] for col in old.columns(name))),
-            changes=(Change(old=row) for row in old.rows(name)),
+            headers=Header(old=(col["name"] for col in old.columns(table_name))),
+            changes=(Change(old=row) for row in old.rows(table_name)),
         ),
     )
 
 
-def compare_databases(old: Connection, new: Connection) -> Iterator[Comparison]:
+def compare_databases(
+    old_database: Connection,
+    new_database: Connection,
+) -> Iterator[Comparison]:
     """Compare two SQLite databases and return differences."""
-    old_inspector = Inspector(old)
-    new_inspector = Inspector(new)
+    old_inspector = Inspector(old_database)
+    new_inspector = Inspector(new_database)
 
     added, removed, common = name_diff(old_inspector.tables(), new_inspector.tables())
 
