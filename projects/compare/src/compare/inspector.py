@@ -3,7 +3,7 @@
 from collections.abc import Iterable, Iterator
 from sqlite3 import Connection, Row
 
-TABLE_INFO_COLS = ("cid", "name", "type", "notnull", "dflt_value", "pk")
+TABLE_INFO_COLUMNS = ("cid", "name", "type", "notnull", "dflt_value", "pk")
 
 
 class Inspector:
