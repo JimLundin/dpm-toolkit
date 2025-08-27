@@ -91,14 +91,23 @@ def compare_columns(
     )
 
 
-def has_guid(row: Row) -> bool:
+def row_guid(row: Row) -> str | None:
     """Check if row has a non-null RowGUID column."""
-    return "RowGUID" in row.keys() and row["RowGUID"]  # noqa: SIM118
+    return row["RowGUID"] if "RowGUID" in row.keys() else None  # noqa: SIM118
+
+
+def row_content(row: Row, primary_keys: Iterable[str]) -> tuple[ValueType, ...]:
+    """Extract a tuple of non-key values from a Row for content comparison."""
+    return tuple(
+        row[column]
+        for column in row.keys()  # noqa: SIM118
+        if column not in primary_keys
+    )
 
 
 def row_key(row: Iterable[ValueType]) -> tuple[tuple[bool, ValueType], ...]:
     """Extract a tuple of values for sorting/comparison from a Row."""
-    return tuple((val is None, val) for val in row)
+    return tuple((value is None, value) for value in row)
 
 
 def compare_rows(
@@ -118,21 +127,33 @@ def compare_rows(
             yield Change(old=old_row)
             old_row = next(old, None)
         else:
-            if has_guid(old_row) and has_guid(new_row):
-                old_primary_key = row_key((old_row["RowGUID"],))
-                new_primary_key = row_key((new_row["RowGUID"],))
-            else:
-                # Compare row keys using the same keys used for sorting
-                old_primary_key = row_key(old_row[col] for col in primary_keys)
-                new_primary_key = row_key(new_row[col] for col in primary_keys)
+            # Determine comparison keys
+            old_guid = row_guid(old_row)
+            new_guid = row_guid(new_row)
 
-            if old_primary_key == new_primary_key:
+            if old_guid and new_guid:
+                old_match_key = row_key((old_guid,))
+                new_match_key = row_key((new_guid,))
+            else:
+                old_content = row_key(row_content(old_row, primary_keys))
+                new_content = row_key(row_content(new_row, primary_keys))
+
+                if old_content == new_content:
+                    # Same content, different keys - treat as modified
+                    old_match_key = old_content
+                    new_match_key = new_content
+                else:
+                    # Compare row keys using the same keys used for sorting
+                    old_match_key = row_key(old_row[column] for column in primary_keys)
+                    new_match_key = row_key(new_row[column] for column in primary_keys)
+
+            if old_match_key == new_match_key:
                 # Same key - check if content differs
                 if old_row != new_row:
                     yield Change(new=new_row, old=old_row)
                 old_row = next(old, None)
                 new_row = next(new, None)
-            elif old_primary_key < new_primary_key:
+            elif old_match_key < new_match_key:
                 # Old key is smaller - row was removed
                 yield Change(old=old_row)
                 old_row = next(old, None)
@@ -150,8 +171,8 @@ def compare_table(table_name: str, old: Inspector, new: Inspector) -> Iterator[C
     2. Common primary keys (if any exist)
     3. All common columns (fallback)
     """
-    old_columns = frozenset(col["name"] for col in old.columns(table_name))
-    new_columns = frozenset(col["name"] for col in new.columns(table_name))
+    old_columns = frozenset(column["name"] for column in old.columns(table_name))
+    new_columns = frozenset(column["name"] for column in new.columns(table_name))
     common_columns = old_columns & new_columns
 
     old_primary_keys = frozenset(old.primary_keys(table_name))
@@ -182,8 +203,8 @@ def common_table(table_name: str, old: Inspector, new: Inspector) -> Comparison:
         ),
         rows=ChangeSet(
             headers=Header(
-                (col["name"] for col in new.columns(table_name)),
-                (col["name"] for col in old.columns(table_name)),
+                (column["name"] for column in new.columns(table_name)),
+                (column["name"] for column in old.columns(table_name)),
             ),
             changes=compare_table(table_name, old, new),
         ),
@@ -196,10 +217,10 @@ def added_table(table_name: str, new: Inspector) -> Comparison:
         name=table_name,
         cols=ChangeSet(
             headers=Header(new=TABLE_INFO_COLUMNS),
-            changes=(Change(new=col) for col in new.columns(table_name)),
+            changes=(Change(new=column) for column in new.columns(table_name)),
         ),
         rows=ChangeSet(
-            headers=Header(new=(col["name"] for col in new.columns(table_name))),
+            headers=Header(new=(column["name"] for column in new.columns(table_name))),
             changes=(Change(new=row) for row in new.rows(table_name)),
         ),
     )
@@ -211,10 +232,10 @@ def removed_table(table_name: str, old: Inspector) -> Comparison:
         name=table_name,
         cols=ChangeSet(
             headers=Header(old=TABLE_INFO_COLUMNS),
-            changes=(Change(old=col) for col in old.columns(table_name)),
+            changes=(Change(old=column) for column in old.columns(table_name)),
         ),
         rows=ChangeSet(
-            headers=Header(old=(col["name"] for col in old.columns(table_name))),
+            headers=Header(old=(column["name"] for column in old.columns(table_name))),
             changes=(Change(old=row) for row in old.rows(table_name)),
         ),
     )
