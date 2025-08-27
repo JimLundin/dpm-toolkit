@@ -66,25 +66,34 @@ def name_diff(
     return added, removed, common
 
 
-def compare_cols(old: Iterable[Row], new: Iterable[Row]) -> Iterator[Change]:
+def compare_columns(
+    old_columns: Iterable[Row],
+    new_columns: Iterable[Row],
+) -> Iterator[Change]:
     """Compare column definitions and return modifications, additions, and removals."""
-    old_cols = {col["name"]: col for col in old}
-    new_cols = {col["name"]: col for col in new}
+    old_column_names = {col["name"]: col for col in old_columns}
+    new_column_names = {col["name"]: col for col in new_columns}
 
     return chain(
         (
-            Change(new_cols[name], old_cols[name])
-            for name in old_cols.keys() & new_cols.keys()
-            if old_cols[name] != new_cols[name]
+            Change(new_column_names[name], old_column_names[name])
+            for name in old_column_names.keys() & new_column_names.keys()
+            if old_column_names[name] != new_column_names[name]
         ),
-        (Change(new=new_cols[name]) for name in new_cols.keys() - old_cols.keys()),
-        (Change(old=old_cols[name]) for name in old_cols.keys() - new_cols.keys()),
+        (
+            Change(new=new_column_names[name])
+            for name in new_column_names.keys() - old_column_names.keys()
+        ),
+        (
+            Change(old=old_column_names[name])
+            for name in old_column_names.keys() - new_column_names.keys()
+        ),
     )
 
 
 def has_guid(row: Row) -> bool:
-    """Check if both rows have a non-null RowGUID column."""
-    return "RowGUID" in row.keys() and row["RowGUID"]
+    """Check if row has a non-null RowGUID column."""
+    return "RowGUID" in row.keys() and row["RowGUID"]  # noqa: SIM118
 
 
 def row_key(row: Iterable[ValueType]) -> tuple[tuple[bool, ValueType], ...]:
@@ -141,12 +150,12 @@ def compare_table(table_name: str, old: Inspector, new: Inspector) -> Iterator[C
     2. Common primary keys (if any exist)
     3. All common columns (fallback)
     """
-    old_columns = frozenset(col["name"] for col in old.cols(table_name))
-    new_columns = frozenset(col["name"] for col in new.cols(table_name))
+    old_columns = frozenset(col["name"] for col in old.columns(table_name))
+    new_columns = frozenset(col["name"] for col in new.columns(table_name))
     common_columns = old_columns & new_columns
 
-    old_primary_keys = frozenset(old.pks(table_name))
-    new_primary_keys = frozenset(new.pks(table_name))
+    old_primary_keys = frozenset(old.primary_keys(table_name))
+    new_primary_keys = frozenset(new.primary_keys(table_name))
     common_primary_keys = old_primary_keys & new_primary_keys
 
     # Build unified key hierarchy: RowGUID > common PKs > all common columns
@@ -163,20 +172,20 @@ def compare_table(table_name: str, old: Inspector, new: Inspector) -> Iterator[C
     return compare_rows(old_rows, new_rows, common_primary_keys)
 
 
-def common_table(name: str, old: Inspector, new: Inspector) -> Comparison:
+def common_table(table_name: str, old: Inspector, new: Inspector) -> Comparison:
     """Compare a table that exists in both databases."""
     return Comparison(
-        name=name,
+        name=table_name,
         cols=ChangeSet(
             headers=Header(TABLE_INFO_COLS, TABLE_INFO_COLS),
-            changes=(compare_cols(old.cols(name), new.cols(name))),
+            changes=(compare_columns(old.columns(table_name), new.columns(table_name))),
         ),
         rows=ChangeSet(
             headers=Header(
-                (col["name"] for col in new.cols(name)),
-                (col["name"] for col in old.cols(name)),
+                (col["name"] for col in new.columns(table_name)),
+                (col["name"] for col in old.columns(table_name)),
             ),
-            changes=compare_table(name, old, new),
+            changes=compare_table(table_name, old, new),
         ),
     )
 
@@ -187,10 +196,10 @@ def added_table(name: str, new: Inspector) -> Comparison:
         name=name,
         cols=ChangeSet(
             headers=Header(new=TABLE_INFO_COLS),
-            changes=(Change(new=col) for col in new.cols(name)),
+            changes=(Change(new=col) for col in new.columns(name)),
         ),
         rows=ChangeSet(
-            headers=Header(new=(col["name"] for col in new.cols(name))),
+            headers=Header(new=(col["name"] for col in new.columns(name))),
             changes=(Change(new=row) for row in new.rows(name)),
         ),
     )
@@ -202,10 +211,10 @@ def removed_table(name: str, old: Inspector) -> Comparison:
         name=name,
         cols=ChangeSet(
             headers=Header(old=TABLE_INFO_COLS),
-            changes=(Change(old=col) for col in old.cols(name)),
+            changes=(Change(old=col) for col in old.columns(name)),
         ),
         rows=ChangeSet(
-            headers=Header(old=(col["name"] for col in old.cols(name))),
+            headers=Header(old=(col["name"] for col in old.columns(name))),
             changes=(Change(old=row) for row in old.rows(name)),
         ),
     )

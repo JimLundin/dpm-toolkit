@@ -240,7 +240,7 @@ def test_tables_excludes_real_system_tables(simple_db: Connection) -> None:
 def test_cols_returns_column_info(simple_db: Connection) -> None:
     """Test that cols() returns correct column metadata."""
     inspector = Inspector(simple_db)
-    cols = list(inspector.cols("users"))
+    cols = list(inspector.columns("users"))
 
     # Should have 4 columns
     assert len(cols) == 4
@@ -262,7 +262,7 @@ def test_cols_returns_column_info(simple_db: Connection) -> None:
 def test_cols_nonexistent_table(simple_db: Connection) -> None:
     """Test cols() with nonexistent table."""
     inspector = Inspector(simple_db)
-    cols = list(inspector.cols("nonexistent"))
+    cols = list(inspector.columns("nonexistent"))
 
     assert not cols
 
@@ -270,7 +270,7 @@ def test_cols_nonexistent_table(simple_db: Connection) -> None:
 def test_pks_single_primary_key(simple_db: Connection) -> None:
     """Test pks() with single primary key."""
     inspector = Inspector(simple_db)
-    pks = list(inspector.pks("users"))
+    pks = list(inspector.primary_keys("users"))
 
     assert pks == ["id"]
 
@@ -278,7 +278,7 @@ def test_pks_single_primary_key(simple_db: Connection) -> None:
 def test_pks_text_primary_key(simple_db: Connection) -> None:
     """Test pks() with text primary key."""
     inspector = Inspector(simple_db)
-    pks = list(inspector.pks("tags"))
+    pks = list(inspector.primary_keys("tags"))
 
     assert pks == ["name"]
 
@@ -286,7 +286,7 @@ def test_pks_text_primary_key(simple_db: Connection) -> None:
 def test_pks_no_primary_key(no_pk_db: Connection) -> None:
     """Test pks() with table that has no primary key."""
     inspector = Inspector(no_pk_db)
-    pks = list(inspector.pks("logs"))
+    pks = list(inspector.primary_keys("logs"))
 
     assert not pks
 
@@ -348,9 +348,9 @@ def test_multiple_operations_on_same_connection(simple_db: Connection) -> None:
     assert tables1 == tables2
 
     # Mixed operations
-    cols = list(inspector.cols("users"))
+    cols = list(inspector.columns("users"))
     rows = list(inspector.rows("users"))
-    pks = list(inspector.pks("users"))
+    pks = list(inspector.primary_keys("users"))
 
     assert len(cols) == 4
     assert len(rows) == 2
@@ -397,7 +397,7 @@ def test_rowguid_column_detection(rowguid_db: Connection) -> None:
 def test_composite_primary_keys(composite_pk_db: Connection) -> None:
     """Test tables with composite primary keys."""
     inspector = Inspector(composite_pk_db)
-    pks = list(inspector.pks("mappings"))
+    pks = list(inspector.primary_keys("mappings"))
 
     # Should return all primary key columns in order
     assert pks == ["source_id", "target_id", "mapping_type"]

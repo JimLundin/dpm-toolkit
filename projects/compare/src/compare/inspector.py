@@ -28,16 +28,16 @@ class Inspector:
     def rows(self, name: str, sort_keys: Iterable[str] | None = None) -> Iterator[Row]:
         """Return all rows from the specified table, sorted by given sort keys."""
         with self.conn as conn:
-            order = ", ".join(sort_keys or (col["name"] for col in self.cols(name)))
+            order = ", ".join(sort_keys or (col["name"] for col in self.columns(name)))
             return conn.execute(
                 f"SELECT * FROM `{name}` ORDER BY {order}",  # noqa: S608
             )
 
-    def cols(self, name: str) -> Iterator[Row]:
+    def columns(self, name: str) -> Iterator[Row]:
         """Return column metadata for the specified table."""
         with self.conn as conn:
             return conn.execute("SELECT * FROM pragma_table_info(?)", (name,))
 
-    def pks(self, name: str) -> Iterator[str]:
+    def primary_keys(self, name: str) -> Iterator[str]:
         """Return primary key column names for the specified table."""
-        return (col["name"] for col in self.cols(name) if col["pk"])
+        return (col["name"] for col in self.columns(name) if col["pk"])
