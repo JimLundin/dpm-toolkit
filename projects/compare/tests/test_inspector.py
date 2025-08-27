@@ -196,7 +196,7 @@ def create_composite_pk_db() -> Iterator[Connection]:
 def test_init_sets_row_factory(simple_db: Connection) -> None:
     """Test that Inspector sets row_factory correctly."""
     inspector = Inspector(simple_db)
-    assert inspector.conn.row_factory is Row
+    assert inspector._connection.row_factory is Row
 
 
 def test_tables_returns_user_tables(simple_db: Connection) -> None:

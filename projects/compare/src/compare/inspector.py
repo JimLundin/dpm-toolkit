@@ -9,14 +9,14 @@ TABLE_INFO_COLUMNS = ("cid", "name", "type", "notnull", "dflt_value", "pk")
 class Inspector:
     """Inspects SQLite databases to extract complete schema and data information."""
 
-    def __init__(self, db: Connection) -> None:
+    def __init__(self, database: Connection) -> None:
         """Initialize inspector with a database connection."""
-        self.conn = db
-        self.conn.row_factory = Row
+        self._connection = database
+        self._connection.row_factory = Row
 
     def tables(self) -> Iterator[str]:
         """Return all user table names, excluding system tables."""
-        with self.conn as conn:
+        with self._connection as conn:
             cursor = conn.execute(
                 "SELECT name "
                 "FROM sqlite_schema "
@@ -25,19 +25,25 @@ class Inspector:
             )
             return (row["name"] for row in cursor)
 
-    def rows(self, name: str, sort_keys: Iterable[str] | None = None) -> Iterator[Row]:
+    def rows(
+        self,
+        table_name: str,
+        sort_keys: Iterable[str] | None = None,
+    ) -> Iterator[Row]:
         """Return all rows from the specified table, sorted by given sort keys."""
-        with self.conn as conn:
-            order = ", ".join(sort_keys or (col["name"] for col in self.columns(name)))
+        with self._connection as conn:
+            order = ", ".join(
+                sort_keys or (col["name"] for col in self.columns(table_name)),
+            )
             return conn.execute(
-                f"SELECT * FROM `{name}` ORDER BY {order}",  # noqa: S608
+                f"SELECT * FROM `{table_name}` ORDER BY {order}",  # noqa: S608
             )
 
-    def columns(self, name: str) -> Iterator[Row]:
+    def columns(self, table_name: str) -> Iterator[Row]:
         """Return column metadata for the specified table."""
-        with self.conn as conn:
-            return conn.execute("SELECT * FROM pragma_table_info(?)", (name,))
+        with self._connection as conn:
+            return conn.execute("SELECT * FROM pragma_table_info(?)", (table_name,))
 
-    def primary_keys(self, name: str) -> Iterator[str]:
+    def primary_keys(self, table_name: str) -> Iterator[str]:
         """Return primary key column names for the specified table."""
-        return (col["name"] for col in self.columns(name) if col["pk"])
+        return (col["name"] for col in self.columns(table_name) if col["pk"])
