@@ -23,3 +23,4 @@ downloads/
 *.sqlite3
 *.db
 *.accdb
+.vscode/settings.json

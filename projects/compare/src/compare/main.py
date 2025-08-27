@@ -82,7 +82,12 @@ def compare_cols(old: Iterable[Row], new: Iterable[Row]) -> Iterator[Change]:
     )
 
 
-def key(row: Iterable[ValueType]) -> tuple[tuple[bool, ValueType], ...]:
+def has_guid(row: Row) -> bool:
+    """Check if both rows have a non-null RowGUID column."""
+    return "RowGUID" in row.keys() and row["RowGUID"]
+
+
+def row_key(row: Iterable[ValueType]) -> tuple[tuple[bool, ValueType], ...]:
     """Extract a tuple of values for sorting/comparison from a Row."""
     return tuple((val is None, val) for val in row)
 
@@ -90,31 +95,35 @@ def key(row: Iterable[ValueType]) -> tuple[tuple[bool, ValueType], ...]:
 def compare_rows(
     old: Iterator[Row],
     new: Iterator[Row],
-    keys: Iterable[str],
+    primary_keys: Iterable[str],
 ) -> Iterator[Change]:
     """Memory-efficient merge-based comparison of sorted row iterators."""
     old_row = next(old, None)
     new_row = next(new, None)
 
     while old_row or new_row:
-        if old_row is None:
+        if not old_row:
             yield Change(new=new_row)
             new_row = next(new, None)
-        elif new_row is None:
+        elif not new_row:
             yield Change(old=old_row)
             old_row = next(old, None)
         else:
-            # Compare row keys using the same keys used for sorting
-            old_key = key(old_row[col] for col in keys)
-            new_key = key(new_row[col] for col in keys)
+            if has_guid(old_row) and has_guid(new_row):
+                old_primary_key = row_key((old_row["RowGUID"],))
+                new_primary_key = row_key((new_row["RowGUID"],))
+            else:
+                # Compare row keys using the same keys used for sorting
+                old_primary_key = row_key(old_row[col] for col in primary_keys)
+                new_primary_key = row_key(new_row[col] for col in primary_keys)
 
-            if old_key == new_key:
+            if old_primary_key == new_primary_key:
                 # Same key - check if content differs
                 if old_row != new_row:
                     yield Change(new=new_row, old=old_row)
                 old_row = next(old, None)
                 new_row = next(new, None)
-            elif old_key < new_key:
+            elif old_primary_key < new_primary_key:
                 # Old key is smaller - row was removed
                 yield Change(old=old_row)
                 old_row = next(old, None)
@@ -124,7 +133,7 @@ def compare_rows(
                 new_row = next(new, None)
 
 
-def compare_table(name: str, old: Inspector, new: Inspector) -> Iterator[Change]:
+def compare_table(table_name: str, old: Inspector, new: Inspector) -> Iterator[Change]:
     """Compare table data using consistent sort/comparison key strategy.
 
     Strategy: Always sort and compare by the same key hierarchy:
@@ -132,26 +141,26 @@ def compare_table(name: str, old: Inspector, new: Inspector) -> Iterator[Change]
     2. Common primary keys (if any exist)
     3. All common columns (fallback)
     """
-    old_cols = frozenset(col["name"] for col in old.cols(name))
-    new_cols = frozenset(col["name"] for col in new.cols(name))
-    com_cols = old_cols & new_cols
+    old_columns = frozenset(col["name"] for col in old.cols(table_name))
+    new_columns = frozenset(col["name"] for col in new.cols(table_name))
+    common_columns = old_columns & new_columns
 
-    old_pks = frozenset(old.pks(name))
-    new_pks = frozenset(new.pks(name))
-    com_pks = old_pks & new_pks
+    old_primary_keys = frozenset(old.pks(table_name))
+    new_primary_keys = frozenset(new.pks(table_name))
+    common_primary_keys = old_primary_keys & new_primary_keys
 
     # Build unified key hierarchy: RowGUID > common PKs > all common columns
-    if "RowGUID" in com_cols:
+    if "RowGUID" in common_columns:
         # Best case: RowGUID + PKs as tiebreaker for NULL RowGUIDs
-        keys = (*com_pks, "RowGUID")
+        sort_keys = (*common_primary_keys, "RowGUID")
     else:
         # Good case: Common PKs provide stable identity
-        keys = tuple(com_pks or com_cols)
+        sort_keys = tuple(common_primary_keys or common_columns)
 
     # Use same keys for both sorting and comparison
-    old_rows = old.rows(name, keys)
-    new_rows = new.rows(name, keys)
-    return compare_rows(old_rows, new_rows, keys)
+    old_rows = old.rows(table_name, sort_keys)
+    new_rows = new.rows(table_name, sort_keys)
+    return compare_rows(old_rows, new_rows, common_primary_keys)
 
 
 def common_table(name: str, old: Inspector, new: Inspector) -> Comparison:
