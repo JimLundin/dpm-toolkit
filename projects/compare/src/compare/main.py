@@ -19,6 +19,9 @@ from compare.types import (
     ValueType,
 )
 
+type RowValues = Iterable[ValueType]
+type ComparisonKey = tuple[tuple[bool, ValueType], ...]
+
 TEMPLATE_DIR = Path(__file__).parent / "templates"
 
 
@@ -105,9 +108,78 @@ def row_content(row: Row, primary_keys: Iterable[str]) -> tuple[ValueType, ...]:
     )
 
 
-def row_key(row: Iterable[ValueType]) -> tuple[tuple[bool, ValueType], ...]:
+def row_key(row: Iterable[ValueType]) -> ComparisonKey:
     """Extract a tuple of values for sorting/comparison from a Row."""
     return tuple((value is None, value) for value in row)
+
+
+def get_match_keys(
+    old_row: Row,
+    new_row: Row,
+    primary_keys: Iterable[str],
+) -> tuple[RowValues, RowValues]:
+    """Get the comparison keys for two rows based on hierarchical matching rules."""
+    old_guid = row_guid(old_row)
+    new_guid = row_guid(new_row)
+
+    if old_guid and new_guid:
+        return (old_guid,), (new_guid,)
+    old_content = row_content(old_row, primary_keys)
+    new_content = row_content(new_row, primary_keys)
+
+    if old_content == new_content:
+        return old_content, new_content
+
+    if primary_keys:
+        return (
+            (old_row[column] for column in primary_keys),
+            (new_row[column] for column in primary_keys),
+        )
+
+    return old_content, new_content
+
+
+def match_missed_rows(
+    old_missed: list[Row],
+    new_missed: list[Row],
+    primary_keys: Iterable[str],
+) -> Iterator[Change]:
+    """Try to match rows that were missed in the normal merge using alternative strategies."""
+    old_remaining = old_missed.copy()
+    new_remaining = new_missed.copy()
+
+    # Phase 1: Try GUID-based matching for missed rows
+    for old_row in old_missed:
+        old_guid = row_guid(old_row)
+        if old_guid:
+            for i, new_row in enumerate(new_remaining):
+                new_guid = row_guid(new_row)
+                if new_guid == old_guid:
+                    # Found GUID match!
+                    if old_row != new_row:
+                        yield Change(old=old_row, new=new_row)
+                    old_remaining.remove(old_row)
+                    new_remaining.pop(i)
+                    break
+
+    # Phase 2: Try content-based matching for remaining rows
+    for old_row in old_remaining.copy():
+        old_content = row_content(old_row, primary_keys)
+        for i, new_row in enumerate(new_remaining):
+            new_content = row_content(new_row, primary_keys)
+            if old_content == new_content:
+                # Found content match!
+                if old_row != new_row:
+                    yield Change(old=old_row, new=new_row)
+                old_remaining.remove(old_row)
+                new_remaining.pop(i)
+                break
+
+    # Output any truly unmatched rows
+    for row in old_remaining:
+        yield Change(old=row)
+    for row in new_remaining:
+        yield Change(new=row)
 
 
 def compare_rows(
@@ -115,10 +187,15 @@ def compare_rows(
     new: Iterator[Row],
     primary_keys: Iterable[str],
 ) -> Iterator[Change]:
-    """Memory-efficient merge-based comparison of sorted row iterators."""
+    """Memory-efficient merge-based comparison with missed rows buffer."""
     old_row = next(old, None)
     new_row = next(new, None)
 
+    # Buffers for rows that couldn't find matches in merge
+    old_missed: list[Row] = []
+    new_missed: list[Row] = []
+
+    # Phase 1: Normal merge algorithm
     while old_row or new_row:
         if not old_row:
             yield Change(new=new_row)
@@ -127,40 +204,26 @@ def compare_rows(
             yield Change(old=old_row)
             old_row = next(old, None)
         else:
-            # Determine comparison keys
-            old_guid = row_guid(old_row)
-            new_guid = row_guid(new_row)
-
-            if old_guid and new_guid:
-                old_match_key = row_key((old_guid,))
-                new_match_key = row_key((new_guid,))
-            else:
-                old_content = row_key(row_content(old_row, primary_keys))
-                new_content = row_key(row_content(new_row, primary_keys))
-
-                if old_content == new_content:
-                    # Same content, different keys - treat as modified
-                    old_match_key = old_content
-                    new_match_key = new_content
-                else:
-                    # Compare row keys using the same keys used for sorting
-                    old_match_key = row_key(old_row[column] for column in primary_keys)
-                    new_match_key = row_key(new_row[column] for column in primary_keys)
+            old_key, new_key = get_match_keys(old_row, new_row, primary_keys)
+            old_match_key, new_match_key = row_key(old_key), row_key(new_key)
 
             if old_match_key == new_match_key:
-                # Same key - check if content differs
+                # Found match in normal merge
                 if old_row != new_row:
                     yield Change(new=new_row, old=old_row)
                 old_row = next(old, None)
                 new_row = next(new, None)
             elif old_match_key < new_match_key:
-                # Old key is smaller - row was removed
-                yield Change(old=old_row)
+                # Potential miss - buffer for later matching
+                old_missed.append(old_row)
                 old_row = next(old, None)
             else:
-                # New key is smaller - row was added
-                yield Change(new=new_row)
+                # Potential miss - buffer for later matching
+                new_missed.append(new_row)
                 new_row = next(new, None)
+
+    # Phase 2: Try to match buffered rows using alternative strategies
+    yield from match_missed_rows(old_missed, new_missed, primary_keys)
 
 
 def compare_table(table_name: str, old: Inspector, new: Inspector) -> Iterator[Change]:
