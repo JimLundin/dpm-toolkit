@@ -117,6 +117,7 @@ def get_match_keys(
     old_row: Row,
     new_row: Row,
     primary_keys: Iterable[str],
+    columns: Iterable[str],
 ) -> tuple[RowValues, RowValues]:
     """Get the comparison keys for two rows based on hierarchical matching rules."""
     old_guid = row_guid(old_row)
@@ -124,8 +125,9 @@ def get_match_keys(
 
     if old_guid and new_guid:
         return (old_guid,), (new_guid,)
-    old_content = row_content(old_row, primary_keys)
-    new_content = row_content(new_row, primary_keys)
+
+    old_content = tuple(old_row[column] for column in columns)
+    new_content = tuple(new_row[column] for column in columns)
 
     if old_content == new_content:
         return old_content, new_content
@@ -139,61 +141,15 @@ def get_match_keys(
     return old_content, new_content
 
 
-def match_missed_rows(
-    old_missed: list[Row],
-    new_missed: list[Row],
-    primary_keys: Iterable[str],
-) -> Iterator[Change]:
-    """Try to match rows that were missed in the normal merge using alternative strategies."""
-    old_remaining = old_missed.copy()
-    new_remaining = new_missed.copy()
-
-    # Phase 1: Try GUID-based matching for missed rows
-    for old_row in old_missed:
-        old_guid = row_guid(old_row)
-        if old_guid:
-            for i, new_row in enumerate(new_remaining):
-                new_guid = row_guid(new_row)
-                if new_guid == old_guid:
-                    # Found GUID match!
-                    if old_row != new_row:
-                        yield Change(old=old_row, new=new_row)
-                    old_remaining.remove(old_row)
-                    new_remaining.pop(i)
-                    break
-
-    # Phase 2: Try content-based matching for remaining rows
-    for old_row in old_remaining.copy():
-        old_content = row_content(old_row, primary_keys)
-        for i, new_row in enumerate(new_remaining):
-            new_content = row_content(new_row, primary_keys)
-            if old_content == new_content:
-                # Found content match!
-                if old_row != new_row:
-                    yield Change(old=old_row, new=new_row)
-                old_remaining.remove(old_row)
-                new_remaining.pop(i)
-                break
-
-    # Output any truly unmatched rows
-    for row in old_remaining:
-        yield Change(old=row)
-    for row in new_remaining:
-        yield Change(new=row)
-
-
 def compare_rows(
     old: Iterator[Row],
     new: Iterator[Row],
     primary_keys: Iterable[str],
+    columns: Iterable[str],
 ) -> Iterator[Change]:
-    """Memory-efficient merge-based comparison with missed rows buffer."""
+    """Memory-efficient merge-based comparison."""
     old_row = next(old, None)
     new_row = next(new, None)
-
-    # Buffers for rows that couldn't find matches in merge
-    old_missed: list[Row] = []
-    new_missed: list[Row] = []
 
     # Phase 1: Normal merge algorithm
     while old_row or new_row:
@@ -204,26 +160,23 @@ def compare_rows(
             yield Change(old=old_row)
             old_row = next(old, None)
         else:
-            old_key, new_key = get_match_keys(old_row, new_row, primary_keys)
+            old_key, new_key = get_match_keys(old_row, new_row, primary_keys, columns)
             old_match_key, new_match_key = row_key(old_key), row_key(new_key)
 
             if old_match_key == new_match_key:
-                # Found match in normal merge
+                # Same key - check if content differs
                 if old_row != new_row:
                     yield Change(new=new_row, old=old_row)
                 old_row = next(old, None)
                 new_row = next(new, None)
             elif old_match_key < new_match_key:
-                # Potential miss - buffer for later matching
-                old_missed.append(old_row)
+                # Old key is smaller - row was removed
+                yield Change(old=old_row)
                 old_row = next(old, None)
             else:
-                # Potential miss - buffer for later matching
-                new_missed.append(new_row)
+                # New key is smaller - row was added
+                yield Change(new=new_row)
                 new_row = next(new, None)
-
-    # Phase 2: Try to match buffered rows using alternative strategies
-    yield from match_missed_rows(old_missed, new_missed, primary_keys)
 
 
 def compare_table(table_name: str, old: Inspector, new: Inspector) -> Iterator[Change]:
@@ -236,24 +189,30 @@ def compare_table(table_name: str, old: Inspector, new: Inspector) -> Iterator[C
     """
     old_columns = frozenset(column["name"] for column in old.columns(table_name))
     new_columns = frozenset(column["name"] for column in new.columns(table_name))
-    common_columns = old_columns & new_columns
+    shared_columns = old_columns & new_columns
 
     old_primary_keys = frozenset(old.primary_keys(table_name))
     new_primary_keys = frozenset(new.primary_keys(table_name))
-    common_primary_keys = old_primary_keys & new_primary_keys
+    shared_primary_keys = old_primary_keys & new_primary_keys
+
+    unique_keys = (*shared_primary_keys, "RowGUID")
 
     # Build unified key hierarchy: RowGUID > common PKs > all common columns
-    if "RowGUID" in common_columns:
+    if "RowGUID" in shared_columns:
         # Best case: RowGUID + PKs as tiebreaker for NULL RowGUIDs
-        sort_keys = (*common_primary_keys, "RowGUID")
+        sort_keys = unique_keys
     else:
         # Good case: Common PKs provide stable identity
-        sort_keys = tuple(common_primary_keys or common_columns)
+        sort_keys = tuple(shared_primary_keys or shared_columns)
+
+    content_columns = tuple(
+        column for column in shared_columns if column not in unique_keys
+    )
 
     # Use same keys for both sorting and comparison
     old_rows = old.rows(table_name, sort_keys)
     new_rows = new.rows(table_name, sort_keys)
-    return compare_rows(old_rows, new_rows, common_primary_keys)
+    return compare_rows(old_rows, new_rows, shared_primary_keys, content_columns)
 
 
 def common_table(table_name: str, old: Inspector, new: Inspector) -> Comparison:
