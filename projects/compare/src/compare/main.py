@@ -10,12 +10,13 @@ from typing import Any
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from jinja2.environment import TemplateStream
 
-from compare.inspector import TABLE_INFO_COLS, Inspector
+from compare.inspector import TABLE_INFO_COLS, DatabaseInspector, TableInspector
 from compare.types import (
     Change,
     ChangeSet,
     Comparison,
     Header,
+    TableChange,
     ValueType,
 )
 
@@ -51,19 +52,19 @@ def comparisons_to_html(comparisons: Iterable[Comparison]) -> TemplateStream:
     return template.stream(comparisons=comparisons)
 
 
-def name_diff(
-    old: Iterable[str],
-    new: Iterable[str],
+def difference(
+    old_names: Iterable[str],
+    new_names: Iterable[str],
 ) -> tuple[frozenset[str], frozenset[str], frozenset[str]]:
     """Return sets of added, removed, and common names between iterables of strings."""
-    old_names = frozenset(old)
-    new_names = frozenset(new)
+    old_names = frozenset(old_names)
+    new_names = frozenset(new_names)
 
-    added = new_names - old_names
-    removed = old_names - new_names
-    common = old_names & new_names
+    added_names = new_names - old_names
+    removed_names = old_names - new_names
+    common_names = old_names & new_names
 
-    return added, removed, common
+    return added_names, removed_names, common_names
 
 
 def compare_cols(old: Iterable[Row], new: Iterable[Row]) -> Iterator[Change]:
@@ -124,7 +125,10 @@ def compare_rows(
                 new_row = next(new, None)
 
 
-def compare_table(name: str, old: Inspector, new: Inspector) -> Iterator[Change]:
+def compare_table_rows(
+    old_table: TableInspector,
+    new_table: TableInspector,
+) -> Iterator[Change]:
     """Compare table data using consistent sort/comparison key strategy.
 
     Strategy: Always sort and compare by the same key hierarchy:
@@ -132,85 +136,88 @@ def compare_table(name: str, old: Inspector, new: Inspector) -> Iterator[Change]
     2. Common primary keys (if any exist)
     3. All common columns (fallback)
     """
-    old_cols = frozenset(col["name"] for col in old.cols(name))
-    new_cols = frozenset(col["name"] for col in new.cols(name))
-    com_cols = old_cols & new_cols
+    old_columns = frozenset(column["name"] for column in old_table.columns())
+    new_columns = frozenset(column["name"] for column in new_table.columns())
+    shared_columns = old_columns & new_columns
 
-    old_pks = frozenset(old.pks(name))
-    new_pks = frozenset(new.pks(name))
-    com_pks = old_pks & new_pks
+    old_primary_keys = frozenset(old_table.primary_keys())
+    new_primary_keys = frozenset(new_table.primary_keys())
+    shared_primary_keys = old_primary_keys & new_primary_keys
 
     # Build unified key hierarchy: RowGUID > common PKs > all common columns
-    if "RowGUID" in com_cols:
+    if "RowGUID" in shared_columns:
         # Best case: RowGUID + PKs as tiebreaker for NULL RowGUIDs
-        keys = (*com_pks, "RowGUID")
+        sort_keys = (*shared_primary_keys, "RowGUID")
     else:
         # Good case: Common PKs provide stable identity
-        keys = tuple(com_pks or com_cols)
+        sort_keys = tuple(shared_primary_keys or shared_columns)
 
     # Use same keys for both sorting and comparison
-    old_rows = old.rows(name, keys)
-    new_rows = new.rows(name, keys)
-    return compare_rows(old_rows, new_rows, keys)
+    old_rows = old_table.rows(sort_keys)
+    new_rows = new_table.rows(sort_keys)
+    return compare_rows(old_rows, new_rows, sort_keys)
 
 
-def common_table(name: str, old: Inspector, new: Inspector) -> Comparison:
+def common_table(
+    old_table: TableInspector,
+    new_table: TableInspector,
+) -> TableChange:
     """Compare a table that exists in both databases."""
-    return Comparison(
-        name=name,
-        cols=ChangeSet(
-            headers=Header(TABLE_INFO_COLS, TABLE_INFO_COLS),
-            changes=(compare_cols(old.cols(name), new.cols(name))),
-        ),
-        rows=ChangeSet(
-            headers=Header(
-                (col["name"] for col in new.cols(name)),
-                (col["name"] for col in old.cols(name)),
-            ),
-            changes=compare_table(name, old, new),
-        ),
+    column_change = ChangeSet(
+        headers=Header(TABLE_INFO_COLS, TABLE_INFO_COLS),
+        changes=compare_cols(old_table.columns(), new_table.columns()),
     )
-
-
-def added_table(name: str, new: Inspector) -> Comparison:
-    """Handle a table that was added to the target database."""
-    return Comparison(
-        name=name,
-        cols=ChangeSet(
-            headers=Header(new=TABLE_INFO_COLS),
-            changes=(Change(new=col) for col in new.cols(name)),
+    row_change = ChangeSet(
+        headers=Header(
+            (column["name"] for column in new_table.columns()),
+            (column["name"] for column in old_table.columns()),
         ),
-        rows=ChangeSet(
-            headers=Header(new=(col["name"] for col in new.cols(name))),
-            changes=(Change(new=row) for row in new.rows(name)),
-        ),
+        changes=compare_table_rows(old_table, new_table),
     )
+    return TableChange(column_change, row_change)
 
 
-def removed_table(name: str, old: Inspector) -> Comparison:
-    """Handle a table that was removed from the source database."""
-    return Comparison(
-        name=name,
-        cols=ChangeSet(
-            headers=Header(old=TABLE_INFO_COLS),
-            changes=(Change(old=col) for col in old.cols(name)),
-        ),
-        rows=ChangeSet(
-            headers=Header(old=(col["name"] for col in old.cols(name))),
-            changes=(Change(old=row) for row in old.rows(name)),
-        ),
+def added_table(new_table: TableInspector) -> TableChange:
+    """Handle a table that was added, returning (cols_changeset, rows_changeset)."""
+    column_change = ChangeSet(
+        headers=Header(new=TABLE_INFO_COLS),
+        changes=(Change(new=column) for column in new_table.columns()),
     )
+    row_change = ChangeSet(
+        headers=Header(new=(column["name"] for column in new_table.columns())),
+        changes=(Change(new=row) for row in new_table.rows()),
+    )
+    return TableChange(column_change, row_change)
 
 
-def compare_databases(old: Connection, new: Connection) -> Iterator[Comparison]:
+def removed_table(old_table: TableInspector) -> TableChange:
+    """Handle a table that was removed, returning (cols_changeset, rows_changeset)."""
+    column_change = ChangeSet(
+        headers=Header(old=TABLE_INFO_COLS),
+        changes=(Change(old=column) for column in old_table.columns()),
+    )
+    row_change = ChangeSet(
+        headers=Header(old=(column["name"] for column in old_table.columns())),
+        changes=(Change(old=row) for row in old_table.rows()),
+    )
+    return TableChange(column_change, row_change)
+
+
+def compare_databases(
+    old_database: Connection,
+    new_database: Connection,
+) -> Iterator[Comparison]:
     """Compare two SQLite databases and return differences."""
-    old_inspector = Inspector(old)
-    new_inspector = Inspector(new)
+    old = DatabaseInspector(old_database)
+    new = DatabaseInspector(new_database)
 
-    added, removed, common = name_diff(old_inspector.tables(), new_inspector.tables())
+    added_tables, removed_tables, common_tables = difference(old.tables(), new.tables())
 
     return chain(
-        (common_table(name, old_inspector, new_inspector) for name in common),
-        (added_table(name, new_inspector) for name in added),
-        (removed_table(name, old_inspector) for name in removed),
+        (
+            Comparison(name, common_table(old.table(name), new.table(name)))
+            for name in common_tables
+        ),
+        (Comparison(name, added_table(new.table(name))) for name in added_tables),
+        (Comparison(name, removed_table(old.table(name))) for name in removed_tables),
     )
