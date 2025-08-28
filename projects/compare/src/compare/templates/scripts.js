@@ -12,16 +12,22 @@ class DatabaseReport {
     validateData(data) {
         if (!Array.isArray(data)) throw new Error('Invalid data format');
         return data.map(table => {
-            // The data is already properly serialized from Python, just ensure it's accessible
+            // Handle NamedTuple structure: Comparison(name, TableChange(columns, rows))
+            // table[0] = name, table[1] = TableChange, table[1][0] = columns, table[1][1] = rows
+            const name = table[0];
+            const tableChange = table[1];
+            const columns = tableChange[0]; // ChangeSet(headers, changes)
+            const rows = tableChange[1];    // ChangeSet(headers, changes)
+            
             return {
-                name: table.name,
+                name: name,
                 cols: { 
-                    headers: table.cols.headers || [null, null], 
-                    changes: table.cols.changes || []
+                    headers: columns[0] || [null, null],  // headers 
+                    changes: columns[1] || []             // changes
                 },
                 rows: { 
-                    headers: table.rows.headers || [null, null], 
-                    changes: table.rows.changes || []
+                    headers: rows[0] || [null, null],     // headers
+                    changes: rows[1] || []                // changes
                 }
             };
         });
@@ -228,7 +234,12 @@ class DatabaseReport {
     getFields(headers) {
         const fields = new Set();
         if (Array.isArray(headers)) {
-            headers.forEach(fieldArray => fieldArray && fieldArray.forEach(f => fields.add(f)));
+            // headers is now [newHeaders, oldHeaders] where each can be an array or null
+            headers.forEach(fieldArray => {
+                if (Array.isArray(fieldArray)) {
+                    fieldArray.forEach(f => fields.add(f));
+                }
+            });
         }
         return Array.from(fields);
     }

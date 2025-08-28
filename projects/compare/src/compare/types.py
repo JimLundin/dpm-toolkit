@@ -2,7 +2,7 @@
 
 from collections.abc import Iterable
 from sqlite3 import Row
-from typing import NamedTuple, ReadOnly, TypedDict
+from typing import NamedTuple
 
 ValueType = str | int | float | None
 
@@ -21,16 +21,22 @@ class Change(NamedTuple):
     old: Row | None = None
 
 
-class ChangeSet(TypedDict):
+class ChangeSet(NamedTuple):
     """Set of changes for a table."""
 
-    headers: ReadOnly[Header]
-    changes: ReadOnly[Iterable[Change]]
+    headers: Header
+    changes: Iterable[Change]
 
 
-class Comparison(TypedDict):
+class TableChange(NamedTuple):
+    """Represents the change for a singular table."""
+
+    columns: ChangeSet
+    rows: ChangeSet
+
+
+class Comparison(NamedTuple):
     """Complete comparison result for a table."""
 
-    name: ReadOnly[str]
-    cols: ReadOnly[ChangeSet]
-    rows: ReadOnly[ChangeSet]
+    name: str
+    changes: TableChange  # (cols, rows)

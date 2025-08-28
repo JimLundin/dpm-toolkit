@@ -1,11 +1,11 @@
-"""Tests for the Inspector class."""
+"""Tests for the DatabaseInspector class."""
 
 from collections.abc import Iterator
 from sqlite3 import Connection, OperationalError, Row, connect
 
 import pytest
 
-from compare.inspector import Inspector
+from compare.inspector import DatabaseInspector
 
 
 @pytest.fixture(name="simple_db")
@@ -194,14 +194,14 @@ def create_composite_pk_db() -> Iterator[Connection]:
 
 
 def test_init_sets_row_factory(simple_db: Connection) -> None:
-    """Test that Inspector sets row_factory correctly."""
-    inspector = Inspector(simple_db)
-    assert inspector.conn.row_factory is Row
+    """Test that DatabaseInspector sets row_factory correctly."""
+    inspector = DatabaseInspector(simple_db)
+    assert inspector._connection.row_factory is Row
 
 
 def test_tables_returns_user_tables(simple_db: Connection) -> None:
     """Test that tables() returns all user tables."""
-    inspector = Inspector(simple_db)
+    inspector = DatabaseInspector(simple_db)
     tables = list(inspector.tables())
 
     assert set(tables) == {"users", "posts", "tags"}
@@ -209,7 +209,7 @@ def test_tables_returns_user_tables(simple_db: Connection) -> None:
 
 def test_tables_empty_database(empty_db: Connection) -> None:
     """Test tables() with empty database."""
-    inspector = Inspector(empty_db)
+    inspector = DatabaseInspector(empty_db)
     tables = list(inspector.tables())
 
     assert not tables
@@ -217,7 +217,7 @@ def test_tables_empty_database(empty_db: Connection) -> None:
 
 def test_tables_excludes_system_tables(system_tables_db: Connection) -> None:
     """Test that tables() includes user tables with sqlite-like names."""
-    inspector = Inspector(system_tables_db)
+    inspector = DatabaseInspector(system_tables_db)
     tables = list(inspector.tables())
 
     # Should include both tables (neither starts with sqlite_)
@@ -226,7 +226,7 @@ def test_tables_excludes_system_tables(system_tables_db: Connection) -> None:
 
 def test_tables_excludes_real_system_tables(simple_db: Connection) -> None:
     """Test that tables() excludes actual sqlite_ system tables."""
-    inspector = Inspector(simple_db)
+    inspector = DatabaseInspector(simple_db)
     tables = list(inspector.tables())
 
     # Should not include any system tables (sqlite_master, sqlite_sequence, etc.)
@@ -239,8 +239,8 @@ def test_tables_excludes_real_system_tables(simple_db: Connection) -> None:
 
 def test_cols_returns_column_info(simple_db: Connection) -> None:
     """Test that cols() returns correct column metadata."""
-    inspector = Inspector(simple_db)
-    cols = list(inspector.cols("users"))
+    inspector = DatabaseInspector(simple_db)
+    cols = list(inspector.table("users").columns())
 
     # Should have 4 columns
     assert len(cols) == 4
@@ -261,40 +261,40 @@ def test_cols_returns_column_info(simple_db: Connection) -> None:
 
 def test_cols_nonexistent_table(simple_db: Connection) -> None:
     """Test cols() with nonexistent table."""
-    inspector = Inspector(simple_db)
-    cols = list(inspector.cols("nonexistent"))
+    inspector = DatabaseInspector(simple_db)
+    cols = list(inspector.table("nonexistent").columns())
 
     assert not cols
 
 
 def test_pks_single_primary_key(simple_db: Connection) -> None:
     """Test pks() with single primary key."""
-    inspector = Inspector(simple_db)
-    pks = list(inspector.pks("users"))
+    inspector = DatabaseInspector(simple_db)
+    pks = list(inspector.table("users").primary_keys())
 
     assert pks == ["id"]
 
 
 def test_pks_text_primary_key(simple_db: Connection) -> None:
     """Test pks() with text primary key."""
-    inspector = Inspector(simple_db)
-    pks = list(inspector.pks("tags"))
+    inspector = DatabaseInspector(simple_db)
+    pks = list(inspector.table("tags").primary_keys())
 
     assert pks == ["name"]
 
 
 def test_pks_no_primary_key(no_pk_db: Connection) -> None:
     """Test pks() with table that has no primary key."""
-    inspector = Inspector(no_pk_db)
-    pks = list(inspector.pks("logs"))
+    inspector = DatabaseInspector(no_pk_db)
+    pks = list(inspector.table("logs").primary_keys())
 
     assert not pks
 
 
 def test_rows_returns_data(simple_db: Connection) -> None:
     """Test that rows() returns table data."""
-    inspector = Inspector(simple_db)
-    rows = list(inspector.rows("users"))
+    inspector = DatabaseInspector(simple_db)
+    rows = list(inspector.table("users").rows())
 
     assert len(rows) == 2
 
@@ -315,32 +315,32 @@ def test_rows_empty_table(simple_db: Connection) -> None:
     simple_db.execute("CREATE TABLE empty_table (id INTEGER PRIMARY KEY)")
     simple_db.commit()
 
-    inspector = Inspector(simple_db)
-    rows = list(inspector.rows("empty_table"))
+    inspector = DatabaseInspector(simple_db)
+    rows = list(inspector.table("empty_table").rows())
 
     assert not rows
 
 
 def test_rows_nonexistent_table(simple_db: Connection) -> None:
     """Test rows() with nonexistent table raises exception."""
-    inspector = Inspector(simple_db)
+    inspector = DatabaseInspector(simple_db)
 
     with pytest.raises(OperationalError):
-        list(inspector.rows("nonexistent"))
+        list(inspector.table("nonexistent").rows())
 
 
 def test_rows_with_sql_injection_attempt(simple_db: Connection) -> None:
     """Test that rows() handles table names safely."""
-    inspector = Inspector(simple_db)
+    inspector = DatabaseInspector(simple_db)
 
     # This should raise an error, not execute malicious SQL
     with pytest.raises(OperationalError):
-        list(inspector.rows("users; DROP TABLE users; --"))
+        list(inspector.table("users; DROP TABLE users; --").rows())
 
 
 def test_multiple_operations_on_same_connection(simple_db: Connection) -> None:
     """Test that multiple operations work correctly on the same connection."""
-    inspector = Inspector(simple_db)
+    inspector = DatabaseInspector(simple_db)
 
     # Multiple calls should work
     tables1 = list(inspector.tables())
@@ -348,9 +348,9 @@ def test_multiple_operations_on_same_connection(simple_db: Connection) -> None:
     assert tables1 == tables2
 
     # Mixed operations
-    cols = list(inspector.cols("users"))
-    rows = list(inspector.rows("users"))
-    pks = list(inspector.pks("users"))
+    cols = list(inspector.table("users").columns())
+    rows = list(inspector.table("users").rows())
+    pks = list(inspector.table("users").primary_keys())
 
     assert len(cols) == 4
     assert len(rows) == 2
@@ -359,8 +359,8 @@ def test_multiple_operations_on_same_connection(simple_db: Connection) -> None:
 
 def test_row_factory_provides_dict_access(simple_db: Connection) -> None:
     """Test that Row objects provide dict-like access."""
-    inspector = Inspector(simple_db)
-    rows = list(inspector.rows("users"))
+    inspector = DatabaseInspector(simple_db)
+    rows = list(inspector.table("users").rows())
 
     # Should be able to access by column name
     row = rows[0]
@@ -377,8 +377,8 @@ def test_row_factory_provides_dict_access(simple_db: Connection) -> None:
 
 def test_rowguid_column_detection(rowguid_db: Connection) -> None:
     """Test detection of RowGUID columns (critical for DPM databases)."""
-    inspector = Inspector(rowguid_db)
-    rows = list(inspector.rows("entities"))
+    inspector = DatabaseInspector(rowguid_db)
+    rows = list(inspector.table("entities").rows())
 
     # Verify RowGUID column exists and is accessible
     assert len(rows) == 2
@@ -396,14 +396,14 @@ def test_rowguid_column_detection(rowguid_db: Connection) -> None:
 
 def test_composite_primary_keys(composite_pk_db: Connection) -> None:
     """Test tables with composite primary keys."""
-    inspector = Inspector(composite_pk_db)
-    pks = list(inspector.pks("mappings"))
+    inspector = DatabaseInspector(composite_pk_db)
+    pks = list(inspector.table("mappings").primary_keys())
 
     # Should return all primary key columns in order
     assert pks == ["source_id", "target_id", "mapping_type"]
 
     # Verify we can access all PK columns from rows
-    rows = list(inspector.rows("mappings"))
+    rows = list(inspector.table("mappings").rows())
     assert len(rows) == 3
 
     for row in rows:
