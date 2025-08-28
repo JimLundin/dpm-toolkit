@@ -33,7 +33,7 @@ class Inspector:
         """Return all rows from the specified table, sorted by given sort keys."""
         with self._connection as conn:
             order = ", ".join(
-                sort_keys or (col["name"] for col in self.columns(table_name)),
+                sort_keys or (column["name"] for column in self.columns(table_name)),
             )
             return conn.execute(
                 f"SELECT * FROM `{table_name}` ORDER BY {order}",  # noqa: S608
@@ -46,4 +46,4 @@ class Inspector:
 
     def primary_keys(self, table_name: str) -> Iterator[str]:
         """Return primary key column names for the specified table."""
-        return (col["name"] for col in self.columns(table_name) if col["pk"])
+        return (column["name"] for column in self.columns(table_name) if column["pk"])

@@ -71,8 +71,8 @@ def compare_columns(
     new_columns: Iterable[Row],
 ) -> Iterator[Change]:
     """Compare column definitions and return modifications, additions, and removals."""
-    old_column_by_name = {col["name"]: col for col in old_columns}
-    new_column_by_name = {col["name"]: col for col in new_columns}
+    old_column_by_name = {column["name"]: column for column in old_columns}
+    new_column_by_name = {column["name"]: column for column in new_columns}
 
     return chain(
         (
