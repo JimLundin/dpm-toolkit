@@ -163,44 +163,47 @@ def common_table(
     new_table: TableInspector,
 ) -> TableChange:
     """Compare a table that exists in both databases."""
-    column_change = ChangeSet(
-        headers=Header(TABLE_INFO_COLS, TABLE_INFO_COLS),
-        changes=compare_cols(old_table.columns(), new_table.columns()),
-    )
-    row_change = ChangeSet(
-        headers=Header(
-            (column["name"] for column in new_table.columns()),
-            (column["name"] for column in old_table.columns()),
+    return TableChange(
+        ChangeSet(
+            headers=Header(TABLE_INFO_COLS, TABLE_INFO_COLS),
+            changes=compare_cols(old_table.columns(), new_table.columns()),
         ),
-        changes=compare_table_rows(old_table, new_table),
+        ChangeSet(
+            headers=Header(
+                (column["name"] for column in new_table.columns()),
+                (column["name"] for column in old_table.columns()),
+            ),
+            changes=compare_table_rows(old_table, new_table),
+        ),
     )
-    return TableChange(column_change, row_change)
 
 
 def added_table(new_table: TableInspector) -> TableChange:
     """Handle a table that was added, returning (cols_changeset, rows_changeset)."""
-    column_change = ChangeSet(
-        headers=Header(new=TABLE_INFO_COLS),
-        changes=(Change(new=column) for column in new_table.columns()),
+    return TableChange(
+        ChangeSet(
+            headers=Header(new=TABLE_INFO_COLS),
+            changes=(Change(new=column) for column in new_table.columns()),
+        ),
+        ChangeSet(
+            headers=Header(new=(column["name"] for column in new_table.columns())),
+            changes=(Change(new=row) for row in new_table.rows()),
+        ),
     )
-    row_change = ChangeSet(
-        headers=Header(new=(column["name"] for column in new_table.columns())),
-        changes=(Change(new=row) for row in new_table.rows()),
-    )
-    return TableChange(column_change, row_change)
 
 
 def removed_table(old_table: TableInspector) -> TableChange:
     """Handle a table that was removed, returning (cols_changeset, rows_changeset)."""
-    column_change = ChangeSet(
-        headers=Header(old=TABLE_INFO_COLS),
-        changes=(Change(old=column) for column in old_table.columns()),
+    return TableChange(
+        ChangeSet(
+            headers=Header(old=TABLE_INFO_COLS),
+            changes=(Change(old=column) for column in old_table.columns()),
+        ),
+        ChangeSet(
+            headers=Header(old=(column["name"] for column in old_table.columns())),
+            changes=(Change(old=row) for row in old_table.rows()),
+        ),
     )
-    row_change = ChangeSet(
-        headers=Header(old=(column["name"] for column in old_table.columns())),
-        changes=(Change(old=row) for row in old_table.rows()),
-    )
-    return TableChange(column_change, row_change)
 
 
 def compare_databases(
