@@ -123,14 +123,3 @@ jobs:
           name: database-comparison-${{ needs.get-previous-version.outputs.previous_version }}-to-${{ inputs.version_id }}
           path: comparison-results/
           retention-days: 30
-
-  skip-comparison:
-    needs: get-previous-version
-    if: needs.get-previous-version.outputs.previous_version == ''
-    runs-on: ubuntu-latest
-    steps:
-      - name: Log skip reason
-        run: |
-          echo "## Comparison Skipped" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "No previous version found for **${{ inputs.version_id }}** - this might be the first version in the series." >> $GITHUB_STEP_SUMMARY
