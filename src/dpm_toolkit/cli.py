@@ -5,7 +5,7 @@ from datetime import date
 from enum import StrEnum, auto
 from json import dumps
 from pathlib import Path
-from sqlite3 import OperationalError, connect
+from sqlite3 import Connection, OperationalError, connect
 from sys import stdout
 from typing import Any
 
@@ -43,6 +43,11 @@ def serializer[T](obj: date | Iterable[T]) -> str | tuple[T, ...] | None:
     if isinstance(obj, date):
         return obj.isoformat()
     return None
+
+
+def read_only_sqlite(sqlite_location: Path) -> Connection:
+    """Create a read-only SQLAlchemy engine for SQLite database."""
+    return connect(f"file:{sqlite_location}?mode=ro", uri=True)
 
 
 console = Console()
@@ -267,8 +272,8 @@ def compare(
 
     # Perform comparison
     try:
-        old_database = connect(old_location)
-        new_database = connect(new_location)
+        old_database = read_only_sqlite(old_location)
+        new_database = read_only_sqlite(new_location)
     except OperationalError as e:
         print_error(f"Failed to open database files: {e}")
         raise Exit(1) from e

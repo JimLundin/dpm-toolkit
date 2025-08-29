@@ -5,7 +5,7 @@ from sqlite3 import Row, connect
 
 import pytest
 
-from compare.main import compare_cols, difference, encoder
+from compare.main import compare_columns, difference, encoder
 
 
 @pytest.fixture(name="mock_row")

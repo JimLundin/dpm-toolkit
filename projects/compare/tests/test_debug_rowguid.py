@@ -10,7 +10,7 @@ def test_simple_rowguid_different_pk() -> None:
     # Old database
     old_conn = connect(":memory:")
     old_conn.execute(
-        "CREATE TABLE test (id INTEGER PRIMARY KEY, RowGUID TEXT, name TEXT)"
+        "CREATE TABLE test (id INTEGER PRIMARY KEY, RowGUID TEXT, name TEXT)",
     )
     old_conn.execute("INSERT INTO test VALUES (1, 'guid-a', 'Item A')")
     old_conn.commit()
@@ -18,20 +18,20 @@ def test_simple_rowguid_different_pk() -> None:
     # New database
     new_conn = connect(":memory:")
     new_conn.execute(
-        "CREATE TABLE test (id INTEGER PRIMARY KEY, RowGUID TEXT, name TEXT)"
+        "CREATE TABLE test (id INTEGER PRIMARY KEY, RowGUID TEXT, name TEXT)",
     )
     new_conn.execute(
-        "INSERT INTO test VALUES (10, 'guid-a', 'Item A Modified')"
+        "INSERT INTO test VALUES (10, 'guid-a', 'Item A Modified')",
     )  # Same RowGUID, different PK
     new_conn.commit()
 
-    changes = next(iter(compare_databases(old_conn, new_conn)))["rows"]["changes"]
+    changes = next(iter(compare_databases(old_conn, new_conn))).body.rows.changes
     changes = list(changes)
 
     print("Changes found:")
     for i, change in enumerate(changes):
         print(
-            f"  {i}: old={dict(change.old) if change.old else None}, new={dict(change.new) if change.new else None}"
+            f"  {i}: old={dict(change.old) if change.old else None}, new={dict(change.new) if change.new else None}",
         )
 
     modified = [c for c in changes if c.old and c.new]

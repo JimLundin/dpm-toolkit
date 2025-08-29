@@ -10,7 +10,7 @@ from typing import Any
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from jinja2.environment import TemplateStream
 
-from compare.inspector import TABLE_INFO_COLUMNS, DatabaseInspector, TableInspector
+from compare.inspector import TABLE_INFO_COLUMNS, Database, Table
 from compare.types import (
     Change,
     ChangeSet,
@@ -180,10 +180,7 @@ def compare_rows(
                 new_row = next(new, None)
 
 
-def compare_table_rows(
-    old_table: TableInspector,
-    new_table: TableInspector,
-) -> Iterator[Change]:
+def compare_table_rows(old_table: Table, new_table: Table) -> Iterator[Change]:
     """Compare table data using consistent sort/comparison key strategy.
 
     Strategy: Always sort and compare by the same key hierarchy:
@@ -213,10 +210,7 @@ def compare_table_rows(
     return compare_rows(old_rows, new_rows, shared_primary_keys, shared_columns)
 
 
-def common_table(
-    old_table: TableInspector,
-    new_table: TableInspector,
-) -> TableChange:
+def common_table(old_table: Table, new_table: Table) -> TableChange:
     """Compare a table that exists in both databases."""
     return TableChange(
         ChangeSet(
@@ -233,7 +227,7 @@ def common_table(
     )
 
 
-def added_table(new_table: TableInspector) -> TableChange:
+def added_table(new_table: Table) -> TableChange:
     """Handle a table that was added, returning (cols_changeset, rows_changeset)."""
     return TableChange(
         ChangeSet(
@@ -247,7 +241,7 @@ def added_table(new_table: TableInspector) -> TableChange:
     )
 
 
-def removed_table(old_table: TableInspector) -> TableChange:
+def removed_table(old_table: Table) -> TableChange:
     """Handle a table that was removed, returning (cols_changeset, rows_changeset)."""
     return TableChange(
         ChangeSet(
@@ -266,16 +260,24 @@ def compare_databases(
     new_database: Connection,
 ) -> Iterator[Comparison]:
     """Compare two SQLite databases and return differences."""
-    old = DatabaseInspector(old_database)
-    new = DatabaseInspector(new_database)
+    old = Database(old_database)
+    new = Database(new_database)
 
     added_tables, removed_tables, common_tables = difference(old.tables(), new.tables())
 
-    return chain(
-        (
-            Comparison(name, common_table(old.table(name), new.table(name)))
-            for name in common_tables
-        ),
-        (Comparison(name, added_table(new.table(name))) for name in added_tables),
-        (Comparison(name, removed_table(old.table(name))) for name in removed_tables),
-    )
+    with old.attach(new) as old_attached, new.attach(old) as new_attached:
+
+        return chain(
+            (
+                Comparison(
+                    name,
+                    common_table(old_attached.table(name), new_attached.table(name)),
+                )
+                for name in common_tables
+            ),
+            (Comparison(name, added_table(new.table(name))) for name in added_tables),
+            (
+                Comparison(name, removed_table(old.table(name)))
+                for name in removed_tables
+            ),
+        )

@@ -32,7 +32,7 @@ def test_dora_module_case() -> None:
     old_conn.execute(
         """
         INSERT INTO modules VALUES (
-            390, 44, NULL, 2, 3, 'DORA', 'DORA', NULL, '1.0.0', 
+            390, 44, NULL, 2, 3, 'DORA', 'DORA', NULL, '1.0.0',
             '2025-01-31', '2025-01-31', 'c0a78332d1ffb8448495194dfce5efe2', 1, 0
         )
         """,
@@ -64,14 +64,14 @@ def test_dora_module_case() -> None:
     new_conn.execute(
         """
         INSERT INTO modules VALUES (
-            391, 44, NULL, 2, 3, 'DORA', 'DORA', NULL, '1.0.0', 
+            391, 44, NULL, 2, 3, 'DORA', 'DORA', NULL, '1.0.0',
             '2025-01-31', '2025-01-31', 'c0a78332d1ffb8448495194dfce5efe2', 1, 0
         )
         """,
     )
     new_conn.commit()
 
-    changes = next(iter(compare_databases(old_conn, new_conn)))["rows"]["changes"]
+    changes = next(iter(compare_databases(old_conn, new_conn))).body.rows.changes
     changes = list(changes)
 
     print("Changes found:")
@@ -92,10 +92,14 @@ def test_dora_module_case() -> None:
 
     # Should be 1 modification since the ModuleVID (PK) changed, even though other content is the same
     assert len(modified) == 1, f"Expected 1 modification but got {len(modified)}"
-    
+
     # Verify the match is by RowGUID
     change = modified[0]
-    assert change.old["RowGUID"] == change.new["RowGUID"] == "c0a78332d1ffb8448495194dfce5efe2"
+    assert (
+        change.old["RowGUID"]
+        == change.new["RowGUID"]
+        == "c0a78332d1ffb8448495194dfce5efe2"
+    )
     assert change.old["ModuleVID"] == 390
     assert change.new["ModuleVID"] == 391  # Different PK
 
@@ -134,7 +138,7 @@ def test_dora_module_case_with_actual_change() -> None:
     )
     new_conn.commit()
 
-    changes = next(iter(compare_databases(old_conn, new_conn)))["rows"]["changes"]
+    changes = next(iter(compare_databases(old_conn, new_conn))).body.rows.changes
     changes = list(changes)
 
     modified = [c for c in changes if c.old and c.new]
