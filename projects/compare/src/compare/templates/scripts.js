@@ -13,21 +13,21 @@ class DatabaseReport {
         if (!Array.isArray(data)) throw new Error('Invalid data format');
         return data.map(table => {
             // Handle NamedTuple structure: Comparison(name, TableChange(columns, rows))
-            // table[0] = name, table[1] = TableChange, table[1][0] = columns, table[1][1] = rows
-            const name = table[0];
-            const tableChange = table[1];
-            const columns = tableChange[0]; // ChangeSet(headers, changes)
-            const rows = tableChange[1];    // ChangeSet(headers, changes)
+            // table = [name, [columns, rows]]
+            const [name, tableChange] = table;
+            const [columns, rows] = tableChange;
+            const [colHeaders, colChanges] = columns;
+            const [rowHeaders, rowChanges] = rows;
             
             return {
                 name: name,
                 cols: { 
-                    headers: columns[0] || [null, null],  // headers 
-                    changes: columns[1] || []             // changes
+                    headers: colHeaders || [null, null],  // headers 
+                    changes: colChanges || []             // changes
                 },
                 rows: { 
-                    headers: rows[0] || [null, null],     // headers
-                    changes: rows[1] || []                // changes
+                    headers: rowHeaders || [null, null],  // headers
+                    changes: rowChanges || []             // changes
                 }
             };
         });
