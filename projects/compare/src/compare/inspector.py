@@ -76,9 +76,8 @@ class Database:
     def attach(self, target_database: Database) -> Generator[Database]:
         """Attach the target SQLite database to the current connection."""
         target_uri = f"file:{target_database.path()}?mode=ro"
-        print(target_uri)
-        self._connection.execute(f"ATTACH DATABASE '{target_uri}' AS other")
+        self._connection.execute(f"ATTACH '{target_uri}' AS other")
         try:
             yield self
         finally:
-            self._connection.execute("DETACH DATABASE other")
+            self._connection.execute("DETACH other")

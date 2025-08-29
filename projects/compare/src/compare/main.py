@@ -275,9 +275,12 @@ def compare_databases(
                 )
                 for name in common_tables
             ),
-            (Comparison(name, added_table(new.table(name))) for name in added_tables),
             (
-                Comparison(name, removed_table(old.table(name)))
+                Comparison(name, added_table(new_attached.table(name)))
+                for name in added_tables
+            ),
+            (
+                Comparison(name, removed_table(old_attached.table(name)))
                 for name in removed_tables
             ),
         )
