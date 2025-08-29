@@ -94,7 +94,7 @@ def test_null_rowguid_composite_sort_order() -> None:
     )
     new_conn.commit()
 
-    changes = next(iter(compare_databases(old_conn, new_conn))).changes.rows.changes
+    changes = next(iter(compare_databases(old_conn, new_conn))).body.rows.changes
     changes = list(changes)
 
     # Categorize changes
@@ -174,7 +174,7 @@ def test_all_null_rowguids() -> None:
     )
     new_conn.commit()
 
-    changes = next(iter(compare_databases(old_conn, new_conn))).changes.rows.changes
+    changes = next(iter(compare_databases(old_conn, new_conn))).body.rows.changes
     changes = list(changes)
 
     modified = [c for c in changes if c.old and c.new]

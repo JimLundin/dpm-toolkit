@@ -39,4 +39,4 @@ class Comparison(NamedTuple):
     """Complete comparison result for a table."""
 
     name: str
-    changes: TableChange  # (cols, rows)
+    body: TableChange  # (cols, rows)
