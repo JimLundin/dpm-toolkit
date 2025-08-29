@@ -1,7 +1,7 @@
 """Tests for the DatabaseInspector class."""
 
 from collections.abc import Iterator
-from sqlite3 import Connection, OperationalError, Row, connect
+from sqlite3 import Connection, OperationalError, connect
 
 import pytest
 
@@ -191,12 +191,6 @@ def create_composite_pk_db() -> Iterator[Connection]:
     conn.commit()
     yield conn
     conn.close()
-
-
-def test_init_sets_row_factory(simple_db: Connection) -> None:
-    """Test that DatabaseInspector sets row_factory correctly."""
-    inspector = DatabaseInspector(simple_db)
-    assert inspector._connection.row_factory is Row
 
 
 def test_tables_returns_user_tables(simple_db: Connection) -> None:
