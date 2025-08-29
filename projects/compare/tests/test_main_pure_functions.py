@@ -5,7 +5,7 @@ from sqlite3 import Row, connect
 
 import pytest
 
-from compare.main import compare_cols, encoder, difference
+from compare.main import compare_cols, difference, encoder
 
 
 @pytest.fixture(name="mock_row")
@@ -135,7 +135,7 @@ def test_name_diff_with_mixed_changes() -> None:
 
 
 def test_name_diff_identical() -> None:
-    """Test name_diff with identical name sets."""
+    """Test difference with identical name sets."""
     names = ["table1", "table2"]
 
     added, removed, common = difference(names, names)
