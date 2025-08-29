@@ -10,7 +10,7 @@ from typing import Any
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from jinja2.environment import TemplateStream
 
-from compare.inspector import TABLE_INFO_COLS, DatabaseInspector, TableInspector
+from compare.inspector import TABLE_INFO_COLUMNS, DatabaseInspector, TableInspector
 from compare.types import (
     Change,
     ChangeSet,
@@ -210,7 +210,7 @@ def compare_table_rows(
     # Use same keys for both sorting and comparison
     old_rows = old_table.rows(sort_keys)
     new_rows = new_table.rows(sort_keys)
-    return compare_rows(old_rows, new_rows, sort_keys)
+    return compare_rows(old_rows, new_rows, shared_primary_keys, shared_columns)
 
 
 def common_table(
@@ -220,8 +220,8 @@ def common_table(
     """Compare a table that exists in both databases."""
     return TableChange(
         ChangeSet(
-            headers=Header(TABLE_INFO_COLS, TABLE_INFO_COLS),
-            changes=compare_cols(old_table.columns(), new_table.columns()),
+            headers=Header(TABLE_INFO_COLUMNS, TABLE_INFO_COLUMNS),
+            changes=compare_columns(old_table.columns(), new_table.columns()),
         ),
         ChangeSet(
             headers=Header(
@@ -237,7 +237,7 @@ def added_table(new_table: TableInspector) -> TableChange:
     """Handle a table that was added, returning (cols_changeset, rows_changeset)."""
     return TableChange(
         ChangeSet(
-            headers=Header(new=TABLE_INFO_COLS),
+            headers=Header(new=TABLE_INFO_COLUMNS),
             changes=(Change(new=column) for column in new_table.columns()),
         ),
         ChangeSet(
@@ -251,7 +251,7 @@ def removed_table(old_table: TableInspector) -> TableChange:
     """Handle a table that was removed, returning (cols_changeset, rows_changeset)."""
     return TableChange(
         ChangeSet(
-            headers=Header(old=TABLE_INFO_COLS),
+            headers=Header(old=TABLE_INFO_COLUMNS),
             changes=(Change(old=column) for column in old_table.columns()),
         ),
         ChangeSet(
