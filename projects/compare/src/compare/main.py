@@ -188,13 +188,15 @@ def compare_table_rows(old_table: Table, new_table: Table) -> Iterator[Change]:
     2. Common primary keys (if any exist)
     3. All common columns (fallback)
     """
-    old_columns = frozenset(column["name"] for column in old_table.columns())
-    new_columns = frozenset(column["name"] for column in new_table.columns())
-    shared_columns = old_columns & new_columns
+    _, _, shared_columns = difference(
+        (column["name"] for column in old_table.columns()),
+        (column["name"] for column in new_table.columns()),
+    )
 
-    old_primary_keys = frozenset(old_table.primary_keys())
-    new_primary_keys = frozenset(new_table.primary_keys())
-    shared_primary_keys = old_primary_keys & new_primary_keys
+    _, _, shared_primary_keys = difference(
+        (old_table.primary_keys()),
+        (new_table.primary_keys()),
+    )
 
     # Build unified key hierarchy: RowGUID > common PKs > all common columns
     if "RowGUID" in shared_columns:
@@ -210,7 +212,7 @@ def compare_table_rows(old_table: Table, new_table: Table) -> Iterator[Change]:
     return compare_rows(old_rows, new_rows, shared_primary_keys, shared_columns)
 
 
-def common_table(old_table: Table, new_table: Table) -> TableChange:
+def compare_tables(old_table: Table, new_table: Table) -> TableChange:
     """Compare a table that exists in both databases."""
     return TableChange(
         ChangeSet(
@@ -265,22 +267,18 @@ def compare_databases(
 
     added_tables, removed_tables, common_tables = difference(old.tables(), new.tables())
 
-    with old.attach(new) as old_attached, new.attach(old) as new_attached:
-
+    with old.attach(new), new.attach(old):
         return chain(
             (
                 Comparison(
                     name,
-                    common_table(old_attached.table(name), new_attached.table(name)),
+                    compare_tables(old.table(name), new.table(name)),
                 )
                 for name in common_tables
             ),
+            (Comparison(name, added_table(new.table(name))) for name in added_tables),
             (
-                Comparison(name, added_table(new_attached.table(name)))
-                for name in added_tables
-            ),
-            (
-                Comparison(name, removed_table(old_attached.table(name)))
+                Comparison(name, removed_table(old.table(name)))
                 for name in removed_tables
             ),
         )

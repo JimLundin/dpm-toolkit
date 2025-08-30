@@ -73,11 +73,12 @@ class Database:
         return Table(self._connection, table_name)
 
     @contextmanager
-    def attach(self, target_database: Database) -> Generator[Database]:
+    def attach(self, target: Database) -> Generator[None]:
         """Attach the target SQLite database to the current connection."""
-        target_uri = f"file:{target_database.path()}?mode=ro"
-        self._connection.execute(f"ATTACH '{target_uri}' AS other")
+        target_location = target.path()
+        target_identifier = f"file:{target_location}?mode=ro"
         try:
-            yield self
+            self._connection.execute("ATTACH ? AS other", (target_identifier,))
+            yield
         finally:
             self._connection.execute("DETACH other")
