@@ -5,7 +5,7 @@ from sqlite3 import Row, connect
 
 import pytest
 
-from compare.main import compare_columns, difference, encoder
+from compare.main import compare_schema, difference, encoder
 
 
 @pytest.fixture(name="mock_row")
@@ -217,7 +217,7 @@ def test_compare_cols_no_changes() -> None:
     new_cols = cursor.fetchall()
     conn.close()
 
-    changes = list(compare_columns(old_cols, new_cols))
+    changes = list(compare_schema(old_cols, new_cols))
 
     assert not changes  # No changes expected
 
@@ -260,7 +260,7 @@ def test_compare_cols_with_additions() -> None:
     new_cols = new_cursor.fetchall()
     conn.close()
 
-    changes = list(compare_columns(old_cols, new_cols))
+    changes = list(compare_schema(old_cols, new_cols))
 
     # Should detect one addition
     assert len(changes) == 1
@@ -308,7 +308,7 @@ def test_compare_cols_with_removals() -> None:
     new_cols = new_cursor.fetchall()
     conn.close()
 
-    changes = list(compare_columns(old_cols, new_cols))
+    changes = list(compare_schema(old_cols, new_cols))
 
     # Should detect one removal
     assert len(changes) == 1
@@ -359,7 +359,7 @@ def test_compare_cols_with_modifications() -> None:
     new_cols = new_cursor.fetchall()
     conn.close()
 
-    changes = list(compare_columns(old_cols, new_cols))
+    changes = list(compare_schema(old_cols, new_cols))
 
     # Should detect one modification
     assert len(changes) == 1
