@@ -232,29 +232,34 @@ def test_tables_excludes_real_system_tables(simple_db: Connection) -> None:
 
 
 def test_cols_returns_column_info(simple_db: Connection) -> None:
-    """Test that cols() returns correct column metadata."""
+    """Test that columns() returns column names and schema() returns metadata."""
     inspector = Database(simple_db)
-    cols = list(inspector.table("users").columns())
 
-    # Should have 4 columns
-    assert len(cols) == 4
-
-    # Check column names
-    col_names = [col["name"] for col in cols]
+    # Test new columns() method - returns column names
+    col_names = list(inspector.table("users").columns())
+    assert len(col_names) == 4
     assert col_names == ["id", "name", "email", "age"]
 
+    # Test schema() method - returns metadata rows
+    schema_rows = list(inspector.table("users").schema().rows())
+    assert len(schema_rows) == 4
+
+    # Check column metadata structure
+    col_names_from_schema = [row["name"] for row in schema_rows]
+    assert col_names_from_schema == ["id", "name", "email", "age"]
+
     # Check primary key
-    pk_cols = [col for col in cols if col["pk"]]
+    pk_cols = [row for row in schema_rows if row["pk"]]
     assert len(pk_cols) == 1
     assert pk_cols[0]["name"] == "id"
 
     # Check not null constraint
-    notnull_cols = [col["name"] for col in cols if col["notnull"]]
+    notnull_cols = [row["name"] for row in schema_rows if row["notnull"]]
     assert "name" in notnull_cols
 
 
 def test_cols_nonexistent_table(simple_db: Connection) -> None:
-    """Test cols() with nonexistent table."""
+    """Test columns() with nonexistent table."""
     inspector = Database(simple_db)
     cols = list(inspector.table("nonexistent").columns())
 

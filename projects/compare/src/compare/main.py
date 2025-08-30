@@ -4,13 +4,14 @@ import json
 from collections.abc import Iterable, Iterator
 from itertools import chain
 from pathlib import Path
-from sqlite3 import Connection, Row
+from sqlite3 import Row
 from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from jinja2.environment import TemplateStream
 
-from compare.inspector import TABLE_INFO_COLUMNS, Database, Table
+from compare.comparison import ComparisonDatabase
+from compare.inspector import TABLE_INFO_COLUMNS, Schema, Table
 from compare.types import (
     Change,
     ChangeSet,
@@ -70,13 +71,10 @@ def difference(
     return added_names, removed_names, common_names
 
 
-def compare_columns(
-    old_columns: Iterable[Row],
-    new_columns: Iterable[Row],
-) -> Iterator[Change]:
+def compare_schema(old_schema: Schema, new_schema: Schema) -> Iterator[Change]:
     """Compare column definitions and return modifications, additions, and removals."""
-    old_column_by_name = {column["name"]: column for column in old_columns}
-    new_column_by_name = {column["name"]: column for column in new_columns}
+    old_column_by_name = {column["name"]: column for column in old_schema.rows()}
+    new_column_by_name = {column["name"]: column for column in new_schema.rows()}
 
     return chain(
         (
@@ -180,51 +178,42 @@ def compare_rows(
                 new_row = next(new, None)
 
 
-def compare_table_rows(old_table: Table, new_table: Table) -> Iterator[Change]:
+def compare_table_rows(
+    old_table: Table, new_table: Table, cmp_db: ComparisonDatabase
+) -> Iterator[Change]:
     """Compare table data using consistent sort/comparison key strategy.
 
     Strategy: Always sort and compare by the same key hierarchy:
     1. RowGUID (if present in both tables)
     2. Common primary keys (if any exist)
     3. All common columns (fallback)
+
+    Uses SQL EXCEPT to pre-filter to only different rows, then applies Python matching.
     """
-    _, _, shared_columns = difference(
-        (column["name"] for column in old_table.columns()),
-        (column["name"] for column in new_table.columns()),
-    )
+    _, _, shared_columns = difference(old_table.columns(), new_table.columns())
 
     _, _, shared_primary_keys = difference(
-        (old_table.primary_keys()),
-        (new_table.primary_keys()),
+        old_table.primary_keys(),
+        new_table.primary_keys(),
     )
-
-    # Build unified key hierarchy: RowGUID > common PKs > all common columns
-    if "RowGUID" in shared_columns:
-        # Best case: RowGUID + PKs as tiebreaker for NULL RowGUIDs
-        sort_keys = (*shared_primary_keys, "RowGUID")
-    else:
-        # Good case: Common PKs provide stable identity
-        sort_keys = tuple(shared_primary_keys or shared_columns)
-
-    # Use same keys for both sorting and comparison
-    old_rows = old_table.rows(sort_keys)
-    new_rows = new_table.rows(sort_keys)
+    # Use SQL-filtered rows - only rows that are different
+    old_rows = cmp_db.difference(old_table, new_table)
+    new_rows = cmp_db.difference(new_table, old_table)
     return compare_rows(old_rows, new_rows, shared_primary_keys, shared_columns)
 
 
-def compare_tables(old_table: Table, new_table: Table) -> TableChange:
+def compare_tables(
+    old_table: Table, new_table: Table, cmp_db: ComparisonDatabase
+) -> TableChange:
     """Compare a table that exists in both databases."""
     return TableChange(
         ChangeSet(
             headers=Header(TABLE_INFO_COLUMNS, TABLE_INFO_COLUMNS),
-            changes=compare_columns(old_table.columns(), new_table.columns()),
+            changes=compare_schema(old_table.schema(), new_table.schema()),
         ),
         ChangeSet(
-            headers=Header(
-                (column["name"] for column in new_table.columns()),
-                (column["name"] for column in old_table.columns()),
-            ),
-            changes=compare_table_rows(old_table, new_table),
+            headers=Header(new_table.columns(), old_table.columns()),
+            changes=compare_table_rows(old_table, new_table, cmp_db),
         ),
     )
 
@@ -234,10 +223,10 @@ def added_table(new_table: Table) -> TableChange:
     return TableChange(
         ChangeSet(
             headers=Header(new=TABLE_INFO_COLUMNS),
-            changes=(Change(new=column) for column in new_table.columns()),
+            changes=(Change(new=column) for column in new_table.schema().rows()),
         ),
         ChangeSet(
-            headers=Header(new=(column["name"] for column in new_table.columns())),
+            headers=Header(new=new_table.columns()),
             changes=(Change(new=row) for row in new_table.rows()),
         ),
     )
@@ -248,37 +237,32 @@ def removed_table(old_table: Table) -> TableChange:
     return TableChange(
         ChangeSet(
             headers=Header(old=TABLE_INFO_COLUMNS),
-            changes=(Change(old=column) for column in old_table.columns()),
+            changes=(Change(old=column) for column in old_table.schema().rows()),
         ),
         ChangeSet(
-            headers=Header(old=(column["name"] for column in old_table.columns())),
+            headers=Header(old=old_table.columns()),
             changes=(Change(old=row) for row in old_table.rows()),
         ),
     )
 
 
-def compare_databases(
-    old_database: Connection,
-    new_database: Connection,
-) -> Iterator[Comparison]:
+def compare_databases(old_location: Path, new_location: Path) -> Iterator[Comparison]:
     """Compare two SQLite databases and return differences."""
-    old = Database(old_database)
-    new = Database(new_database)
-
-    added_tables, removed_tables, common_tables = difference(old.tables(), new.tables())
-
-    with old.attach(new), new.attach(old):
-        return chain(
-            (
-                Comparison(
-                    name,
-                    compare_tables(old.table(name), new.table(name)),
-                )
-                for name in common_tables
-            ),
-            (Comparison(name, added_table(new.table(name))) for name in added_tables),
-            (
-                Comparison(name, removed_table(old.table(name)))
-                for name in removed_tables
-            ),
-        )
+    cmp_db = ComparisonDatabase(old_location, new_location)
+    return chain(
+        # Common tables - use main.py compare_tables with SQL-filtered rows
+        (
+            Comparison(old_table._name, compare_tables(old_table, new_table, cmp_db))
+            for old_table, new_table in cmp_db.common_table_pairs()
+        ),
+        # Added tables - get Table objects directly
+        (
+            Comparison(table._name, added_table(table))
+            for table in cmp_db.added_tables()
+        ),
+        # Removed tables - get Table objects directly
+        (
+            Comparison(table._name, removed_table(table))
+            for table in cmp_db.removed_tables()
+        ),
+    )
