@@ -1,9 +1,10 @@
 """Database inspection functionality using sqlite3."""
 
 from collections.abc import Iterator
+from functools import cached_property
 from sqlite3 import Connection, Row
 
-TABLE_INFO_COLUMNS = ("cid", "name", "type", "notnull", "dflt_value", "pk")
+TABLE_INFO_COLUMNS = frozenset(("cid", "name", "type", "notnull", "dflt_value", "pk"))
 
 
 class Schema:
@@ -22,16 +23,20 @@ class Schema:
         self._schema = schema
         self.qualified_name = f"pragma_table_info({self._table_name}, {self._schema})"
 
-    def rows(self) -> Iterator[Row]:
+    @cached_property
+    def rows(self) -> tuple[Row, ...]:
         """Return schema metadata rows for this table."""
-        return self._connection.execute(
-            "SELECT * FROM pragma_table_info(?, ?)",
-            (self._table_name, self._schema),
+        return tuple(
+            self._connection.execute(
+                "SELECT * FROM pragma_table_info(?, ?)",
+                (self._table_name, self._schema),
+            ),
         )
 
-    def columns(self) -> Iterator[str]:
+    @cached_property
+    def columns(self) -> frozenset[str]:
         """Return the column names of the schema metadata (TABLE_INFO_COLUMNS)."""
-        return iter(TABLE_INFO_COLUMNS)
+        return TABLE_INFO_COLUMNS
 
 
 class Table:
@@ -41,15 +46,14 @@ class Table:
         self,
         connection: Connection,
         table_name: str,
-        schema: str = "main",
+        schema_name: str = "main",
     ) -> None:
         """Initialize table with a database connection, table name, and schema."""
         self._connection = connection
         self._connection.row_factory = Row
-        self._schema = schema
         self.name = table_name
-        # Use double quotes to properly escape identifiers (handles reserved keywords)
-        self.qualified_name = f'{self._schema}."{self.name}"'
+        self.schema = Schema(connection, table_name, schema_name)
+        self.qualified_name = f'{schema_name}."{table_name}"'
 
     def rows(self) -> Iterator[Row]:
         """Return all rows from this table."""
@@ -57,32 +61,34 @@ class Table:
             f"SELECT * FROM {self.qualified_name}",  # noqa: S608
         )
 
-    def columns(self) -> Iterator[str]:
+    @cached_property
+    def columns(self) -> frozenset[str]:
         """Return column names for this table."""
-        return (row["name"] for row in self.schema().rows())
+        return frozenset(row["name"] for row in self.schema.rows)
 
-    def schema(self) -> Schema:
-        """Return a SchemaTable representing this table's metadata."""
-        return Schema(self._connection, self.name, self._schema)
-
-    def primary_keys(self) -> Iterator[str]:
+    @cached_property
+    def primary_keys(self) -> frozenset[str]:
         """Return primary key column names for this table."""
-        return (row["name"] for row in self.schema().rows() if row["pk"])
+        return frozenset(row["name"] for row in self.schema.rows if row["pk"])
 
 
 class Database:
     """Inspects SQLite databases to extract schema information."""
 
-    def __init__(self, connection: Connection, schema: str = "main") -> None:
+    def __init__(self, connection: Connection, schema_name: str = "main") -> None:
         """Initialize inspector with a database connection and schema name."""
         self._connection = connection
-        self.schema = schema
         self._connection.row_factory = Row
+        self._schema_name = schema_name
+        self._table_cache: dict[str, Table] = {}
 
-    def tables(self) -> Iterator[str]:
+    @cached_property
+    def tables(self) -> frozenset[str]:
         """Return all user table names for this schema, excluding system tables."""
         schema_ref = (
-            f"{self.schema}.sqlite_schema" if self.schema != "main" else "sqlite_schema"
+            f"{self._schema_name}.sqlite_schema"
+            if self._schema_name != "main"
+            else "sqlite_schema"
         )
 
         cursor = self._connection.execute(
@@ -92,11 +98,17 @@ class Database:
             ORDER BY name
             """,  # noqa: S608
         )
-        return (row["name"] for row in cursor)
+        return frozenset(row["name"] for row in cursor)
 
     def table(self, table_name: str) -> Table:
         """Return a Table instance for the given table name in this schema."""
-        return Table(self._connection, table_name, self.schema)
+        if table_name not in self._table_cache:
+            self._table_cache[table_name] = Table(
+                self._connection,
+                table_name,
+                self._schema_name,
+            )
+        return self._table_cache[table_name]
 
 
 type TableType = Table | Schema
