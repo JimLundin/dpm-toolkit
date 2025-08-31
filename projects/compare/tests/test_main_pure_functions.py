@@ -6,7 +6,7 @@ from sqlite3 import Row, connect
 import pytest
 
 from compare.inspector import Schema
-from compare.main import compare_schema, difference, encoder
+from compare.main import compare_schema, encoder
 
 
 @pytest.fixture(name="mock_row")
@@ -132,85 +132,6 @@ def test_encoder_with_non_iterable() -> None:
     assert "Object of type" in str(exc_info.value)
     assert "is not JSON serializable" in str(exc_info.value)
 
-
-def test_name_diff_with_additions() -> None:
-    """Test name_diff detects added names."""
-    old = ["table1", "table2"]
-    new = ["table1", "table2", "table3", "table4"]
-
-    added, removed, common = difference(old, new)
-
-    assert added == {"table3", "table4"}
-    assert removed == set()
-    assert common == {"table1", "table2"}
-
-
-def test_name_diff_with_removals() -> None:
-    """Test name_diff detects removed names."""
-    old = ["table1", "table2", "table3"]
-    new = ["table1"]
-
-    added, removed, common = difference(old, new)
-
-    assert added == set()
-    assert removed == {"table2", "table3"}
-    assert common == {"table1"}
-
-
-def test_name_diff_with_mixed_changes() -> None:
-    """Test name_diff handles additions, removals, and common names."""
-    old = ["table1", "table2", "table3"]
-    new = ["table2", "table4", "table5"]
-
-    added, removed, common = difference(old, new)
-
-    assert added == {"table4", "table5"}
-    assert removed == {"table1", "table3"}
-    assert common == {"table2"}
-
-
-def test_name_diff_identical() -> None:
-    """Test difference with identical name sets."""
-    names = ["table1", "table2"]
-
-    added, removed, common = difference(names, names)
-
-    assert added == set()
-    assert removed == set()
-    assert common == {"table1", "table2"}
-
-
-def test_name_diff_empty_old() -> None:
-    """Test name_diff with empty old set."""
-    old: list[str] = []
-    new: list[str] = ["table1", "table2"]
-
-    added, removed, common = difference(old, new)
-
-    assert added == {"table1", "table2"}
-    assert removed == set()
-    assert common == set()
-
-
-def test_name_diff_empty_new() -> None:
-    """Test name_diff with empty new set."""
-    old: list[str] = ["table1", "table2"]
-    new: list[str] = []
-
-    added, removed, common = difference(old, new)
-
-    assert added == set()
-    assert removed == {"table1", "table2"}
-    assert common == set()
-
-
-def test_name_diff_both_empty() -> None:
-    """Test name_diff with both sets empty."""
-    added, removed, common = difference([], [])
-
-    assert added == set()
-    assert removed == set()
-    assert common == set()
 
 
 def test_row_key_empty_row() -> None:
