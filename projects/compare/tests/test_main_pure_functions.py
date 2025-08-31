@@ -5,6 +5,7 @@ from sqlite3 import Row, connect
 
 import pytest
 
+from compare.inspector import Schema
 from compare.main import compare_schema, difference, encoder
 
 
@@ -46,6 +47,40 @@ def create_mock_empty_row() -> Row | None:
     row: Row = cursor.fetchone()
     conn.close()
     return row if row else None
+
+
+@pytest.fixture(name="basic_schema")
+def create_basic_schema() -> Schema:
+    """Create a basic Schema object for testing."""
+    conn = connect(":memory:")
+    conn.row_factory = Row
+    # Create a table with basic columns
+    conn.execute("""
+        CREATE TABLE test_table (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL
+        )
+    """)
+    conn.commit()
+    return Schema(conn, "test_table")
+
+
+@pytest.fixture(name="extended_schema")
+def create_extended_schema() -> Schema:
+    """Create an extended Schema object with additional columns for testing."""
+    conn = connect(":memory:")
+    conn.row_factory = Row
+    # Create a table with additional columns
+    conn.execute("""
+        CREATE TABLE test_table (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            email TEXT UNIQUE,
+            age INTEGER
+        )
+    """)
+    conn.commit()
+    return Schema(conn, "test_table")
 
 
 def test_encoder_with_row_object(mock_row: Row) -> None:
@@ -185,82 +220,51 @@ def test_row_key_empty_row() -> None:
     pytest.skip("Complex empty row test - covered by other fallback tests")
 
 
-def test_compare_cols_no_changes() -> None:
-    """Test compare_cols with identical column sets."""
-    # Create identical column data using proper SQLite table
+def test_compare_schema_no_changes(basic_schema: Schema) -> None:
+    """Test compare_schema with identical schemas."""
+    # Create another identical schema
     conn = connect(":memory:")
     conn.row_factory = Row
+    conn.execute("""
+        CREATE TABLE test_table (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL
+        )
+    """)
+    conn.commit()
+    other_schema = Schema(conn, "test_table")
 
-    # Create Row objects by simulating pragma_table_info output
-    conn.execute(
-        "CREATE TABLE cols_info ("
-        "cid INTEGER, "
-        "name TEXT, "
-        "type TEXT, "
-        "not_null INTEGER, "
-        "dflt_value TEXT, "
-        "pk INTEGER"
-        ")",
-    )
-
-    # Insert identical column metadata
-    col_data = [
-        (0, "id", "INTEGER", 0, None, 1),
-        (1, "name", "TEXT", 1, None, 0),
-    ]
-    for col in col_data:
-        conn.execute("INSERT INTO cols_info VALUES (?, ?, ?, ?, ?, ?)", col)
-
-    cursor = conn.execute("SELECT * FROM cols_info")
-    old_cols = cursor.fetchall()
-    cursor = conn.execute("SELECT * FROM cols_info")
-    new_cols = cursor.fetchall()
-    conn.close()
-
-    changes = list(compare_schema(old_cols, new_cols))
+    changes = list(compare_schema(basic_schema, other_schema))
 
     assert not changes  # No changes expected
 
 
 def test_compare_cols_with_additions() -> None:
     """Test compare_cols detects added columns."""
-    conn = connect(":memory:")
-    conn.row_factory = Row
+    # Create old schema with just 'id' column
+    old_conn = connect(":memory:")
+    old_conn.row_factory = Row
+    old_conn.execute("""
+        CREATE TABLE test_table (
+            id INTEGER PRIMARY KEY
+        )
+    """)
+    old_conn.commit()
+    old_schema = Schema(old_conn, "test_table")
 
-    # Old columns
-    conn.execute(
-        "CREATE TABLE old_cols ("
-        "cid INTEGER, "
-        "name TEXT, "
-        "type TEXT, "
-        "not_null INTEGER, "
-        "dflt_value TEXT, "
-        "pk INTEGER"
-        ")",
-    )
-    conn.execute("INSERT INTO old_cols VALUES (0, 'id', 'INTEGER', 0, NULL, 1)")
+    # Create new schema with 'id' and 'name' columns
+    new_conn = connect(":memory:")
+    new_conn.row_factory = Row
+    new_conn.execute("""
+        CREATE TABLE test_table (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL
+        )
+    """)
+    new_conn.commit()
+    new_schema = Schema(new_conn, "test_table")
 
-    # New columns (added 'name' column)
-    conn.execute(
-        "CREATE TABLE new_cols ("
-        "cid INTEGER, "
-        "name TEXT, "
-        "type TEXT, "
-        "not_null INTEGER, "
-        "dflt_value TEXT, "
-        "pk INTEGER"
-        ")",
-    )
-    conn.execute("INSERT INTO new_cols VALUES (0, 'id', 'INTEGER', 0, NULL, 1)")
-    conn.execute("INSERT INTO new_cols VALUES (1, 'name', 'TEXT', 1, NULL, 0)")
-
-    old_cursor = conn.execute("SELECT * FROM old_cols")
-    old_cols = old_cursor.fetchall()
-    new_cursor = conn.execute("SELECT * FROM new_cols")
-    new_cols = new_cursor.fetchall()
-    conn.close()
-
-    changes = list(compare_schema(old_cols, new_cols))
+    changes = list(compare_schema(old_schema, new_schema))
 
     # Should detect one addition
     assert len(changes) == 1
@@ -269,46 +273,36 @@ def test_compare_cols_with_additions() -> None:
     assert change.old is None
     assert change.new["name"] == "name"
 
+    old_conn.close()
+    new_conn.close()
+
 
 def test_compare_cols_with_removals() -> None:
     """Test compare_cols detects removed columns."""
-    conn = connect(":memory:")
-    conn.row_factory = Row
+    # Create old schema with 'id' and 'name' columns
+    old_conn = connect(":memory:")
+    old_conn.row_factory = Row
+    old_conn.execute("""
+        CREATE TABLE test_table (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL
+        )
+    """)
+    old_conn.commit()
+    old_schema = Schema(old_conn, "test_table")
 
-    # Old columns (has 'name' column)
-    conn.execute(
-        "CREATE TABLE old_cols ("
-        "cid INTEGER, "
-        "name TEXT, "
-        "type TEXT, "
-        "not_null INTEGER, "
-        "dflt_value TEXT, "
-        "pk INTEGER"
-        ")",
-    )
-    conn.execute("INSERT INTO old_cols VALUES (0, 'id', 'INTEGER', 0, NULL, 1)")
-    conn.execute("INSERT INTO old_cols VALUES (1, 'name', 'TEXT', 1, NULL, 0)")
+    # Create new schema with just 'id' column
+    new_conn = connect(":memory:")
+    new_conn.row_factory = Row
+    new_conn.execute("""
+        CREATE TABLE test_table (
+            id INTEGER PRIMARY KEY
+        )
+    """)
+    new_conn.commit()
+    new_schema = Schema(new_conn, "test_table")
 
-    # New columns (removed 'name' column)
-    conn.execute(
-        "CREATE TABLE new_cols ("
-        "cid INTEGER, "
-        "name TEXT, "
-        "type TEXT, "
-        "not_null INTEGER, "
-        "dflt_value TEXT, "
-        "pk INTEGER"
-        ")",
-    )
-    conn.execute("INSERT INTO new_cols VALUES (0, 'id', 'INTEGER', 0, NULL, 1)")
-
-    old_cursor = conn.execute("SELECT * FROM old_cols")
-    old_cols = old_cursor.fetchall()
-    new_cursor = conn.execute("SELECT * FROM new_cols")
-    new_cols = new_cursor.fetchall()
-    conn.close()
-
-    changes = list(compare_schema(old_cols, new_cols))
+    changes = list(compare_schema(old_schema, new_schema))
 
     # Should detect one removal
     assert len(changes) == 1
@@ -317,54 +311,45 @@ def test_compare_cols_with_removals() -> None:
     assert change.old is not None
     assert change.old["name"] == "name"
 
+    old_conn.close()
+    new_conn.close()
+
 
 def test_compare_cols_with_modifications() -> None:
     """Test compare_cols detects modified columns."""
-    conn = connect(":memory:")
-    conn.row_factory = Row
+    # Create old schema with nullable 'name' column
+    old_conn = connect(":memory:")
+    old_conn.row_factory = Row
+    old_conn.execute("""
+        CREATE TABLE test_table (
+            id INTEGER PRIMARY KEY,
+            name TEXT
+        )
+    """)
+    old_conn.commit()
+    old_schema = Schema(old_conn, "test_table")
 
-    # Old columns
-    conn.execute(
-        "CREATE TABLE old_cols ("
-        "cid INTEGER, "
-        "name TEXT, "
-        "type TEXT, "
-        "not_null INTEGER, "
-        "dflt_value TEXT, "
-        "pk INTEGER"
-        ")",
-    )
-    conn.execute(
-        "INSERT INTO old_cols VALUES (1, 'name', 'TEXT', 0, NULL, 0)",
-    )  # NOT NULL = 0
+    # Create new schema with NOT NULL 'name' column
+    new_conn = connect(":memory:")
+    new_conn.row_factory = Row
+    new_conn.execute("""
+        CREATE TABLE test_table (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL
+        )
+    """)
+    new_conn.commit()
+    new_schema = Schema(new_conn, "test_table")
 
-    # New columns (changed NOT NULL constraint)
-    conn.execute(
-        "CREATE TABLE new_cols ("
-        "cid INTEGER, "
-        "name TEXT, "
-        "type TEXT, "
-        "not_null INTEGER, "
-        "dflt_value TEXT, "
-        "pk INTEGER"
-        ")",
-    )
-    conn.execute(
-        "INSERT INTO new_cols VALUES (1, 'name', 'TEXT', 1, NULL, 0)",
-    )  # NOT NULL = 1
-
-    old_cursor = conn.execute("SELECT * FROM old_cols")
-    old_cols = old_cursor.fetchall()
-    new_cursor = conn.execute("SELECT * FROM new_cols")
-    new_cols = new_cursor.fetchall()
-    conn.close()
-
-    changes = list(compare_schema(old_cols, new_cols))
+    changes = list(compare_schema(old_schema, new_schema))
 
     # Should detect one modification
     assert len(changes) == 1
     change = changes[0]
     assert change.new is not None
     assert change.old is not None
-    assert change.old["not_null"] == 0
-    assert change.new["not_null"] == 1
+    assert change.old["notnull"] == 0
+    assert change.new["notnull"] == 1
+
+    old_conn.close()
+    new_conn.close()
