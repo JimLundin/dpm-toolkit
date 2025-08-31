@@ -11,8 +11,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from jinja2.environment import TemplateStream
 
 from compare.comparison import ComparisonDatabase
-from compare.inspector import TABLE_INFO_COLUMNS, Schema, Table
-from compare.types import (
+from compare.data import (
     Change,
     ChangeSet,
     Comparison,
@@ -20,6 +19,7 @@ from compare.types import (
     TableChange,
     ValueType,
 )
+from compare.inspector import TABLE_INFO_COLUMNS, Schema, Table
 
 type RowValues = Iterable[ValueType]
 type ComparisonKey = tuple[tuple[bool, ValueType], ...]
