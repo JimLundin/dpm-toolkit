@@ -1,5 +1,7 @@
 """Test specific edge case: NULL RowGUID handling with composite sort order."""
 
+import tempfile
+from pathlib import Path
 from sqlite3 import connect
 
 from compare.main import compare_databases
@@ -14,88 +16,95 @@ def test_null_rowguid_composite_sort_order() -> None:
     After the fix: Composite sort order (RowGUID, PK) ensures proper matching
     for both valid GUIDs and NULL GUIDs.
     """
-    # Create scenario with mixed NULL/non-NULL RowGUIDs
-    old_conn = connect(":memory:")
-    old_conn.execute(
-        """
-        CREATE TABLE users (
-            id INTEGER PRIMARY KEY,
-            RowGUID TEXT,
-            email TEXT UNIQUE,
-            name TEXT,
-            status TEXT
-        )
-    """,
-    )
-    old_conn.executemany(
-        "INSERT INTO users VALUES (?, ?, ?, ?, ?)",
-        [
-            (1, "guid-alice", "alice@test.com", "Alice Smith", "active"),
-            (2, None, "bob@test.com", "Bob Jones", "active"),  # NULL RowGUID
-            (3, "guid-charlie", "charlie@test.com", "Charlie Brown", "active"),
-            (4, None, "david@test.com", "David Wilson", "inactive"),  # NULL RowGUID
-            (5, "guid-eve", "eve@test.com", "Eve Davis", "active"),
-        ],
-    )
-    old_conn.commit()
+    with tempfile.TemporaryDirectory() as temp_dir:
+        old_db = Path(temp_dir) / "old.db"
+        new_db = Path(temp_dir) / "new.db"
 
-    new_conn = connect(":memory:")
-    new_conn.execute(
-        """
-        CREATE TABLE users (
-            id INTEGER PRIMARY KEY,
-            RowGUID TEXT,
-            email TEXT UNIQUE,
-            name TEXT,
-            status TEXT
+        # Create old database with mixed NULL/non-NULL RowGUIDs
+        old_conn = connect(old_db)
+        old_conn.execute(
+            """
+            CREATE TABLE users (
+                id INTEGER PRIMARY KEY,
+                RowGUID TEXT,
+                email TEXT UNIQUE,
+                name TEXT,
+                status TEXT
+            )
+        """,
         )
-    """,
-    )
-    new_conn.executemany(
-        "INSERT INTO users VALUES (?, ?, ?, ?, ?)",
-        [
-            (
-                1,
-                "guid-alice",
-                "alice@test.com",
-                "Alice Smith",
-                "inactive",
-            ),  # status changed
-            (
-                2,
-                None,
-                "bob@test.com",
-                "Bob Jones",
-                "active",
-            ),  # unchanged (NULL RowGUID)
-            (
-                3,
-                "guid-charlie",
-                "charlie@test.com",
-                "Charlie Brown",
-                "active",
-            ),  # unchanged
-            (
-                4,
-                None,
-                "david@test.com",
-                "David Wilson",
-                "active",
-            ),  # status changed (NULL RowGUID)
-            (5, "guid-eve", "eve@test.com", "Eve Davis", "inactive"),  # status changed
-            (
-                6,
-                None,
-                "frank@test.com",
-                "Frank Miller",
-                "active",
-            ),  # added (NULL RowGUID)
-        ],
-    )
-    new_conn.commit()
+        old_conn.executemany(
+            "INSERT INTO users VALUES (?, ?, ?, ?, ?)",
+            [
+                (1, "guid-alice", "alice@test.com", "Alice Smith", "active"),
+                (2, None, "bob@test.com", "Bob Jones", "active"),  # NULL RowGUID
+                (3, "guid-charlie", "charlie@test.com", "Charlie Brown", "active"),
+                (4, None, "david@test.com", "David Wilson", "inactive"),  # NULL RowGUID
+                (5, "guid-eve", "eve@test.com", "Eve Davis", "active"),
+            ],
+        )
+        old_conn.commit()
+        old_conn.close()
 
-    changes = next(iter(compare_databases(old_conn, new_conn))).body.rows.changes
-    changes = list(changes)
+        # Create new database
+        new_conn = connect(new_db)
+        new_conn.execute(
+            """
+            CREATE TABLE users (
+                id INTEGER PRIMARY KEY,
+                RowGUID TEXT,
+                email TEXT UNIQUE,
+                name TEXT,
+                status TEXT
+            )
+        """,
+        )
+        new_conn.executemany(
+            "INSERT INTO users VALUES (?, ?, ?, ?, ?)",
+            [
+                (
+                    1,
+                    "guid-alice",
+                    "alice@test.com",
+                    "Alice Smith",
+                    "inactive",
+                ),  # status changed
+                (
+                    2,
+                    None,
+                    "bob@test.com",
+                    "Bob Jones",
+                    "active",
+                ),  # unchanged (NULL RowGUID)
+                (
+                    3,
+                    "guid-charlie",
+                    "charlie@test.com",
+                    "Charlie Brown",
+                    "active",
+                ),  # unchanged
+                (
+                    4,
+                    None,
+                    "david@test.com",
+                    "David Wilson",
+                    "active",
+                ),  # status changed (NULL RowGUID)
+                (5, "guid-eve", "eve@test.com", "Eve Davis", "inactive"),  # status changed
+                (
+                    6,
+                    None,
+                    "frank@test.com",
+                    "Frank Miller",
+                    "active",
+                ),  # added (NULL RowGUID)
+            ],
+        )
+        new_conn.commit()
+        new_conn.close()
+
+        changes = next(iter(compare_databases(old_db, new_db))).body.rows.changes
+        changes = list(changes)
 
     # Categorize changes
     modified = [c for c in changes if c.old and c.new]
@@ -145,37 +154,45 @@ def test_null_rowguid_composite_sort_order() -> None:
 
 def test_all_null_rowguids() -> None:
     """Test case where all rows have NULL RowGUIDs - should fall back to PK matching."""
-    old_conn = connect(":memory:")
-    old_conn.execute(
-        "CREATE TABLE test (id INTEGER PRIMARY KEY, RowGUID TEXT, data TEXT)",
-    )
-    old_conn.executemany(
-        "INSERT INTO test VALUES (?, ?, ?)",
-        [
-            (1, None, "data1"),
-            (2, None, "data2"),
-            (3, None, "data3"),
-        ],
-    )
-    old_conn.commit()
+    with tempfile.TemporaryDirectory() as temp_dir:
+        old_db = Path(temp_dir) / "old.db"
+        new_db = Path(temp_dir) / "new.db"
 
-    new_conn = connect(":memory:")
-    new_conn.execute(
-        "CREATE TABLE test (id INTEGER PRIMARY KEY, RowGUID TEXT, data TEXT)",
-    )
-    new_conn.executemany(
-        "INSERT INTO test VALUES (?, ?, ?)",
-        [
-            (1, None, "modified1"),  # data changed
-            (2, None, "data2"),  # unchanged
-            (3, None, "data3"),  # unchanged
-            (4, None, "data4"),  # added
-        ],
-    )
-    new_conn.commit()
+        # Create old database
+        old_conn = connect(old_db)
+        old_conn.execute(
+            "CREATE TABLE test (id INTEGER PRIMARY KEY, RowGUID TEXT, data TEXT)",
+        )
+        old_conn.executemany(
+            "INSERT INTO test VALUES (?, ?, ?)",
+            [
+                (1, None, "data1"),
+                (2, None, "data2"),
+                (3, None, "data3"),
+            ],
+        )
+        old_conn.commit()
+        old_conn.close()
 
-    changes = next(iter(compare_databases(old_conn, new_conn))).body.rows.changes
-    changes = list(changes)
+        # Create new database
+        new_conn = connect(new_db)
+        new_conn.execute(
+            "CREATE TABLE test (id INTEGER PRIMARY KEY, RowGUID TEXT, data TEXT)",
+        )
+        new_conn.executemany(
+            "INSERT INTO test VALUES (?, ?, ?)",
+            [
+                (1, None, "modified1"),  # data changed
+                (2, None, "data2"),  # unchanged
+                (3, None, "data3"),  # unchanged
+                (4, None, "data4"),  # added
+            ],
+        )
+        new_conn.commit()
+        new_conn.close()
+
+        changes = next(iter(compare_databases(old_db, new_db))).body.rows.changes
+        changes = list(changes)
 
     modified = [c for c in changes if c.old and c.new]
     added = [c for c in changes if c.new and not c.old]

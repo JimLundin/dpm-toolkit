@@ -1,5 +1,7 @@
 """Debug test to understand RowGUID matching behavior."""
 
+import tempfile
+from pathlib import Path
 from sqlite3 import connect
 
 from compare.main import compare_databases
@@ -7,26 +9,32 @@ from compare.main import compare_databases
 
 def test_simple_rowguid_different_pk() -> None:
     """Simple test with just 2 rows to debug the matching."""
-    # Old database
-    old_conn = connect(":memory:")
-    old_conn.execute(
-        "CREATE TABLE test (id INTEGER PRIMARY KEY, RowGUID TEXT, name TEXT)",
-    )
-    old_conn.execute("INSERT INTO test VALUES (1, 'guid-a', 'Item A')")
-    old_conn.commit()
+    with tempfile.TemporaryDirectory() as temp_dir:
+        old_db = Path(temp_dir) / "old.db"
+        new_db = Path(temp_dir) / "new.db"
 
-    # New database
-    new_conn = connect(":memory:")
-    new_conn.execute(
-        "CREATE TABLE test (id INTEGER PRIMARY KEY, RowGUID TEXT, name TEXT)",
-    )
-    new_conn.execute(
-        "INSERT INTO test VALUES (10, 'guid-a', 'Item A Modified')",
-    )  # Same RowGUID, different PK
-    new_conn.commit()
+        # Create old database
+        old_conn = connect(old_db)
+        old_conn.execute(
+            "CREATE TABLE test (id INTEGER PRIMARY KEY, RowGUID TEXT, name TEXT)",
+        )
+        old_conn.execute("INSERT INTO test VALUES (1, 'guid-a', 'Item A')")
+        old_conn.commit()
+        old_conn.close()
 
-    changes = next(iter(compare_databases(old_conn, new_conn))).body.rows.changes
-    changes = list(changes)
+        # Create new database
+        new_conn = connect(new_db)
+        new_conn.execute(
+            "CREATE TABLE test (id INTEGER PRIMARY KEY, RowGUID TEXT, name TEXT)",
+        )
+        new_conn.execute(
+            "INSERT INTO test VALUES (10, 'guid-a', 'Item A Modified')",
+        )  # Same RowGUID, different PK
+        new_conn.commit()
+        new_conn.close()
+
+        changes = next(iter(compare_databases(old_db, new_db))).body.rows.changes
+        changes = list(changes)
 
     print("Changes found:")
     for i, change in enumerate(changes):

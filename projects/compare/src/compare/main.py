@@ -179,7 +179,9 @@ def compare_rows(
 
 
 def compare_table_rows(
-    old_table: Table, new_table: Table, cmp_db: ComparisonDatabase
+    old_table: Table,
+    new_table: Table,
+    cmp_db: ComparisonDatabase,
 ) -> Iterator[Change]:
     """Compare table data using consistent sort/comparison key strategy.
 
@@ -203,7 +205,9 @@ def compare_table_rows(
 
 
 def compare_tables(
-    old_table: Table, new_table: Table, cmp_db: ComparisonDatabase
+    old_table: Table,
+    new_table: Table,
+    cmp_db: ComparisonDatabase,
 ) -> TableChange:
     """Compare a table that exists in both databases."""
     return TableChange(
@@ -252,17 +256,14 @@ def compare_databases(old_location: Path, new_location: Path) -> Iterator[Compar
     return chain(
         # Common tables - use main.py compare_tables with SQL-filtered rows
         (
-            Comparison(old_table._name, compare_tables(old_table, new_table, cmp_db))
+            Comparison(old_table.name, compare_tables(old_table, new_table, cmp_db))
             for old_table, new_table in cmp_db.common_table_pairs()
         ),
         # Added tables - get Table objects directly
-        (
-            Comparison(table._name, added_table(table))
-            for table in cmp_db.added_tables()
-        ),
+        (Comparison(table.name, added_table(table)) for table in cmp_db.added_tables()),
         # Removed tables - get Table objects directly
         (
-            Comparison(table._name, removed_table(table))
+            Comparison(table.name, removed_table(table))
             for table in cmp_db.removed_tables()
         ),
     )

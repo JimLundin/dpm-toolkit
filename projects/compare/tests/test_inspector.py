@@ -409,3 +409,55 @@ def test_composite_primary_keys(composite_pk_db: Connection) -> None:
         assert row["source_id"] is not None
         assert row["target_id"] is not None
         assert row["mapping_type"] is not None
+
+
+def test_reserved_keyword_table_name(simple_db: Connection) -> None:
+    """Test that reserved keyword table names work correctly.
+
+    Checks both SQL and pragma functions.
+    """
+    # Create a table with a reserved keyword name
+    simple_db.execute('CREATE TABLE "order" (id INTEGER PRIMARY KEY, amount REAL)')
+    simple_db.execute('INSERT INTO "order" VALUES (1, 99.99)')
+    simple_db.commit()
+
+    inspector = Database(simple_db)
+
+    # Should be able to list the table
+    tables = list(inspector.tables())
+    assert "order" in tables
+
+    # Should be able to get column info (tests pragma_table_info)
+    cols = list(inspector.table("order").columns())
+    assert len(cols) == 2
+    assert cols == ["id", "amount"]
+
+    # Should be able to get primary keys (tests pragma_table_info)
+    pks = list(inspector.table("order").primary_keys())
+    assert pks == ["id"]
+
+    # Should be able to query rows (tests SQL with quoted identifier)
+    rows = list(inspector.table("order").rows())
+    assert len(rows) == 1
+    assert rows[0]["id"] == 1
+    assert rows[0]["amount"] == 99.99
+
+
+def test_reserved_keyword_in_attached_schema() -> None:
+    """Test reserved keyword table name in non-main schema."""
+    conn = connect(":memory:")
+
+    # Create and attach another database
+    conn.execute("ATTACH ':memory:' AS test_schema")
+    conn.execute('CREATE TABLE test_schema."order" (id INTEGER PRIMARY KEY, total REAL)')
+    conn.execute('INSERT INTO test_schema."order" VALUES (1, 100.50)')
+    conn.commit()
+
+    inspector = Database(conn, "test_schema")
+
+    # Test pragma functions work with non-main schema reserved keywords
+    cols = list(inspector.table("order").columns())
+    assert len(cols) == 2
+    assert cols == ["id", "total"]
+
+    conn.close()

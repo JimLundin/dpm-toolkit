@@ -1,12 +1,10 @@
 """Database comparison functionality."""
 
 from collections.abc import Iterator
-from itertools import chain
 from pathlib import Path
 from sqlite3 import Row, connect
 
-from compare.inspector import TABLE_INFO_COLUMNS, Database, Table, TableType
-from compare.types import Change, ChangeSet, Header, TableChange
+from compare.inspector import Database, Table, TableType
 
 
 class ComparisonDatabase:
@@ -50,34 +48,4 @@ class ComparisonDatabase:
         EXCEPT
         SELECT * FROM {other.qualified_name}
         """,  # noqa: S608
-        )
-
-    def compare_table(self, old_table: Table, new_table: Table) -> TableChange:
-        """Compare a table comprehensively using SQL operations."""
-        # Schema comparison using the generalized column_difference method
-        old_schema_diff = self.difference(old_table.schema(), new_table.schema())
-        new_schema_diff = self.difference(new_table.schema(), old_table.schema())
-
-        # Row comparison using the simplified table_difference method
-        old_rows_diff = self.difference(old_table, new_table)
-        new_rows_diff = self.difference(new_table, old_table)
-
-        return TableChange(
-            ChangeSet(
-                headers=Header(TABLE_INFO_COLUMNS, TABLE_INFO_COLUMNS),
-                changes=chain(
-                    (Change(old=row) for row in old_schema_diff),
-                    (Change(new=row) for row in new_schema_diff),
-                ),
-            ),
-            ChangeSet(
-                headers=Header(
-                    old=old_table.columns(),
-                    new=new_table.columns(),
-                ),
-                changes=chain(
-                    (Change(old=row) for row in old_rows_diff),
-                    (Change(new=row) for row in new_rows_diff),
-                ),
-            ),
         )
