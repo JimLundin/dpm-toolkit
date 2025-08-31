@@ -272,11 +272,14 @@ def test_no_common_primary_keys() -> None:
         changes = next(iter(compare_databases(old_db, new_db))).body.rows.changes
         changes = list(changes)
 
-    # Without common PKs or RowGUID, this falls back to all-column sorting
-    # Results may show as add/remove pairs rather than modifications
-    # This is expected behavior for incompatible schemas
+    # When tables have different PK structures, rows are detected as modified
+    # due to structural differences, even if common column data is identical
     total_changes = len(changes)
-    assert total_changes > 0  # Should detect some changes
+    assert total_changes == 2  # Should detect Alice and Bob as modified due to structural changes
+    
+    # Both should be modifications (not add/remove) since they match by common columns
+    modified_rows = [c for c in changes if c.old and c.new]
+    assert len(modified_rows) == 2
 
 
 def test_composite_primary_keys() -> None:

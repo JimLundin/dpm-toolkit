@@ -42,10 +42,21 @@ class ComparisonDatabase:
 
     def difference(self, main: TableType, other: TableType) -> Iterator[Row]:
         """Compare table rows using SQL EXCEPT operations."""
+        # Check if tables have identical column structure
+        main_columns = list(main.columns())
+        other_columns = list(other.columns())
+
+        if main_columns == other_columns:
+            # Same structure - use efficient SQL EXCEPT
+            return self._connection.execute(
+                f"""
+            SELECT * FROM {main.qualified_name}
+            EXCEPT
+            SELECT * FROM {other.qualified_name}
+            """,  # noqa: S608
+            )
+
+        # Different structures - return all rows for Python-level comparison
         return self._connection.execute(
-            f"""
-        SELECT * FROM {main.qualified_name}
-        EXCEPT
-        SELECT * FROM {other.qualified_name}
-        """,  # noqa: S608
+            f"SELECT * FROM {main.qualified_name}",  # noqa: S608
         )
