@@ -21,42 +21,25 @@ class ComparisonDatabase:
 
     def added_tables(self) -> Iterator[Table]:
         """Tables that exist in new but not old."""
-        old_names = frozenset(self.old.tables())
-        new_names = frozenset(self.new.tables())
-        added_names = new_names - old_names
+        added_names = self.new.tables - self.old.tables
         return (self.new.table(name) for name in added_names)
 
     def removed_tables(self) -> Iterator[Table]:
         """Tables that exist in old but not new."""
-        old_names = frozenset(self.old.tables())
-        new_names = frozenset(self.new.tables())
-        removed_names = old_names - new_names
+        removed_names = self.old.tables - self.new.tables
         return (self.old.table(name) for name in removed_names)
 
-    def common_table_pairs(self) -> Iterator[tuple[Table, Table]]:
+    def common_tables(self) -> Iterator[tuple[Table, Table]]:
         """Table pairs that exist in both databases (old_table, new_table)."""
-        old_names = frozenset(self.old.tables())
-        new_names = frozenset(self.new.tables())
-        common_names = old_names & new_names
+        common_names = self.old.tables & self.new.tables
         return ((self.old.table(name), self.new.table(name)) for name in common_names)
 
     def difference(self, main: TableType, other: TableType) -> Iterator[Row]:
-        """Compare table rows using SQL EXCEPT operations."""
-        # Check if tables have identical column structure
-        main_columns = list(main.columns())
-        other_columns = list(other.columns())
+        """Compare table rows using SQL EXCEPT operations when possible."""
+        base_query = f"SELECT * FROM {main.qualified_name}"  # noqa: S608
+        except_clause = f" EXCEPT SELECT * FROM {other.qualified_name}"  # noqa: S608
 
-        if main_columns == other_columns:
-            # Same structure - use efficient SQL EXCEPT
-            return self._connection.execute(
-                f"""
-            SELECT * FROM {main.qualified_name}
-            EXCEPT
-            SELECT * FROM {other.qualified_name}
-            """,  # noqa: S608
-            )
+        # Add EXCEPT clause only when columns match exactly
+        query = base_query + (except_clause if main.columns == other.columns else "")
 
-        # Different structures - return all rows for Python-level comparison
-        return self._connection.execute(
-            f"SELECT * FROM {main.qualified_name}",  # noqa: S608
-        )
+        return self._connection.execute(query)
