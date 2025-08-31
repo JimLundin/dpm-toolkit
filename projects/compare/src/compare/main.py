@@ -19,12 +19,17 @@ from compare.data import (
     TableChange,
     ValueType,
 )
-from compare.inspector import Schema, Table
+from compare.inspector import Schema, Table, TableType
 
 type RowValues = Iterable[ValueType]
 type ComparisonKey = tuple[tuple[bool, ValueType], ...]
 
 TEMPLATE_DIR = Path(__file__).parent / "templates"
+
+
+def intersection[T](main: Iterable[T], other: Iterable[T]) -> frozenset[T]:
+    """Compare two iterables and return the intersection of their elements."""
+    return frozenset(main) & frozenset(other)
 
 
 def encoder(obj: object) -> tuple[Any, ...]:
@@ -164,8 +169,8 @@ def compare_rows(
 
 
 def compare_table_rows(
-    old_table: Table,
-    new_table: Table,
+    old_table: TableType,
+    new_table: TableType,
     cmp_db: ComparisonDatabase,
 ) -> Iterator[Change]:
     """Compare table data using consistent sort/comparison key strategy.
@@ -177,8 +182,8 @@ def compare_table_rows(
 
     Uses SQL EXCEPT to pre-filter to only different rows, then applies Python matching.
     """
-    shared_columns = old_table.columns & new_table.columns
-    shared_primary_keys = old_table.primary_keys & new_table.primary_keys
+    shared_columns = intersection(old_table.columns, new_table.columns)
+    shared_primary_keys = intersection(old_table.primary_keys, new_table.primary_keys)
     # Use SQL-filtered rows - only rows that are different
     old_rows = cmp_db.difference(old_table, new_table)
     new_rows = cmp_db.difference(new_table, old_table)
@@ -212,7 +217,7 @@ def added_table(new_table: Table) -> TableChange:
         ),
         ChangeSet(
             headers=Header(new=new_table.columns),
-            changes=(Change(new=row) for row in new_table.rows()),
+            changes=(Change(new=row) for row in new_table.rows),
         ),
     )
 
@@ -226,7 +231,7 @@ def removed_table(old_table: Table) -> TableChange:
         ),
         ChangeSet(
             headers=Header(old=old_table.columns),
-            changes=(Change(old=row) for row in old_table.rows()),
+            changes=(Change(old=row) for row in old_table.rows),
         ),
     )
 
