@@ -4,8 +4,6 @@ from collections.abc import Iterator
 from functools import cached_property
 from sqlite3 import Connection, Row
 
-TABLE_INFO_COLUMNS = frozenset(("cid", "name", "type", "notnull", "dflt_value", "pk"))
-
 
 class Schema:
     """Represents the schema metadata for a table (simplified table)."""
@@ -34,9 +32,14 @@ class Schema:
         )
 
     @cached_property
-    def columns(self) -> frozenset[str]:
-        """Return the column names of the schema metadata (TABLE_INFO_COLUMNS)."""
-        return TABLE_INFO_COLUMNS
+    def columns(self) -> tuple[str, ...]:
+        """Return the column names of the schema metadata."""
+        return ("cid", "name", "type", "notnull", "dflt_value", "pk")
+
+    @cached_property
+    def primary_keys(self) -> tuple[str, ...]:
+        """Return the names that represent the unique key of the metadata table."""
+        return ("name",)
 
 
 class Table:
@@ -55,6 +58,7 @@ class Table:
         self.schema = Schema(connection, table_name, schema_name)
         self.qualified_name = f'{schema_name}."{table_name}"'
 
+    @property
     def rows(self) -> Iterator[Row]:
         """Return all rows from this table."""
         return self._connection.execute(
@@ -62,14 +66,14 @@ class Table:
         )
 
     @cached_property
-    def columns(self) -> frozenset[str]:
+    def columns(self) -> tuple[str, ...]:
         """Return column names for this table."""
-        return frozenset(row["name"] for row in self.schema.rows)
+        return tuple(row["name"] for row in self.schema.rows)
 
     @cached_property
-    def primary_keys(self) -> frozenset[str]:
+    def primary_keys(self) -> tuple[str, ...]:
         """Return primary key column names for this table."""
-        return frozenset(row["name"] for row in self.schema.rows if row["pk"])
+        return tuple(row["name"] for row in self.schema.rows if row["pk"])
 
 
 class Database:
@@ -95,7 +99,6 @@ class Database:
             f"""
             SELECT name FROM {schema_ref}
             WHERE type='table' AND name NOT LIKE 'sqlite_%'
-            ORDER BY name
             """,  # noqa: S608
         )
         return frozenset(row["name"] for row in cursor)
