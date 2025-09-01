@@ -11,7 +11,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from jinja2.environment import TemplateStream
 
 from compare.comparison import ComparisonDatabase
-from compare.inspector import ComparableTable, Table
+from compare.inspection import Table
 
 type ValueType = str | int | float | None
 type RowValues = Iterable[ValueType]
@@ -170,17 +170,14 @@ def compare_rows(
                 new_row = next(new, None)
 
 
-def compare_tables(
-    old_table: ComparableTable,
-    new_table: ComparableTable,
-) -> Iterator[Change]:
+def compare_tables(old_table: Table, new_table: Table) -> Iterator[Change]:
     """Compare table data using consistent sort/comparison key strategy.
 
     Uses SQL EXCEPT to pre-filter to only different rows, then applies Python matching.
     """
     shared_columns = intersection(old_table.columns, new_table.columns)
     shared_primary_keys = intersection(old_table.primary_keys, new_table.primary_keys)
-    # Use ComparableTable.difference() method - only rows that are different
+
     old_rows = old_table.difference(new_table)
     new_rows = new_table.difference(old_table)
 
@@ -190,10 +187,7 @@ def compare_tables(
     return compare_rows(old_rows, new_rows, matcher)
 
 
-def modified_changes(
-    old_table: ComparableTable,
-    new_table: ComparableTable,
-) -> ChangeSet:
+def modified_changes(old_table: Table, new_table: Table) -> ChangeSet:
     """Return the changeset for a modified table."""
     return ChangeSet(
         headers=Header(old=old_table.columns, new=new_table.columns),
@@ -230,7 +224,7 @@ def compare_databases(old_location: Path, new_location: Path) -> Iterator[Compar
                     rows=modified_changes(old_table, new_table),
                 ),
             )
-            for old_table, new_table in cmp_db.comparable_tables
+            for old_table, new_table in cmp_db.common_tables
         ),
         # Added tables - get Table objects directly
         (
