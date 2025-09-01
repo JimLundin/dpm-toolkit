@@ -2,22 +2,21 @@
 
 from collections.abc import Iterator
 from pathlib import Path
-from sqlite3 import Row, connect
+from sqlite3 import connect
 
 from compare.inspection import Database, Table
 
 
-class ComparisonDatabase:
+class DatabaseDifference:
     """A comparison context with two databases attached for cross-database actions."""
 
     def __init__(self, old_location: Path, new_location: Path) -> None:
         """Initialize the comparison context."""
         self._connection = connect(":memory:", uri=True)
-        self._connection.row_factory = Row
-        self.old = self._attach_database(old_location, "old")
-        self.new = self._attach_database(new_location, "new")
+        self.old = self._attach_database("old", old_location)
+        self.new = self._attach_database("new", new_location)
 
-    def _attach_database(self, location: Path, database_name: str) -> Database:
+    def _attach_database(self, database_name: str, location: Path) -> Database:
         self._connection.execute(
             f"ATTACH ? AS {database_name}",
             (f"file:{location}?mode=ro",),
