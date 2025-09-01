@@ -2,19 +2,9 @@
 
 from collections.abc import Iterator
 from pathlib import Path
-from sqlite3 import Connection, Row, connect
+from sqlite3 import Row, connect
 
-from compare.inspector import ComparableTable, Database, Table
-
-
-def attach_database(
-    connection: Connection,
-    location: Path,
-    database_name: str,
-) -> Database:
-    """Attach a database at the given location to the given connection."""
-    connection.execute(f"ATTACH ? AS {database_name}", (f"file:{location}?mode=ro",))
-    return Database(connection, database_name)
+from compare.inspection import Database, Table
 
 
 class ComparisonDatabase:
@@ -24,12 +14,15 @@ class ComparisonDatabase:
         """Initialize the comparison context."""
         self._connection = connect(":memory:", uri=True)
         self._connection.row_factory = Row
-        self.old = attach_database(self._connection, old_location, "old")
-        self.new = attach_database(self._connection, new_location, "new")
+        self.old = self._attach_database(old_location, "old")
+        self.new = self._attach_database(new_location, "new")
 
-    def comparable_table(self, table_name: str, database_name: str) -> ComparableTable:
-        """Return a ComparableTable which allows for table comparisons."""
-        return ComparableTable(self._connection, table_name, database_name)
+    def _attach_database(self, location: Path, database_name: str) -> Database:
+        self._connection.execute(
+            f"ATTACH ? AS {database_name}",
+            (f"file:{location}?mode=ro",),
+        )
+        return Database(self._connection, database_name)
 
     @property
     def added_tables(self) -> Iterator[Table]:
@@ -42,9 +35,9 @@ class ComparisonDatabase:
         return (self.old.table(name) for name in self.old.tables - self.new.tables)
 
     @property
-    def comparable_tables(self) -> Iterator[tuple[ComparableTable, ComparableTable]]:
-        """Create fresh ComparableTable instances for comparison."""
+    def common_tables(self) -> Iterator[tuple[Table, Table]]:
+        """Tables that exist in both old and new."""
         return (
-            (self.comparable_table(name, "old"), self.comparable_table(name, "new"))
+            (self.old.table(name), self.new.table(name))
             for name in self.old.tables & self.new.tables
         )

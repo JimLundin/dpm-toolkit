@@ -5,7 +5,7 @@ from sqlite3 import Connection, OperationalError, connect
 
 import pytest
 
-from compare.inspector import Database
+from compare.inspection import Database
 
 
 @pytest.fixture(name="simple_db")
