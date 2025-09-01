@@ -90,40 +90,14 @@ def comparisons_to_html(comparisons: Iterable[Comparison]) -> TemplateStream:
     return template.stream(comparisons=comparisons)
 
 
-def compare_schema(old_schema: Table, new_schema: Table) -> Iterator[Change]:
-    """Compare column definitions and return modifications, additions, and removals."""
-    old_column_by_name = {column["name"]: column for column in old_schema.rows}
-    new_column_by_name = {column["name"]: column for column in new_schema.rows}
-
-    return chain(
-        (
-            Change(new_column_by_name[name], old_column_by_name[name])
-            for name in old_column_by_name.keys() & new_column_by_name.keys()
-            if old_column_by_name[name] != new_column_by_name[name]
-        ),
-        (
-            Change(new=new_column_by_name[name])
-            for name in new_column_by_name.keys() - old_column_by_name.keys()
-        ),
-        (
-            Change(old=old_column_by_name[name])
-            for name in old_column_by_name.keys() - new_column_by_name.keys()
-        ),
-    )
-
-
 def row_guid(row: Row) -> str | None:
     """Check if row has a non-null RowGUID column."""
     return row["RowGUID"] if "RowGUID" in row.keys() else None  # noqa: SIM118
 
 
-def row_content(row: Row, primary_keys: Iterable[str]) -> tuple[ValueType, ...]:
+def row_content(row: Row, content_columns: Iterable[str]) -> tuple[ValueType, ...]:
     """Extract a tuple of non-key values from a Row for content comparison."""
-    return tuple(
-        row[column]
-        for column in row.keys()  # noqa: SIM118
-        if column not in primary_keys
-    )
+    return tuple(row[column] for column in content_columns)
 
 
 def row_key(row: Iterable[ValueType]) -> ComparisonKey:
@@ -144,8 +118,8 @@ def get_match_keys(
     if old_guid and new_guid:
         return (old_guid,), (new_guid,)
 
-    old_content = tuple(old_row[column] for column in columns)
-    new_content = tuple(new_row[column] for column in columns)
+    old_content = row_content(old_row, columns)
+    new_content = row_content(new_row, columns)
 
     if old_content == new_content:
         return old_content, new_content
@@ -202,11 +176,6 @@ def compare_tables(
 ) -> Iterator[Change]:
     """Compare table data using consistent sort/comparison key strategy.
 
-    Strategy: Always sort and compare by the same key hierarchy:
-    1. RowGUID (if present in both tables)
-    2. Common primary keys (if any exist)
-    3. All common columns (fallback)
-
     Uses SQL EXCEPT to pre-filter to only different rows, then applies Python matching.
     """
     shared_columns = intersection(old_table.columns, new_table.columns)
@@ -255,8 +224,8 @@ def compare_databases(old_location: Path, new_location: Path) -> Iterator[Compar
         # Common tables - use main.py compare_tables with ComparableTable instances
         (
             Comparison(
-                old_table.name,
-                TableChange(
+                name=old_table.name,
+                body=TableChange(
                     columns=modified_changes(old_table.schema, new_table.schema),
                     rows=modified_changes(old_table, new_table),
                 ),
@@ -266,8 +235,8 @@ def compare_databases(old_location: Path, new_location: Path) -> Iterator[Compar
         # Added tables - get Table objects directly
         (
             Comparison(
-                table.name,
-                TableChange(
+                name=table.name,
+                body=TableChange(
                     columns=new_changes(table.schema),
                     rows=new_changes(table),
                 ),
@@ -277,8 +246,8 @@ def compare_databases(old_location: Path, new_location: Path) -> Iterator[Compar
         # Removed tables - get Table objects directly
         (
             Comparison(
-                table.name,
-                TableChange(
+                name=table.name,
+                body=TableChange(
                     columns=old_changes(table.schema),
                     rows=old_changes(table),
                 ),
