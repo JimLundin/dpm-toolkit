@@ -1,62 +1,41 @@
 """Database inspection functionality using sqlite3."""
 
-from collections.abc import Iterator
+from __future__ import annotations
+
 from functools import cached_property
 from sqlite3 import Connection, Row
+from typing import TYPE_CHECKING, Literal, Self
 
-
-class Schema:
-    """Represents the schema metadata for a table (simplified table)."""
-
-    def __init__(
-        self,
-        connection: Connection,
-        table_name: str,
-        schema: str = "main",
-    ) -> None:
-        """Initialize the schema table."""
-        self._connection = connection
-        self._connection.row_factory = Row
-        self._table_name = table_name
-        self._schema = schema
-        self.qualified_name = f"pragma_table_info({self._table_name}, {self._schema})"
-
-    @cached_property
-    def rows(self) -> tuple[Row, ...]:
-        """Return schema metadata rows for this table."""
-        return tuple(
-            self._connection.execute(
-                "SELECT * FROM pragma_table_info(?, ?)",
-                (self._table_name, self._schema),
-            ),
-        )
-
-    @cached_property
-    def columns(self) -> tuple[str, ...]:
-        """Return the column names of the schema metadata."""
-        return ("cid", "name", "type", "notnull", "dflt_value", "pk")
-
-    @cached_property
-    def primary_keys(self) -> tuple[str, ...]:
-        """Return the names that represent the unique key of the metadata table."""
-        return ("name",)
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 class Table:
-    """Represents a specific table within a SQLite database."""
+    """Unified table representation that handles both data tables and schema tables."""
 
     def __init__(
         self,
         connection: Connection,
         table_name: str,
         schema_name: str = "main",
+        table_type: Literal["data", "schema"] = "data",
     ) -> None:
         """Initialize table with a database connection, table name, and schema."""
         self._connection = connection
         self._connection.row_factory = Row
-        self.name = table_name
-        self.schema = Schema(connection, table_name, schema_name)
-        self.qualified_name = f'{schema_name}."{table_name}"'
+        self._schema_name = schema_name
+        self.name = "pragma_table_info" if table_type == "schema" else table_name
+        self.table_type = table_type
+
+        if table_type == "schema":
+            self.qualified_name = f"pragma_table_info('{table_name}', '{schema_name}')"
+        else:
+            self.qualified_name = f'{schema_name}."{table_name}"'
+
+    @property
+    def schema(self) -> Self:
+        """Return table representing the schema of the table."""
+        return type(self)(self._connection, self.name, self._schema_name, "schema")
 
     @property
     def rows(self) -> Iterator[Row]:
@@ -114,4 +93,23 @@ class Database:
         return self._table_cache[table_name]
 
 
-type TableType = Table | Schema
+class ComparableTable(Table):
+    """A table with comparison capabilities."""
+
+    def difference(self, other: ComparableTable) -> Iterator[Row]:
+        """Compare this table with another using SQL EXCEPT operations."""
+        select = f"SELECT * FROM {self.qualified_name}"  # noqa: S608
+        except_clause = f" EXCEPT SELECT * FROM {other.qualified_name}"  # noqa: S608
+
+        # Add EXCEPT clause only when columns match exactly
+        query = select + (except_clause if self.columns == other.columns else "")
+
+        return self._connection.execute(query)
+
+
+class ComparableDatabase(Database):
+    """Database that can create comparable tables when needed."""
+
+    def comparable_table(self, table_name: str) -> ComparableTable:
+        """Return a ComparableTable instance for comparison operations."""
+        return ComparableTable(self._connection, table_name, self._schema_name)
