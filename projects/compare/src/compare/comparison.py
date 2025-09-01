@@ -19,16 +19,19 @@ class ComparisonDatabase:
         self.old = Database(self._connection, "old")
         self.new = Database(self._connection, "new")
 
+    @property
     def added_tables(self) -> Iterator[Table]:
         """Tables that exist in new but not old."""
         added_names = self.new.tables - self.old.tables
         return (self.new.table(name) for name in added_names)
 
+    @property
     def removed_tables(self) -> Iterator[Table]:
         """Tables that exist in old but not new."""
         removed_names = self.old.tables - self.new.tables
         return (self.old.table(name) for name in removed_names)
 
+    @property
     def common_tables(self) -> Iterator[tuple[Table, Table]]:
         """Table pairs that exist in both databases (old_table, new_table)."""
         common_names = self.old.tables & self.new.tables

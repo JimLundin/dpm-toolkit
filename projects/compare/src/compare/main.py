@@ -5,24 +5,53 @@ from collections.abc import Iterable, Iterator
 from itertools import chain
 from pathlib import Path
 from sqlite3 import Row
-from typing import Any
+from typing import Any, NamedTuple
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from jinja2.environment import TemplateStream
 
 from compare.comparison import ComparisonDatabase
-from compare.data import (
-    Change,
-    ChangeSet,
-    Comparison,
-    Header,
-    TableChange,
-    ValueType,
-)
 from compare.inspector import Schema, Table, TableType
 
+type ValueType = str | int | float | None
 type RowValues = Iterable[ValueType]
 type ComparisonKey = tuple[tuple[bool, ValueType], ...]
+
+
+class Header(NamedTuple):
+    """Header for a set of changes."""
+
+    new: Iterable[str] | None = None
+    old: Iterable[str] | None = None
+
+
+class Change(NamedTuple):
+    """Information about a modified row."""
+
+    new: Row | None = None
+    old: Row | None = None
+
+
+class ChangeSet(NamedTuple):
+    """Set of changes for a table."""
+
+    headers: Header
+    changes: Iterable[Change]
+
+
+class TableChange(NamedTuple):
+    """Represents the change for a singular table."""
+
+    columns: ChangeSet
+    rows: ChangeSet
+
+
+class Comparison(NamedTuple):
+    """Complete comparison result for a table."""
+
+    name: str
+    body: TableChange  # (cols, rows)
+
 
 TEMPLATE_DIR = Path(__file__).parent / "templates"
 
@@ -243,13 +272,13 @@ def compare_databases(old_location: Path, new_location: Path) -> Iterator[Compar
         # Common tables - use main.py compare_tables with SQL-filtered rows
         (
             Comparison(old_table.name, compare_tables(old_table, new_table, cmp_db))
-            for old_table, new_table in cmp_db.common_tables()
+            for old_table, new_table in cmp_db.common_tables
         ),
         # Added tables - get Table objects directly
-        (Comparison(table.name, added_table(table)) for table in cmp_db.added_tables()),
+        (Comparison(table.name, added_table(table)) for table in cmp_db.added_tables),
         # Removed tables - get Table objects directly
         (
             Comparison(table.name, removed_table(table))
-            for table in cmp_db.removed_tables()
+            for table in cmp_db.removed_tables
         ),
     )
