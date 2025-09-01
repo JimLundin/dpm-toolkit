@@ -1,0 +1,42 @@
+name: Build Database
+
+on:
+  workflow_call:
+    inputs:
+      version_id:
+        description: "The version ID to build."
+        required: true
+        type: string
+    outputs:
+      database_artifact_name:
+        description: "The name of the uploaded artifact containing the SQLite database"
+        value: ${{ jobs.migrate.outputs.artifact_name }}
+      schema_artifact_name:
+        description: "The name of the uploaded artifact containing the generated schema"
+        value: ${{ jobs.schema.outputs.artifact_name }}
+
+jobs:
+  download:
+    uses: ./.github/workflows/download-database.yml
+    with:
+      version_id: ${{ inputs.version_id }}
+      database_type: "original"
+
+  migrate:
+    needs: download
+    uses: ./.github/workflows/migrate-database.yml
+    with:
+      source_artifact_name: ${{ needs.download.outputs.artifact_name }}
+
+  schema:
+    needs: migrate
+    uses: ./.github/workflows/generate-schema.yml
+    with:
+      sqlite_artifact_name: ${{ needs.migrate.outputs.artifact_name }}
+
+  compare:
+    needs: migrate
+    uses: ./.github/workflows/compare-previous.yml
+    with:
+      version_id: ${{ inputs.version_id }}
+      output_format: "html"

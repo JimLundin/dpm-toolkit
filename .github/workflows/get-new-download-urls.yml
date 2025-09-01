@@ -1,0 +1,81 @@
+# Automated workflow to check for new DPM database releases and create a PR
+# If new URLs are found, this will create a branch (or update existing one) and
+# create/update a PR with the scrape results as a comment
+
+name: New download urls
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  get-new-download-urls:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      JOB_NAME: "New download urls"
+      BRANCH_NAME: get-new-download-urls
+      PR_TITLE: "New download urls"
+      PR_BODY: "Automated PR for new download URLs."
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@v6
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: 'pyproject.toml'
+      
+      - name: Install dependencies
+        run: |
+          uv sync --locked --extra scrape
+      
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Run scraper and capture output
+        id: scrape
+        run: |
+          # Update command is deprecated - workflow may need manual intervention
+          echo "SCRAPE_RESULT=Update command deprecated - manual intervention required" >> $GITHUB_ENV
+      
+      - name: Create or update branch
+        run: |
+          git checkout -B "${{ env.BRANCH_NAME }}"
+          git commit --allow-empty -m "Trigger PR for new download URLs" || true
+          git push -u origin "${{ env.BRANCH_NAME }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Create PR if it doesn't exist
+        id: create_pr
+        run: |
+          PR_EXISTS=$(gh pr list --head "${{ env.BRANCH_NAME }}" --json number | jq 'length')
+          if [ "$PR_EXISTS" -eq "0" ]; then
+            PR_NUMBER=$(gh pr create --title "${{ env.PR_TITLE }}" --body "${{ env.PR_BODY }}" --head "${{ env.BRANCH_NAME }}" | grep -oE '[0-9]+$')
+            echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
+          else
+            PR_NUMBER=$(gh pr view "${{ env.BRANCH_NAME }}" --json number --jq '.number')
+            echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Comment on PR with scrape results
+        run: |
+          COMMENT_BODY="Update command status:\n\n\`\`\`\n${SCRAPE_RESULT}\n\`\`\`"
+          gh pr comment "${PR_NUMBER}" --body "$COMMENT_BODY"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
