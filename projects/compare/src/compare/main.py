@@ -10,7 +10,7 @@ from typing import Any, NamedTuple
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from jinja2.environment import TemplateStream
 
-from compare.comparison import ComparisonDatabase
+from compare.comparison import DatabaseDifference
 from compare.inspection import Table
 
 type ValueType = str | int | float | None
@@ -213,7 +213,7 @@ def old_changes(table: Table) -> ChangeSet:
 
 def compare_databases(old_location: Path, new_location: Path) -> Iterator[Comparison]:
     """Compare two SQLite databases and return differences."""
-    cmp_db = ComparisonDatabase(old_location, new_location)
+    difference = DatabaseDifference(old_location, new_location)
     return chain(
         # Common tables - use main.py compare_tables with ComparableTable instances
         (
@@ -224,7 +224,7 @@ def compare_databases(old_location: Path, new_location: Path) -> Iterator[Compar
                     rows=modified_changes(old_table, new_table),
                 ),
             )
-            for old_table, new_table in cmp_db.common_tables
+            for old_table, new_table in difference.common_tables
         ),
         # Added tables - get Table objects directly
         (
@@ -235,7 +235,7 @@ def compare_databases(old_location: Path, new_location: Path) -> Iterator[Compar
                     rows=new_changes(table),
                 ),
             )
-            for table in cmp_db.added_tables
+            for table in difference.added_tables
         ),
         # Removed tables - get Table objects directly
         (
@@ -246,6 +246,6 @@ def compare_databases(old_location: Path, new_location: Path) -> Iterator[Compar
                     rows=old_changes(table),
                 ),
             )
-            for table in cmp_db.removed_tables
+            for table in difference.removed_tables
         ),
     )
