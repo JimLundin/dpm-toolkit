@@ -95,11 +95,6 @@ def row_guid(row: Row) -> str | None:
     return row["RowGUID"] if "RowGUID" in row.keys() else None  # noqa: SIM118
 
 
-def row_content(row: Row, content_columns: Iterable[str]) -> tuple[ValueType, ...]:
-    """Extract a tuple of non-key values from a Row for content comparison."""
-    return tuple(row[column] for column in content_columns)
-
-
 def row_key(row: Iterable[ValueType]) -> ComparisonKey:
     """Extract a tuple of values for sorting/comparison from a Row."""
     return tuple((value is None, value) for value in row)
@@ -118,8 +113,8 @@ def get_match_keys(
     if old_guid and new_guid:
         return (old_guid,), (new_guid,)
 
-    old_content = row_content(old_row, columns)
-    new_content = row_content(new_row, columns)
+    old_content = tuple(old_row[column] for column in columns)
+    new_content = tuple(new_row[column] for column in columns)
 
     if old_content == new_content:
         return old_content, new_content

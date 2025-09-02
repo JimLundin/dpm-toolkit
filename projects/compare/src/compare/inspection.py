@@ -41,6 +41,7 @@ class Database:
         """Return a Table instance for the given table name in this schema."""
         if table_name not in self._table_cache:
             self._table_cache[table_name] = Table(self, table_name)
+
         return self._table_cache[table_name]
 
 
@@ -55,14 +56,13 @@ class Table:
     ) -> None:
         """Initialize table with a database connection, table name, and schema."""
         self._database = database
-        self.table_type = table_type
 
         if table_type == "schema":
             self.name = "pragma_table_info"
             self.qualified_name = pragma_table_info(table_name, database.name)
         else:
             self.name = table_name
-            self.qualified_name = qualified_table(database.name, table_name)
+            self.qualified_name = qualified_table(table_name, database.name)
 
     @property
     def schema(self) -> Table:
