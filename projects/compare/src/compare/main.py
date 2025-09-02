@@ -1,6 +1,7 @@
 """Main database comparison functionality."""
 
 import json
+from collections import deque
 from collections.abc import Callable, Iterable, Iterator
 from itertools import chain
 from pathlib import Path
@@ -14,8 +15,9 @@ from compare.comparison import DatabaseDifference
 from compare.inspection import Table
 
 type ValueType = str | int | float | None
-type RowValues = Iterable[ValueType]
-type ComparisonKey = tuple[tuple[bool, ValueType], ...]
+type IndexKey = tuple[ValueType, ...]
+type IndexKeys = list[IndexKey]
+type Indexer = Callable[[Row], IndexKeys]
 
 
 class Header(NamedTuple):
@@ -95,91 +97,97 @@ def row_guid(row: Row) -> str | None:
     return row["RowGUID"] if "RowGUID" in row.keys() else None  # noqa: SIM118
 
 
-def row_key(row: Iterable[ValueType]) -> ComparisonKey:
-    """Extract a tuple of values for sorting/comparison from a Row."""
-    return tuple((value is None, value) for value in row)
-
-
-def get_match_keys(
-    old_row: Row,
-    new_row: Row,
+def create_row_indexer(
     primary_keys: Iterable[str],
-    columns: Iterable[str],
-) -> tuple[RowValues, RowValues]:
-    """Get the comparison keys for two rows based on hierarchical matching rules."""
-    old_guid = row_guid(old_row)
-    new_guid = row_guid(new_row)
+    shared_columns: Iterable[str],
+) -> Indexer:
+    """Create indexer for hierarchical row matching."""
+    pk_list = list(primary_keys)
+    col_list = list(shared_columns)
 
-    if old_guid and new_guid:
-        return (old_guid,), (new_guid,)
+    def indexer(row: Row) -> IndexKeys:
+        keys: IndexKeys = []
 
-    old_content = tuple(old_row[column] for column in columns)
-    new_content = tuple(new_row[column] for column in columns)
+        # Priority 1: RowGUID (if exists)
+        guid = row_guid(row)
+        if guid:
+            keys.append((guid,))
 
-    if old_content == new_content:
-        return old_content, new_content
+        # Priority 2: Primary keys (if exist)
+        if pk_list:
+            pk_values = tuple(row[col] for col in pk_list)
+            keys.append(pk_values)
 
-    if primary_keys:
-        return (
-            (old_row[column] for column in primary_keys),
-            (new_row[column] for column in primary_keys),
-        )
+        # Priority 3: Full content (if columns exist)
+        if col_list:
+            content_values = tuple(row[col] for col in col_list)
+            keys.append(content_values)
 
-    return old_content, new_content
+        return keys
+
+    return indexer
 
 
 def compare_rows(
     old: Iterator[Row],
     new: Iterator[Row],
-    matcher: Callable[[Row, Row], tuple[RowValues, RowValues]],
+    indexer: Indexer,
 ) -> Iterator[Change]:
-    """Memory-efficient merge-based comparison."""
-    old_row = next(old, None)
-    new_row = next(new, None)
+    """Asymmetric hierarchical matching: build index for new rows, match old rows."""
+    new_rows = list(new)
 
-    # Phase 1: Normal merge algorithm
-    while old_row or new_row:
-        if not old_row:
-            yield Change(new=new_row)
-            new_row = next(new, None)
-        elif not new_row:
+    # Build index: (priority, key) -> row_indices (as deque for O(1) pop)
+
+    index: dict[tuple[int, IndexKey], deque[int]] = {}
+    for i, row in enumerate(new_rows):
+        for priority, key in enumerate(indexer(row)):
+            index.setdefault((priority, key), deque()).append(i)
+
+    # Track consumed new rows
+    used: set[int] = set()
+
+    # Match each old row to best available new row
+    for old_row in old:
+        matched = False
+
+        for priority, key in enumerate(indexer(old_row)):
+            candidates = index.get((priority, key))
+            if candidates:
+                # Find first unused candidate
+                while candidates:
+                    new_idx = candidates.popleft()
+                    if new_idx not in used:
+                        used.add(new_idx)
+                        new_row = new_rows[new_idx]
+
+                        yield Change(old=old_row, new=new_row)
+                        matched = True
+                        break
+
+                if matched:
+                    break
+
+        if not matched:
             yield Change(old=old_row)
-            old_row = next(old, None)
-        else:
-            old_key, new_key = matcher(old_row, new_row)
-            old_match_key, new_match_key = row_key(old_key), row_key(new_key)
 
-            if old_match_key == new_match_key:
-                # Same key - check if content differs
-                if old_row != new_row:
-                    yield Change(new=new_row, old=old_row)
-                old_row = next(old, None)
-                new_row = next(new, None)
-            elif old_match_key < new_match_key:
-                # Old key is smaller - row was removed
-                yield Change(old=old_row)
-                old_row = next(old, None)
-            else:
-                # New key is smaller - row was added
-                yield Change(new=new_row)
-                new_row = next(new, None)
+    # Emit remaining new rows as additions
+    for i, row in enumerate(new_rows):
+        if i not in used:
+            yield Change(new=row)
 
 
 def compare_tables(old_table: Table, new_table: Table) -> Iterator[Change]:
-    """Compare table data using consistent sort/comparison key strategy.
-
-    Uses SQL EXCEPT to pre-filter to only different rows, then applies Python matching.
-    """
+    """Compare table data using hierarchical indexing approach."""
     shared_columns = intersection(old_table.columns, new_table.columns)
     shared_primary_keys = intersection(old_table.primary_keys, new_table.primary_keys)
 
     old_rows = old_table.difference(new_table)
     new_rows = new_table.difference(old_table)
 
-    def matcher(old: Row, new: Row) -> tuple[RowValues, RowValues]:
-        return get_match_keys(old, new, shared_primary_keys, shared_columns)
+    # Create hierarchical indexer
+    indexer = create_row_indexer(shared_primary_keys, shared_columns)
 
-    return compare_rows(old_rows, new_rows, matcher)
+    return compare_rows(old_rows, new_rows, indexer)
 
 
 def modified_changes(old_table: Table, new_table: Table) -> ChangeSet:
