@@ -17,8 +17,10 @@ class DatabaseDifference:
         self.old = self._attach_database("old", old_location)
         self.new = self._attach_database("new", new_location)
 
-    def _attach_database(self, database_name: str, location: Path) -> Database:
-        self._connection.execute(attach(f"file:{location}?mode=ro", database_name))
+    def _attach_database(self, database_name: str, database_location: Path) -> Database:
+        self._connection.execute(
+            attach(f"file:{database_location}?mode=ro", database_name),
+        )
         return Database(self._connection, database_name)
 
     @property
