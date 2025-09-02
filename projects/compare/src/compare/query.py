@@ -3,6 +3,19 @@
 from __future__ import annotations
 
 
+def escape_identifier(name: str) -> str:
+    """Escape an SQL identifier with double quotes."""
+    # Escape any existing double quotes by doubling them
+    return f'"{name.replace('"', '""')}"'
+
+
+def parse_column(name: str) -> str:
+    """Parse a column name to identify if it needs escaping."""
+    if name == "*":
+        return name
+    return escape_identifier(name)
+
+
 def select(*columns: str) -> Query:
     """Start a SELECT query with the given columns."""
     return Query(columns or ("*",))
@@ -18,9 +31,9 @@ def pragma_table_info(table: str, schema: str = "main") -> str:
     return f"pragma_table_info('{table}', '{schema}')"
 
 
-def qualified_table(schema: str, table: str) -> str:
+def qualified_table(table: str, schema: str = "main") -> str:
     """Generate a qualified table name with proper escaping."""
-    return f'{schema}."{table}"'
+    return f"{escape_identifier(schema)}.{escape_identifier(table)}"
 
 
 class Query:
@@ -54,7 +67,10 @@ class Query:
             msg = "FROM clause is required"
             raise ValueError(msg)
 
-        query = f"SELECT {', '.join(self._columns)} FROM {self._table}"  # noqa: S608
+        # Escape column identifiers but not * (wildcard)
+        escaped_columns = (parse_column(col) for col in self._columns)
+
+        query = f"SELECT {', '.join(escaped_columns)} FROM {self._table}"  # noqa: S608
         if self._where:
             query += f" WHERE {' AND '.join(self._where)}"
         if self._except:
