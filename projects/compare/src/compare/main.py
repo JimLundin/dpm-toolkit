@@ -1,7 +1,7 @@
 """Main database comparison functionality."""
 
 import json
-from collections import deque
+from collections import defaultdict, deque
 from collections.abc import Callable, Iterable, Iterator
 from itertools import chain
 from pathlib import Path
@@ -128,6 +128,21 @@ def create_row_indexer(
     return indexer
 
 
+def create_schema_indexer() -> Indexer:
+    """Create indexer for schema/column comparisons."""
+
+    def indexer(row: Row) -> IndexKeys:
+        keys: IndexKeys = []
+
+        # Priority 1: Column name (primary matching criterion)
+        column_name = row["name"]
+        keys.append((column_name,))
+
+        return keys
+
+    return indexer
+
+
 def compare_rows(
     old: Iterator[Row],
     new: Iterator[Row],
@@ -138,10 +153,10 @@ def compare_rows(
 
     # Build index: (priority, key) -> row_indices (as deque for O(1) pop)
 
-    index: dict[tuple[int, IndexKey], deque[int]] = {}
+    index: dict[tuple[int, IndexKey], deque[int]] = defaultdict(deque)
     for i, row in enumerate(new_rows):
         for priority, key in enumerate(indexer(row)):
-            index.setdefault((priority, key), deque()).append(i)
+            index[(priority, key)].append(i)
 
     # Track consumed new rows
     used: set[int] = set()
@@ -178,14 +193,21 @@ def compare_rows(
 
 def compare_tables(old_table: Table, new_table: Table) -> Iterator[Change]:
     """Compare table data using hierarchical indexing approach."""
-    shared_columns = intersection(old_table.columns, new_table.columns)
-    shared_primary_keys = intersection(old_table.primary_keys, new_table.primary_keys)
-
     old_rows = old_table.difference(new_table)
     new_rows = new_table.difference(old_table)
 
-    # Create hierarchical indexer
-    indexer = create_row_indexer(shared_primary_keys, shared_columns)
+    # Choose appropriate indexer based on table type
+    if old_table.name == "pragma_table_info":
+        # Schema comparison - match columns by name, type, etc.
+        indexer = create_schema_indexer()
+    else:
+        shared_columns = intersection(old_table.columns, new_table.columns)
+        shared_primary_keys = intersection(
+            old_table.primary_keys,
+            new_table.primary_keys,
+        )
+        # Data comparison - match rows by RowGUID, PK, content
+        indexer = create_row_indexer(shared_primary_keys, shared_columns)
 
     return compare_rows(old_rows, new_rows, indexer)
 
