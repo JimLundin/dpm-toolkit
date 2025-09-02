@@ -6,13 +6,10 @@ from functools import cached_property
 from sqlite3 import Connection, Row
 from typing import TYPE_CHECKING, Literal
 
+from compare.query import Query, pragma_table_info, qualified_table, select
+
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
-
-
-def select_from(table_name: str, columns: Iterable[str] = ("*",)) -> str:
-    """Select given columns from the table with the given table name."""
-    return f"SELECT {", ".join(columns)} FROM {table_name}"  # noqa: S608
+    from collections.abc import Iterator
 
 
 class Database:
@@ -25,18 +22,18 @@ class Database:
         self._table_cache: dict[str, Table] = {}
         self.name = database_name
 
-    def execute(self, query: str) -> Iterator[Row]:
+    def execute(self, query: Query) -> Iterator[Row]:
         """Proxies a query to the underlying connection."""
-        return self._connection.execute(query)
+        return self._connection.execute(str(query))
 
     @cached_property
     def tables(self) -> frozenset[str]:
         """Return all user table names for this schema, excluding system tables."""
         cursor = self.execute(
-            f"""
-            {select_from(f"{self.name}.sqlite_schema", ("name",))}
-            WHERE type='table' AND name NOT LIKE 'sqlite_%'
-            """,
+            select("name")
+            .from_(f"{self.name}.sqlite_schema")
+            .where("type='table'")
+            .where("name NOT LIKE 'sqlite_%'"),
         )
         return frozenset(row["name"] for row in cursor)
 
@@ -62,12 +59,10 @@ class Table:
 
         if table_type == "schema":
             self.name = "pragma_table_info"
-            self.qualified_name = (
-                f"pragma_table_info('{table_name}', '{database.name}')"
-            )
+            self.qualified_name = pragma_table_info(table_name, database.name)
         else:
             self.name = table_name
-            self.qualified_name = f'{database.name}."{table_name}"'
+            self.qualified_name = qualified_table(database.name, table_name)
 
     @property
     def schema(self) -> Table:
@@ -77,7 +72,7 @@ class Table:
     @property
     def rows(self) -> Iterator[Row]:
         """Return all rows from this table."""
-        return self._database.execute(select_from(self.qualified_name))
+        return self._database.execute(select().from_(self.qualified_name))
 
     @cached_property
     def columns(self) -> tuple[str, ...]:
@@ -91,10 +86,10 @@ class Table:
 
     def difference(self, other: Table) -> Iterator[Row]:
         """Compare this table with another using SQL EXCEPT operations."""
-        select = select_from(self.qualified_name)
-        except_clause = f" EXCEPT {select_from(other.qualified_name)}"
+        query = select().from_(self.qualified_name)
 
         # Add EXCEPT clause only when columns match exactly
-        query = select + (except_clause if self.columns == other.columns else "")
+        if self.columns == other.columns:
+            query = query.except_(select().from_(other.qualified_name))
 
         return self._database.execute(query)

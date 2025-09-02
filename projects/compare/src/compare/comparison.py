@@ -5,6 +5,7 @@ from pathlib import Path
 from sqlite3 import connect
 
 from compare.inspection import Database, Table
+from compare.query import attach
 
 
 class DatabaseDifference:
@@ -17,10 +18,7 @@ class DatabaseDifference:
         self.new = self._attach_database("new", new_location)
 
     def _attach_database(self, database_name: str, location: Path) -> Database:
-        self._connection.execute(
-            f"ATTACH ? AS {database_name}",
-            (f"file:{location}?mode=ro",),
-        )
+        self._connection.execute(attach(f"file:{location}?mode=ro", database_name))
         return Database(self._connection, database_name)
 
     @property
