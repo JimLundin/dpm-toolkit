@@ -5,7 +5,6 @@ from datetime import date
 from enum import StrEnum, auto
 from json import dumps
 from pathlib import Path
-from sqlite3 import OperationalError, connect
 from sys import stdout
 from typing import Any
 
@@ -265,44 +264,28 @@ def compare(
 
     print_info(f"Output format: {output_format}")
 
-    # Perform comparison
-    try:
-        old_database = connect(old_location)
-        new_database = connect(new_location)
-    except OperationalError as e:
-        print_error(f"Failed to open database files: {e}")
-        raise Exit(1) from e
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=err_console,
+    ) as progress:
+        progress.add_task("Comparing databases...", total=None)
+        comparisons = compare_databases(old_location, new_location)
 
-    try:
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=err_console,
-        ) as progress:
-            progress.add_task("Comparing databases...", total=None)
-            comparisons = compare_databases(old_database, new_database)
+    # Output to stdout in requested format (keep stdout clean for data)
+    if output_format == OutputFormats.HTML:
+        html_stream = comparisons_to_html(comparisons)
+        for chunk in html_stream:
+            stdout.write(chunk)
+        return
 
-        # Output to stdout in requested format (keep stdout clean for data)
-        if output_format == OutputFormats.HTML:
-            html_stream = comparisons_to_html(comparisons)
-            for chunk in html_stream:
-                stdout.write(chunk)
-            return
+    if output_format == OutputFormats.JSON:
+        console.print_json(dumps(comparisons, default=serializer))
+        return
 
-        if output_format == OutputFormats.JSON:
-            console.print_json(dumps(comparisons, default=serializer))
-            return
-
-        if output_format == OutputFormats.TABLE:
-            format_comparison_table(comparisons)
-            return
-
-    except OperationalError as e:
-        print_error(f"Database comparison failed: {e}")
-        raise Exit(1) from e
-    finally:
-        old_database.close()
-        new_database.close()
+    if output_format == OutputFormats.TABLE:
+        format_comparison_table(comparisons)
+        return
 
 
 def main() -> None:
