@@ -123,19 +123,15 @@ def create_row_indexer(
     return indexer
 
 
-def create_schema_indexer() -> Indexer:
-    """Create indexer for schema/column comparisons."""
+def schema_indexer(row: Row) -> IndexKeys:
+    """Indexer for schema/column comparisons."""
+    keys: IndexKeys = []
 
-    def indexer(row: Row) -> IndexKeys:
-        keys: IndexKeys = []
+    # Priority 1: Column name (primary matching criterion)
+    column_name = row["name"]
+    keys.append((column_name,))
 
-        # Priority 1: Column name (primary matching criterion)
-        column_name = row["name"]
-        keys.append((column_name,))
-
-        return keys
-
-    return indexer
+    return keys
 
 
 def compare_rows(
@@ -161,32 +157,29 @@ def compare_rows(
         yield Change(new=new_row)
 
 
-def compare_tables(old_table: Table, new_table: Table) -> Iterator[Change]:
-    """Compare table data using hierarchical indexing approach."""
+def compare_contents(old_table: Table, new_table: Table) -> ChangeSet:
+    """Compare content tables and return complete ChangeSet."""
+    shared_columns = intersection(old_table.columns, new_table.columns)
+    shared_primary_keys = intersection(old_table.primary_keys, new_table.primary_keys)
+    content_indexer = create_row_indexer(shared_primary_keys, shared_columns)
+
     old_rows = old_table.difference(new_table)
     new_rows = new_table.difference(old_table)
 
-    # Choose appropriate indexer based on table type
-    if old_table.name == "pragma_table_info":
-        # Schema comparison - match columns by name, type, etc.
-        indexer = create_schema_indexer()
-    else:
-        shared_columns = intersection(old_table.columns, new_table.columns)
-        shared_primary_keys = intersection(
-            old_table.primary_keys,
-            new_table.primary_keys,
-        )
-        # Data comparison - match rows by RowGUID, PK, content
-        indexer = create_row_indexer(shared_primary_keys, shared_columns)
-
-    return compare_rows(old_rows, new_rows, indexer)
-
-
-def modified_changes(old_table: Table, new_table: Table) -> ChangeSet:
-    """Return the changeset for a modified table."""
     return ChangeSet(
         headers=Header(old=old_table.columns, new=new_table.columns),
-        changes=compare_tables(old_table, new_table),
+        changes=compare_rows(old_rows, new_rows, content_indexer),
+    )
+
+
+def compare_schemas(old_table: Table, new_table: Table) -> ChangeSet:
+    """Compare schema tables and return complete ChangeSet."""
+    old_rows = old_table.difference(new_table)
+    new_rows = new_table.difference(old_table)
+
+    return ChangeSet(
+        headers=Header(old=old_table.columns, new=new_table.columns),
+        changes=compare_rows(old_rows, new_rows, schema_indexer),
     )
 
 
@@ -210,13 +203,13 @@ def compare_databases(old_location: Path, new_location: Path) -> Iterator[Compar
     """Compare two SQLite databases and return differences."""
     difference = DatabaseDifference(old_location, new_location)
     return chain(
-        # Common tables - use main.py compare_tables with ComparableTable instances
+        # Common tables - use single table change function
         (
             Comparison(
                 name=old_table.name,
                 body=TableChange(
-                    columns=modified_changes(old_table.schema, new_table.schema),
-                    rows=modified_changes(old_table, new_table),
+                    columns=compare_schemas(old_table.schema, new_table.schema),
+                    rows=compare_contents(old_table, new_table),
                 ),
             )
             for old_table, new_table in difference.common_tables
