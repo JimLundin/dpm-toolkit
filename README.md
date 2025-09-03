@@ -1,4 +1,4 @@
-# DMP Toolkit
+# DPM Toolkit
 
 Open-source tools and models for working with EBA DPM 2.0 (Data Point Model) databases.
 
