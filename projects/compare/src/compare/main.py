@@ -152,7 +152,7 @@ def compare_rows(
 
 def compare_contents(old_table: Table, new_table: Table) -> ChangeSet:
     """Compare content tables and return complete ChangeSet."""
-    shared_columns = intersection(old_table.columns, new_table.columns)
+    shared_columns = intersection(old_table.columns, new_table.columns) - {"RowGUID"}
     shared_primary_keys = intersection(old_table.primary_keys, new_table.primary_keys)
     content_indexer = create_row_indexer(shared_primary_keys, shared_columns)
 
