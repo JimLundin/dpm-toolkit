@@ -1,8 +1,7 @@
 """Main database comparison functionality."""
 
 import json
-from collections import defaultdict, deque
-from collections.abc import Callable, Iterable, Iterator
+from collections.abc import Iterable, Iterator
 from itertools import chain
 from pathlib import Path
 from sqlite3 import Row
@@ -12,12 +11,8 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from jinja2.environment import TemplateStream
 
 from compare.comparison import DatabaseDifference
+from compare.index import HierarchicalIndex, Indexer, IndexKeys
 from compare.inspection import Table
-
-type ValueType = str | int | float | None
-type IndexKey = tuple[ValueType, ...]
-type IndexKeys = list[IndexKey]
-type Indexer = Callable[[Row], IndexKeys]
 
 
 class Header(NamedTuple):
@@ -148,47 +143,22 @@ def compare_rows(
     new: Iterator[Row],
     indexer: Indexer,
 ) -> Iterator[Change]:
-    """Asymmetric hierarchical matching: build index for new rows, match old rows."""
-    new_rows = list(new)
-
-    # Build index: (priority, key) -> row_indices (as deque for O(1) pop)
-
-    index: dict[tuple[int, IndexKey], deque[int]] = defaultdict(deque)
-    for i, row in enumerate(new_rows):
-        for priority, key in enumerate(indexer(row)):
-            index[(priority, key)].append(i)
-
-    # Track consumed new rows
-    used: set[int] = set()
+    """Hierarchical matching: build index for new rows, match old rows."""
+    # Build hierarchical index
+    index = HierarchicalIndex(indexer)
+    for row in new:
+        index.add(row)
 
     # Match each old row to best available new row
     for old_row in old:
-        matched = False
-
-        for priority, key in enumerate(indexer(old_row)):
-            candidates = index.get((priority, key))
-            if candidates:
-                # Find first unused candidate
-                while candidates:
-                    new_idx = candidates.popleft()
-                    if new_idx not in used:
-                        used.add(new_idx)
-                        new_row = new_rows[new_idx]
-
-                        yield Change(old=old_row, new=new_row)
-                        matched = True
-                        break
-
-                if matched:
-                    break
-
-        if not matched:
+        if new_row := index.pop(old_row):
+            yield Change(old=old_row, new=new_row)
+        else:
             yield Change(old=old_row)
 
-    # Emit remaining new rows as additions
-    for i, row in enumerate(new_rows):
-        if i not in used:
-            yield Change(new=row)
+    # Emit all remaining new rows as additions
+    for new_row in index:
+        yield Change(new=new_row)
 
 
 def compare_tables(old_table: Table, new_table: Table) -> Iterator[Change]:
