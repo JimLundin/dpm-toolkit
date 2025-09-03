@@ -87,36 +87,29 @@ def comparisons_to_html(comparisons: Iterable[Comparison]) -> TemplateStream:
     return template.stream(comparisons=comparisons)
 
 
-def row_guid(row: Row) -> str | None:
-    """Check if row has a non-null RowGUID column."""
-    return row["RowGUID"] if "RowGUID" in row.keys() else None  # noqa: SIM118
-
-
 def create_row_indexer(
     primary_keys: Iterable[str],
-    shared_columns: Iterable[str],
+    columns: Iterable[str],
 ) -> Indexer:
-    """Create indexer for hierarchical row matching."""
-    pk_list = list(primary_keys)
-    col_list = list(shared_columns)
+    """Create indexer for hierarchical row matching with fixed priority levels."""
+    # Store the iterables for re-use across mutiple calls of the indexer
+    columns = tuple(columns)
+    primary_keys = tuple(primary_keys)
 
     def indexer(row: Row) -> IndexKeys:
         keys: IndexKeys = []
 
-        # Priority 1: RowGUID (if exists)
-        guid = row_guid(row)
-        if guid:
-            keys.append((guid,))
+        # Priority 0: RowGUID - use special key prefix to ensure unique priority level
+        if guid := row["RowGUID"] if "RowGUID" in row.keys() else None:  # noqa: SIM118
+            keys.append(("GUID", (guid,)))
 
-        # Priority 2: Primary keys (if exist)
-        if pk_list:
-            pk_values = tuple(row[col] for col in pk_list)
-            keys.append(pk_values)
+        # Priority 1: Primary keys - use special key prefix
+        if primary_key_values := tuple(row[column] for column in primary_keys):
+            keys.append(("PK", primary_key_values))
 
-        # Priority 3: Full content (if columns exist)
-        if col_list:
-            content_values = tuple(row[col] for col in col_list)
-            keys.append(content_values)
+        # Priority 2: Full content - use special key prefix
+        if content_values := tuple(row[column] for column in columns):
+            keys.append(("CONTENT", content_values))
 
         return keys
 
@@ -127,9 +120,9 @@ def schema_indexer(row: Row) -> IndexKeys:
     """Indexer for schema/column comparisons."""
     keys: IndexKeys = []
 
-    # Priority 1: Column name (primary matching criterion)
+    # Priority 0: Column name (primary matching criterion)
     column_name = row["name"]
-    keys.append((column_name,))
+    keys.append(("SCHEMA", (column_name,)))
 
     return keys
 
@@ -203,7 +196,7 @@ def compare_databases(old_location: Path, new_location: Path) -> Iterator[Compar
     """Compare two SQLite databases and return differences."""
     difference = DatabaseDifference(old_location, new_location)
     return chain(
-        # Common tables - use single table change function
+        # Common tables - use separate comparison functions
         (
             Comparison(
                 name=old_table.name,
