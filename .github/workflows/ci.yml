@@ -1,0 +1,38 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    uses: ./.github/workflows/run-tests.yml
+
+  lint:
+    uses: ./.github/workflows/run-lint.yml
+
+  type-check:
+    uses: ./.github/workflows/run-type-check.yml
+
+  # Summary job that all other jobs depend on
+  ci-success:
+    if: always()
+    runs-on: ubuntu-latest
+    needs: [test, lint, type-check]
+    steps:
+      - name: Check CI Status
+        if: >-
+          needs.test.result == 'failure' ||
+          needs.lint.result == 'failure' ||
+          needs.type-check.result == 'failure'
+        run: |
+          echo "❌ CI failed - check individual job results"
+          exit 1
+      - name: CI Success
+        run: echo "✅ All CI checks passed!"

@@ -8,6 +8,20 @@ license = {file = "LICENSE"}
 requires-python = ">=3.13"
 dependencies = ["sqlalchemy>=2.0.37"]
 
+[tool.ruff]
+unsafe-fixes = true
+
+[tool.ruff.lint]
+fixable = ["ALL"]
+select = ["ALL"]
+ignore = ["T201"]
+
+[tool.mypy]
+strict = true
+
+[tool.pyright]
+typeCheckingMode = "strict"
+
 [build-system]
 requires = ["uv_build"]
 build-backend = "uv_build"
