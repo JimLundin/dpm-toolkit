@@ -1,0 +1,197 @@
+name: Run Tests
+
+on:
+  workflow_call:
+
+jobs:
+  # Main CLI tests (cross-platform)
+  test-cli:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.13"]
+        
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        
+      - name: Install UV
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+          
+      - name: Install dependencies
+        run: uv sync --dev
+        
+      - name: Test CLI functionality
+        run: |
+          echo "::group::CLI Functionality Tests"
+          uv run dpm-toolkit --help
+          uv run dpm-toolkit versions --help
+          uv run dpm-toolkit compare --help
+          uv run dpm-toolkit schema --help
+          echo "✅ All CLI commands work"
+          echo "::endgroup::"
+
+  # Archive module tests (Ubuntu only)
+  test-archive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        
+      - name: Install UV
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          
+      - name: Set up Python
+        run: uv python install
+        
+      - name: Install dependencies
+        run: uv sync --dev
+        
+      - name: Test Archive module
+        run: |
+          cd projects/archive
+          if [ -d "tests" ]; then
+            echo "::group::Archive Module Tests"
+            uv run pytest -v --tb=short
+            echo "::endgroup::"
+          else
+            echo "::group::Archive Module - No tests found"
+            echo "⚠️ No tests directory found for archive module"
+            echo "::endgroup::"
+          fi
+
+  # Compare module tests (Ubuntu only)
+  test-compare:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        
+      - name: Install UV
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          
+      - name: Set up Python
+        run: uv python install
+        
+      - name: Install dependencies
+        run: |
+          uv sync --dev
+          uv sync --extra compare
+        
+      - name: Test Compare module
+        run: |
+          echo "::group::Compare Module Tests"
+          cd projects/compare && uv run pytest -v --tb=short
+          echo "::endgroup::"
+
+
+  # Schema module tests (Ubuntu only)
+  test-schema:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        
+      - name: Install UV
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          
+      - name: Set up Python
+        run: uv python install
+        
+      - name: Install dependencies
+        run: |
+          uv sync --dev
+          uv sync --extra schema
+        
+      - name: Test Schema module
+        run: |
+          cd projects/schema
+          if [ -d "tests" ]; then
+            echo "::group::Schema Module Tests"
+            uv run pytest -v --tb=short
+            echo "::endgroup::"
+          else
+            echo "::group::Schema Module - No tests found"
+            echo "⚠️ No tests directory found for schema module"
+            echo "::endgroup::"
+          fi
+
+  # Scrape module tests (Ubuntu only)  
+  test-scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        
+      - name: Install UV
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          
+      - name: Set up Python
+        run: uv python install
+        
+      - name: Install dependencies
+        run: |
+          uv sync --dev
+          uv sync --extra scrape
+        
+      - name: Test Scrape module
+        run: |
+          cd projects/scrape
+          if [ -d "tests" ]; then
+            echo "::group::Scrape Module Tests"
+            uv run pytest -v --tb=short
+            echo "::endgroup::"
+          else
+            echo "::group::Scrape Module - No tests found"
+            echo "⚠️ No tests directory found for scrape module"
+            echo "::endgroup::"
+          fi
+
+  # Migrate module tests (Windows only)
+  test-migrate:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        
+      - name: Install UV
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          
+      - name: Set up Python
+        run: uv python install
+        
+      - name: Install dependencies
+        run: |
+          uv sync --dev
+          uv sync --extra migrate
+        
+      - name: Test Migrate module
+        run: |
+          cd projects/migrate
+          if (Test-Path "tests") {
+            echo "::group::Migrate Module Tests"
+            uv run pytest -v --tb=short
+            echo "::endgroup::"
+          } else {
+            echo "::group::Migrate Module - No tests found"
+            echo "⚠️ No tests directory found for migrate module"
+            echo "::endgroup::"
+          }
+        shell: powershell

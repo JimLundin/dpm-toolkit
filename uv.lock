@@ -113,6 +113,9 @@ dependencies = [
 compare = [
     { name = "compare" },
 ]
+dpm2 = [
+    { name = "dpm2" },
+]
 migrate = [
     { name = "migrate" },
 ]
@@ -126,6 +129,7 @@ scrape = [
 [package.dev-dependencies]
 dev = [
     { name = "mypy" },
+    { name = "pyright" },
     { name = "pytest" },
     { name = "ruff" },
     { name = "ty" },
@@ -137,16 +141,18 @@ dev = [
 requires-dist = [
     { name = "archive", editable = "projects/archive" },
     { name = "compare", marker = "extra == 'compare'", editable = "projects/compare" },
+    { name = "dpm2", marker = "extra == 'dpm2'", editable = "projects/dpm2" },
     { name = "migrate", marker = "extra == 'migrate'", virtual = "projects/migrate" },
     { name = "schema", marker = "extra == 'schema'", editable = "projects/schema" },
-    { name = "scrape", marker = "extra == 'scrape'", virtual = "projects/scrape" },
+    { name = "scrape", marker = "extra == 'scrape'", editable = "projects/scrape" },
     { name = "typer", specifier = ">=0.16.1" },
 ]
-provides-extras = ["scrape", "migrate", "schema", "compare"]
+provides-extras = ["scrape", "migrate", "schema", "compare", "dpm2"]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "mypy", specifier = ">=1.15.0" },
+    { name = "pyright", specifier = ">=1.1.0" },
     { name = "pytest", specifier = ">=8.4.1" },
     { name = "ruff", specifier = ">=0.11.4" },
     { name = "ty", specifier = ">=0.0.1a15" },
@@ -312,6 +318,15 @@ wheels = [
 ]
 
 [[package]]
+name = "nodeenv"
+version = "1.9.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/43/16/fc88b08840de0e0a72a2f9d8c6bae36be573e475a6326ae854bcc549fc45/nodeenv-1.9.1.tar.gz", hash = "sha256:6ec12890a2dab7946721edbfbcd91f3319c6ccc9aec47be7c7e6b7011ee6645f", size = 47437, upload-time = "2024-06-04T18:44:11.171Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d2/1d/1b658dbd2b9fa9c4c9f32accbfc0205d532c8c6194dc0f2a4c0428e7128a/nodeenv-1.9.1-py2.py3-none-any.whl", hash = "sha256:ba11c9782d29c27c70ffbdda2d7415098754709be8a7056d79a737cd901155c9", size = 22314, upload-time = "2024-06-04T18:44:08.352Z" },
+]
+
+[[package]]
 name = "packaging"
 version = "25.0"
 source = { registry = "https://pypi.org/simple" }
@@ -350,6 +365,19 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/a4/35/1c7efd4665e7983169d20175014f68578e0edfcbc4602b0bafcefa522c4a/pyodbc-5.2.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:eaf42c4bd323b8fd01f1cd900cca2d09232155f9b8f0b9bcd0be66763588ce64", size = 353025, upload-time = "2024-10-16T01:39:55.124Z" },
     { url = "https://files.pythonhosted.org/packages/6d/c9/736d07fa33572abdc50d858fd9e527d2c8281f3acbb90dff4999a3662edd/pyodbc-5.2.0-cp313-cp313-win32.whl", hash = "sha256:207f16b7e9bf09c591616429ebf2b47127e879aad21167ac15158910dc9bbcda", size = 63052, upload-time = "2024-10-16T01:39:56.565Z" },
     { url = "https://files.pythonhosted.org/packages/73/2a/3219c8b7fa3788fc9f27b5fc2244017223cf070e5ab370f71c519adf9120/pyodbc-5.2.0-cp313-cp313-win_amd64.whl", hash = "sha256:96d3127f28c0dacf18da7ae009cd48eac532d3dcc718a334b86a3c65f6a5ef5c", size = 69486, upload-time = "2024-10-16T01:39:57.57Z" },
+]
+
+[[package]]
+name = "pyright"
+version = "1.1.405"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "nodeenv" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/fb/6c/ba4bbee22e76af700ea593a1d8701e3225080956753bee9750dcc25e2649/pyright-1.1.405.tar.gz", hash = "sha256:5c2a30e1037af27eb463a1cc0b9f6d65fec48478ccf092c1ac28385a15c55763", size = 4068319, upload-time = "2025-09-04T03:37:06.776Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d5/1a/524f832e1ff1962a22a1accc775ca7b143ba2e9f5924bb6749dce566784a/pyright-1.1.405-py3-none-any.whl", hash = "sha256:a2cb13700b5508ce8e5d4546034cb7ea4aedb60215c6c33f56cec7f53996035a", size = 5905038, upload-time = "2025-09-04T03:37:04.913Z" },
 ]
 
 [[package]]
@@ -445,7 +473,7 @@ requires-dist = [{ name = "sqlalchemy", specifier = ">=2.0.37" }]
 [[package]]
 name = "scrape"
 version = "0.0.0"
-source = { virtual = "projects/scrape" }
+source = { editable = "projects/scrape" }
 dependencies = [
     { name = "beautifulsoup4" },
     { name = "requests" },
