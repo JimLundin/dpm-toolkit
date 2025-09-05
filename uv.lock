@@ -113,9 +113,6 @@ dependencies = [
 compare = [
     { name = "compare" },
 ]
-dpm2 = [
-    { name = "dpm2" },
-]
 migrate = [
     { name = "migrate" },
 ]
@@ -141,13 +138,12 @@ dev = [
 requires-dist = [
     { name = "archive", editable = "projects/archive" },
     { name = "compare", marker = "extra == 'compare'", editable = "projects/compare" },
-    { name = "dpm2", marker = "extra == 'dpm2'", editable = "projects/dpm2" },
     { name = "migrate", marker = "extra == 'migrate'", virtual = "projects/migrate" },
     { name = "schema", marker = "extra == 'schema'", editable = "projects/schema" },
     { name = "scrape", marker = "extra == 'scrape'", editable = "projects/scrape" },
     { name = "typer", specifier = ">=0.16.1" },
 ]
-provides-extras = ["scrape", "migrate", "schema", "compare", "dpm2"]
+provides-extras = ["scrape", "migrate", "schema", "compare"]
 
 [package.metadata.requires-dev]
 dev = [
