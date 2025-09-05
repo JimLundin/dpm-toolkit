@@ -1,159 +1,102 @@
 """Schema transformation utilities for database conversion."""
 
 from collections import defaultdict
-from collections.abc import Callable, Iterator
+from collections.abc import Iterator
 from datetime import date, datetime
-from typing import Any, NotRequired, TypedDict
+from typing import Any
 
 from sqlalchemy import (
-    Boolean,
-    Date,
-    DateTime,
+    Column,
     Enum,
     ForeignKey,
     Inspector,
     Integer,
     Row,
     Table,
-    Uuid,
 )
 from sqlalchemy.engine.interfaces import ReflectedColumn
-from sqlalchemy.types import TypeEngine
+
+from migrate.type_registry import TypeRegistry
 
 type FieldValue = str | int | bool | date | datetime | None
 type CastedRow = dict[str, FieldValue]
 type CastedRows = list[CastedRow]
-type ColumnNames = set[str]
-type EnumByColumnName = dict[str, set[str]]
+type Columns = set[Column[Any]]
+type EnumByColumn = dict[Column[Any], set[str]]
 
 
-class ColumnType(TypedDict):
-    """Column type mapping."""
-
-    sql: TypeEngine[Any]
-    python: NotRequired[Callable[[FieldValue], FieldValue]]
-
-
-# Mapping specific column names to their appropriate types
-COLUMN_TYPE_OVERRIDES: dict[str, ColumnType] = {
-    "ParentFirst": {"sql": Boolean(), "python": bool},
-    "UseIntervalArithmetics": {"sql": Boolean(), "python": bool},
-    "StartDate": {"sql": DateTime()},
-    "EndDate": {"sql": DateTime()},
-}
-
-
-def is_guid(column_name: str) -> bool:
-    """Check if a column is a GUID column."""
-    return column_name.lower().endswith("guid")
-
-
-def is_bool(column_name: str) -> bool:
-    """Check if a column is a boolean column."""
-    return column_name.lower().startswith(("is", "has"))
-
-
-def is_date(column_name: str) -> bool:
-    """Check if a column is a date column."""
-    return column_name.lower().endswith("date")
-
-
-def is_enum(column_name: str) -> bool:
-    """Check if a column is an enum column."""
-    return column_name.lower().endswith(
-        (
-            "type",
-            "status",
-            "sign",
-            "optionality",
-            "direction",
-            "number",
-            "endorsement",
-            "source",
-            "severity",
-            "errorcode",
-        ),
-    )
-
-
-def genericize(_i: Inspector, _t: str, column: ReflectedColumn) -> None:
-    """Refine column datatypes during database reflection.
-
-    This function enhances SQLAlchemy's type reflection by analyzing column names
-    and applying more appropriate data types. The source database often uses generic
-    types (like Integer or String) for specialized data such as GUIDs, dates, and
-    booleans, which this function corrects based on naming conventions and known
-    column characteristics.
-    """
-    column_name = column["name"]
+def genericize(
+    _inspector: Inspector,
+    _table_name: str,
+    column: ReflectedColumn,
+) -> None:
+    """Genericize for SQLAlchemy compatibility only."""
     column_type = column["type"]
-    if column_name in COLUMN_TYPE_OVERRIDES:
-        column_type = COLUMN_TYPE_OVERRIDES[column_name]["sql"]
-    elif is_guid(column_name):
-        column_type = Uuid()
-    elif is_date(column_name):
-        column_type = Date()
-    elif is_bool(column_name):
-        column_type = Boolean()
-    elif isinstance(column_type, Integer):
-        column_type = Integer()
+    if isinstance(column_type, Integer):
+        column["type"] = Integer()
     else:
-        column_type = column_type.as_generic()
-
-    column["type"] = column_type
-
-
-def cast_value(column_name: str, value: FieldValue) -> FieldValue:
-    """Transform row values to appropriate Python types."""
-    if value is None:
-        return None
-    if column_name in COLUMN_TYPE_OVERRIDES and (
-        caster := COLUMN_TYPE_OVERRIDES[column_name].get("python")
-    ):
-        return caster(value)
-    if is_date(column_name) and isinstance(value, str):
-        return date.fromisoformat(value)
-    if is_bool(column_name):
-        return bool(value)
-    return value
+        column["type"] = column_type.as_generic()
 
 
 def parse_rows(
+    table: Table,
     rows: Iterator[Row[Any]],
-) -> tuple[CastedRows, EnumByColumnName, ColumnNames]:
-    """Transform row values to appropriate Python types."""
+    registry: TypeRegistry,
+) -> tuple[CastedRows, EnumByColumn, Columns]:
+    """Transform row values using TypeRegistry and collect analysis data."""
     casted_rows: CastedRows = []
-    enum_by_column_name: EnumByColumnName = defaultdict(set)
-    nullable_column_names: ColumnNames = set()
+    enum_by_column: EnumByColumn = defaultdict(set)
+    nullable_columns: Columns = set()
+
     for row in rows:
         casted_row = row._asdict()  # pyright: ignore[reportPrivateUsage]
-        for column_name in casted_row:
-            casted_value = cast_value(column_name, casted_row[column_name])
+
+        for column_name, raw_value in casted_row.items():
+            # Get the table column for registry lookup
+            table_column = table.columns[column_name]
+
+            if raw_value is None:
+                casted_value = None
+                nullable_columns.add(table_column)
+                continue
+            # Get type from registry
+            registry_type = registry.get_sql_type(table_column)
+
+            if registry_type is None:
+                casted_value = raw_value
+                continue
+            if isinstance(registry_type, Enum):
+                # This is an enum candidate - collect raw values
+                if not isinstance(raw_value, str):
+                    continue
+                enum_by_column[table_column].add(raw_value)
+                casted_value = raw_value
+            else:
+                # Let SQLAlchemy handle the casting based on current column type
+                # For now, just pass through - SQLAlchemy will handle conversion
+                casted_value = registry_type.python_type(raw_value)
+
             casted_row[column_name] = casted_value
-            if casted_value is None:
-                nullable_column_names.add(column_name)
-            elif is_enum(column_name) and isinstance(casted_value, str):
-                enum_by_column_name[column_name].add(casted_value)
 
         casted_rows.append(casted_row)
 
-    return casted_rows, enum_by_column_name, nullable_column_names
+    return casted_rows, enum_by_column, nullable_columns
 
 
-def apply_enums_to_table(table: Table, enum_by_column_name: EnumByColumnName) -> None:
+def apply_enums_to_table(table: Table, enum_by_column: EnumByColumn) -> None:
     """Set enum columns for a table."""
     for column in table.columns:
-        if column.name in enum_by_column_name:
-            column.type = Enum(*enum_by_column_name[column.name])
+        if column.name in enum_by_column:
+            column.type = Enum(*enum_by_column[column], create_constraint=True)
 
 
 def mark_nullable_columns_in_table(
     table: Table,
-    nullable_column_names: ColumnNames,
+    nullable_columns: Columns,
 ) -> None:
     """Set nullable status for columns based on data analysis."""
     for column in table.columns:
-        if column.name not in nullable_column_names:
+        if column.name not in nullable_columns:
             column.nullable = False
 
 
@@ -173,3 +116,19 @@ def add_foreign_keys_to_table(table: Table) -> None:
     """Set missing foreign keys."""
     add_foreign_key_to_table(table, "RowGUID", "Concept.ConceptGUID")
     add_foreign_key_to_table(table, "ParentItemID", "Item.ItemID")
+
+
+def apply_types_to_table(table: Table, registry: TypeRegistry) -> None:
+    """Apply type corrections from registry to table schema.
+
+    This applies all business logic type transformations after data analysis.
+    """
+    for column in table.columns:
+        registry_type = registry.get_sql_type(column)
+        if registry_type is not None:
+            # Don't override enum types that have already been set with actual values
+            if isinstance(registry_type, Enum):
+                # Keep the enum with actual values
+                continue
+            # Apply the registry type
+            column.type = registry_type
