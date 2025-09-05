@@ -1,0 +1,93 @@
+name: Run Type Checking
+
+on:
+  workflow_call:
+
+jobs:
+  type-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Install dependencies
+        run: |
+          uv sync --dev
+          # Install only necessary submodule dependencies for type checking
+          uv sync --extra compare --extra schema --extra scrape
+
+      - name: Run MyPy type checking
+        run: |
+          echo "::group::MyPy - Main CLI"
+          uv run mypy src/ || echo "MyPy found issues in src/"
+          echo "::endgroup::"
+
+          echo "::group::MyPy - Archive Module"
+          uv run mypy projects/archive/src/ || echo "MyPy found issues in archive/"
+          echo "::endgroup::"
+
+          echo "::group::MyPy - Compare Module"
+          uv run mypy projects/compare/src/ || echo "MyPy found issues in compare/"
+          echo "::endgroup::"
+
+          echo "::group::MyPy - Schema Module"
+          uv run mypy projects/schema/src/ || echo "MyPy found issues in schema/"
+          echo "::endgroup::"
+
+          echo "::group::MyPy - Scrape Module"
+          uv run mypy projects/scrape/src/ || echo "MyPy found issues in scrape/"
+          echo "::endgroup::"
+
+      - name: Run Pyright type checking
+        run: |
+          echo "::group::Pyright - Main CLI"
+          uv run pyright src/ || echo "Pyright found issues in src/"
+          echo "::endgroup::"
+
+          echo "::group::Pyright - Archive Module"
+          uv run pyright projects/archive/src/ || echo "Pyright found issues in archive/"
+          echo "::endgroup::"
+
+          echo "::group::Pyright - Compare Module"
+          uv run pyright projects/compare/src/ || echo "Pyright found issues in compare/"
+          echo "::endgroup::"
+
+          echo "::group::Pyright - Schema Module"
+          uv run pyright projects/schema/src/ || echo "Pyright found issues in schema/"
+          echo "::endgroup::"
+
+          echo "::group::Pyright - Scrape Module"
+          uv run pyright projects/scrape/src/ || echo "Pyright found issues in scrape/"
+          echo "::endgroup::"
+
+      - name: Run Ty type checking (beta)
+        continue-on-error: true # ty is in beta
+        run: |
+          echo "::group::Ty (beta) - Main CLI"
+          uv run ty check src/ || echo "Ty found issues in src/ (beta tool)"
+          echo "::endgroup::"
+
+          echo "::group::Ty (beta) - Archive Module"
+          uv run ty check projects/archive/src/ || echo "Ty found issues in archive/ (beta tool)"
+          echo "::endgroup::"
+
+          echo "::group::Ty (beta) - Compare Module"
+          uv run ty check projects/compare/src/ || echo "Ty found issues in compare/ (beta tool)"
+          echo "::endgroup::"
+
+          echo "::group::Ty (beta) - Schema Module"
+          uv run ty check projects/schema/src/ || echo "Ty found issues in schema/ (beta tool)"
+          echo "::endgroup::"
+
+          echo "::group::Ty (beta) - Scrape Module"
+          uv run ty check projects/scrape/src/ || echo "Ty found issues in scrape/ (beta tool)"
+          echo "::endgroup::"

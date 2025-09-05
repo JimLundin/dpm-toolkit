@@ -1,0 +1,38 @@
+name: Run Linting
+
+on:
+  workflow_call:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        
+      - name: Install UV
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          
+      - name: Set up Python
+        run: uv python install
+        
+      - name: Install dependencies
+        run: |
+          uv sync --dev
+          # Install only necessary submodule dependencies for linting
+          uv sync --extra compare --extra schema --extra scrape
+        
+      - name: Run Ruff linter
+        run: |
+          echo "::group::Ruff Check"
+          uv run ruff check --output-format=github .
+          echo "::endgroup::"
+          
+      - name: Run Ruff formatter check
+        run: |
+          echo "::group::Ruff Format Check"
+          uv run ruff format --check --diff .
+          echo "::endgroup::"
