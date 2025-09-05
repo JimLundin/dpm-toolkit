@@ -174,29 +174,3 @@ def create_default_registry() -> TypeRegistry:
     return registry
 
 
-# Global registry instance
-_default_registry: TypeRegistry | None = None
-
-
-def get_default_registry() -> TypeRegistry:
-    """Get or create the default type registry.
-
-    Returns:
-        The default TypeRegistry instance
-
-    """
-    global _default_registry
-    if _default_registry is None:
-        _default_registry = create_default_registry()
-    return _default_registry
-
-
-def configure_registry(registry: TypeRegistry) -> None:
-    """Configure a custom type registry as the default.
-
-    Args:
-        registry: TypeRegistry to use as the new default
-
-    """
-    global _default_registry
-    _default_registry = registry
