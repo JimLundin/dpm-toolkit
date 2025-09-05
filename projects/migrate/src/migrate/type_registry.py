@@ -20,6 +20,7 @@ class TypeRegistry:
     """Priority-based registry for column type transformations."""
 
     def __init__(self) -> None:
+        """Initialize a registry of columns and type matches."""
         # Store as (priority, matcher, sql_type) tuples, sorted by priority descending
         self._rules: list[tuple[int, Matcher, TypeEngine[Any]]] = []
 
@@ -172,5 +173,3 @@ def create_default_registry() -> TypeRegistry:
     registry.suffix("errorcode", Enum())
 
     return registry
-
-
