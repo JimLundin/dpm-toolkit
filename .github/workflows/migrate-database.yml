@@ -1,8 +1,5 @@
 name: Migrate Database
 
-env:
-  ACCESS_ENGINE_INSTALLER: accessdatabaseengine_X64.exe
-  ACCESS_ENGINE_URL: https://download.microsoft.com/download/3/5/C/35C84C36-661A-44E6-9324-8786B8DBE231/accessdatabaseengine_X64.exe
 
 on:
   workflow_call:
@@ -17,7 +14,12 @@ on:
         value: ${{ inputs.source_artifact_name }}-sqlite
 
 jobs:
+  # Get secure Access Database Engine
+  get-access-engine:
+    uses: ./.github/workflows/download-access-engine.yml
+
   migrate:
+    needs: get-access-engine
     runs-on: windows-latest
     defaults:
       run:
@@ -35,22 +37,17 @@ jobs:
       - name: Install project
         run: uv sync --extra migrate
 
-      - name: Cache Access Database Engine
-        id: cache-access-engine
-        uses: actions/cache@v4
+      - name: Download secure Access Database Engine
+        uses: actions/download-artifact@v5
         with:
-          path: ${{ env.ACCESS_ENGINE_INSTALLER }}
-          key: ${{ env.ACCESS_ENGINE_INSTALLER }}
-
-      - name: Download Microsoft Access Database Engine
-        if: steps.cache-access-engine.outputs.cache-hit != 'true'
-        run: |
-          curl -L "${{ env.ACCESS_ENGINE_URL }}" -o "${{ env.ACCESS_ENGINE_INSTALLER }}"
+          name: ${{ needs.get-access-engine.outputs.artifact_name }}
+          path: ./engine/
 
       - name: Install Microsoft Access Database Engine
         shell: powershell
         run: |
-          Start-Process -FilePath "${{ env.ACCESS_ENGINE_INSTALLER }}" -ArgumentList "/quiet" -Wait
+          $enginePath = "./engine/${{ needs.get-access-engine.outputs.installer_filename }}"
+          Start-Process -FilePath $enginePath -ArgumentList "/quiet" -Wait
 
       - name: Download source database files
         uses: actions/download-artifact@v5
