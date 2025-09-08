@@ -86,11 +86,11 @@ def cast_value_for_type(raw_value: Field, sql_type: TypeEngine[Field]) -> Field:
     if isinstance(sql_type, Date) and isinstance(raw_value, str):
         # Handle date conversion from various string formats
         parsed_date = _parse_date_string(raw_value)
-        return parsed_date if parsed_date is not None else raw_value
+        return parsed_date or raw_value
     if isinstance(sql_type, DateTime) and isinstance(raw_value, str):
         # Handle datetime conversion from various string formats
         parsed_datetime = _parse_datetime_string(raw_value)
-        return parsed_datetime if parsed_datetime is not None else raw_value
+        return parsed_datetime or raw_value
     # For other types, try using SQLAlchemy's python_type
     try:
         python_type = sql_type.python_type
@@ -200,9 +200,4 @@ def apply_types_to_table(table: Table, registry: TypeRegistry) -> None:
     for column in table.columns:
         registry_type = registry.get_sql_type(column)
         if registry_type is not None:
-            # Don't override enum types that have already been set with actual values
-            if isinstance(registry_type, Enum):
-                # Keep the enum with actual values
-                continue
-            # Apply the registry type
             column.type = registry_type
