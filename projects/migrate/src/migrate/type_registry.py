@@ -22,21 +22,16 @@ class TypeRegistry:
         # Store as (priority, matcher, sql_type) tuples, sorted by priority descending
         self._rules: list[tuple[int, Matcher, TypeEngine[Any]]] = []
 
-    def exact(
-        self,
-        column_name: str,
-        sql_type: TypeEngine[Any],
-        priority: int = 100,
-    ) -> None:
+    def exact(self, name: str, sql_type: TypeEngine[Any], priority: int = 100) -> None:
         """Register rule for exact column name match.
 
         Args:
-            column_name: Exact column name to match
+            name: Exact column name to match
             sql_type: SQLAlchemy type to apply
             priority: Rule priority (higher = evaluated first), defaults to 100
 
         """
-        self.register(lambda column: column.name == column_name, sql_type, priority)
+        self.register(lambda column: column.name == name, sql_type, priority)
 
     def suffix(
         self,
