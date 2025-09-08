@@ -5,13 +5,11 @@ that are applied during database migration. All type rules are defined once and 
 consistently during schema reflection.
 """
 
-from typing import TYPE_CHECKING, Any
+from collections.abc import Callable
+from typing import Any
 
 from sqlalchemy import Boolean, Column, Date, DateTime, Enum, Uuid
 from sqlalchemy.types import TypeEngine
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
 
 type Matcher = Callable[[Column[Any]], bool]
 
