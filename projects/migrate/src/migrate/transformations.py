@@ -161,7 +161,7 @@ def apply_enums_to_table(table: Table, enum_by_column: EnumByColumn) -> None:
     """Set enum columns for a table."""
     for column in table.columns:
         if column in enum_by_column:
-            column.type = Enum(*enum_by_column[column], create_constraint=True)
+            column.type = Enum(*enum_by_column[column])
 
 
 def mark_nullable_columns_in_table(
