@@ -100,3 +100,12 @@ revision = 1
 original = { url = "https://www.eba.europa.eu/sites/default/files/2025-07/c5e64c91-0e04-4419-8943-4963271ed983/DPM%202.0%20%20Database_v%204_1_20250625.accdb_.zip", checksum = "sha256:5052ecf687e0b4ce9ee2ed9b8158ffd0f161da57929bb129b2b835688e82fec3" }
 archive = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-4.1-errata-1/dpm-4.1-errata-1-archive.zip", checksum = "sha256:d06cfa01135e946ba68fa16a059bd54197b292d9d13bf308745edc643d043b32" }
 converted = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-4.1-errata-1/dpm-4.1-errata-1-sqlite.zip", checksum = "sha256:3de5bc256322b24689694c15a352435f483ef8d29548fb249a0257e48545ed76" }
+
+[[versions]]
+id = "4.2-draft"
+previous = "4.1-errata-1"
+version = "4.2"
+type = "draft"
+semver = "4.2.0-beta.1"
+date = 2025-09-05
+original = { url = "https://www.eba.europa.eu/sites/default/files/2025-09/2e9220cc-2fb6-4af2-8ff8-5e870882380a/DPM2%20Database_Release%204.2%28draft%29.accdb_.zip", checksum = "sha256:cbeeb1ff940f8388480fb358d4bd2a8b85498901e614c4fe536129a6ca536004" }
