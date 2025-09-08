@@ -6,7 +6,10 @@ from datetime import date, datetime
 from typing import Any
 
 from sqlalchemy import (
+    Boolean,
     Column,
+    Date,
+    DateTime,
     Enum,
     ForeignKey,
     Inspector,
@@ -15,14 +18,38 @@ from sqlalchemy import (
     Table,
 )
 from sqlalchemy.engine.interfaces import ReflectedColumn
+from sqlalchemy.types import TypeEngine
 
 from migrate.type_registry import TypeRegistry
 
-type FieldValue = str | int | bool | date | datetime | None
-type CastedRow = dict[str, FieldValue]
+type Field = str | int | bool | date | datetime | None
+type CastedRow = dict[str, Field]
 type CastedRows = list[CastedRow]
 type Columns = set[Column[Any]]
 type EnumByColumn = dict[Column[Any], set[str]]
+
+
+def cast_value_for_type(raw_value: Field, sql_type: TypeEngine[Field]) -> Field:
+    """Cast a raw value to match the SQLAlchemy type."""
+    if isinstance(sql_type, Boolean):
+        # Handle boolean conversion - bool("0") = True, so need special handling
+        if isinstance(raw_value, str):
+            return raw_value.lower() in ("1", "true", "yes", "y")
+    if isinstance(sql_type, Date):
+        # Handle date conversion from ISO string
+        if isinstance(raw_value, str):
+            return date.fromisoformat(raw_value)
+    if isinstance(sql_type, DateTime):
+        # Handle datetime conversion from ISO string
+        if isinstance(raw_value, str):
+            return datetime.fromisoformat(raw_value)
+    # For other types, try using SQLAlchemy's python_type
+    try:
+        python_type = sql_type.python_type
+        return python_type(raw_value)
+    except (AttributeError, ValueError, TypeError):
+        # Fallback - just return the raw value
+        return raw_value
 
 
 def genericize(
@@ -72,9 +99,8 @@ def parse_rows(
                 enum_by_column[table_column].add(raw_value)
                 casted_value = raw_value
             else:
-                # Let SQLAlchemy handle the casting based on current column type
-                # For now, just pass through - SQLAlchemy will handle conversion
-                casted_value = registry_type.python_type(raw_value)
+                # Cast using the registry type
+                casted_value = cast_value_for_type(raw_value, registry_type)
 
             casted_row[column_name] = casted_value
 
@@ -96,7 +122,7 @@ def mark_nullable_columns_in_table(
 ) -> None:
     """Set nullable status for columns based on data analysis."""
     for column in table.columns:
-        if column.name not in nullable_columns:
+        if column not in nullable_columns:
             column.nullable = False
 
 
