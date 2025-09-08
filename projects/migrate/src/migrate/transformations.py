@@ -30,16 +30,22 @@ type EnumByColumn = dict[Column[Any], set[str]]
 
 
 def _parse_date_string(date_str: str) -> date | None:
-    """Parse date string using common formats."""
-    formats = [
-        "%Y-%m-%d",  # ISO format: 2026-03-30
+    """Parse date string using common formats, optimized for performance."""
+    # Fast path: try ISO format first (most common in databases)
+    try:
+        return date.fromisoformat(date_str)
+    except ValueError:
+        pass
+
+    # Fallback: try other common formats
+    fallback_formats = [
         "%d/%m/%Y",  # DD/MM/YYYY: 30/03/2026
         "%m/%d/%Y",  # MM/DD/YYYY: 03/30/2026
         "%d-%m-%Y",  # DD-MM-YYYY: 30-03-2026
         "%Y/%m/%d",  # YYYY/MM/DD: 2026/03/30
     ]
 
-    for fmt in formats:
+    for fmt in fallback_formats:
         try:
             return datetime.strptime(date_str, fmt).date()  # noqa: DTZ007
         except ValueError:
@@ -48,18 +54,23 @@ def _parse_date_string(date_str: str) -> date | None:
 
 
 def _parse_datetime_string(datetime_str: str) -> datetime | None:
-    """Parse datetime string using common formats."""
-    formats = [
-        "%Y-%m-%d %H:%M:%S",  # ISO format: 2026-03-30 14:30:00
+    """Parse datetime string using common formats, optimized for performance."""
+    # Fast path: try ISO formats first (most common in databases)
+    try:
+        return datetime.fromisoformat(datetime_str)
+    except ValueError:
+        pass
+
+    # Fallback: try other common formats
+    fallback_formats = [
         "%d/%m/%Y %H:%M:%S",  # DD/MM/YYYY HH:MM:SS
         "%m/%d/%Y %H:%M:%S",  # MM/DD/YYYY HH:MM:SS
-        "%Y-%m-%dT%H:%M:%S",  # ISO with T: 2026-03-30T14:30:00
         "%Y-%m-%d",  # Date only, time defaults to 00:00:00
         "%d/%m/%Y",  # DD/MM/YYYY, time defaults to 00:00:00
         "%m/%d/%Y",  # MM/DD/YYYY, time defaults to 00:00:00
     ]
 
-    for fmt in formats:
+    for fmt in fallback_formats:
         try:
             return datetime.strptime(datetime_str, fmt)  # noqa: DTZ007
         except ValueError:
