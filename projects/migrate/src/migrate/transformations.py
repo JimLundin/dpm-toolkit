@@ -29,20 +29,57 @@ type Columns = set[Column[Any]]
 type EnumByColumn = dict[Column[Any], set[str]]
 
 
+def _parse_date_string(date_str: str) -> date | None:
+    """Parse date string using common formats."""
+    formats = [
+        "%Y-%m-%d",  # ISO format: 2026-03-30
+        "%d/%m/%Y",  # DD/MM/YYYY: 30/03/2026
+        "%m/%d/%Y",  # MM/DD/YYYY: 03/30/2026
+        "%d-%m-%Y",  # DD-MM-YYYY: 30-03-2026
+        "%Y/%m/%d",  # YYYY/MM/DD: 2026/03/30
+    ]
+
+    for fmt in formats:
+        try:
+            return datetime.strptime(date_str, fmt).date()  # noqa: DTZ007
+        except ValueError:
+            continue
+    return None
+
+
+def _parse_datetime_string(datetime_str: str) -> datetime | None:
+    """Parse datetime string using common formats."""
+    formats = [
+        "%Y-%m-%d %H:%M:%S",  # ISO format: 2026-03-30 14:30:00
+        "%d/%m/%Y %H:%M:%S",  # DD/MM/YYYY HH:MM:SS
+        "%m/%d/%Y %H:%M:%S",  # MM/DD/YYYY HH:MM:SS
+        "%Y-%m-%dT%H:%M:%S",  # ISO with T: 2026-03-30T14:30:00
+        "%Y-%m-%d",  # Date only, time defaults to 00:00:00
+        "%d/%m/%Y",  # DD/MM/YYYY, time defaults to 00:00:00
+        "%m/%d/%Y",  # MM/DD/YYYY, time defaults to 00:00:00
+    ]
+
+    for fmt in formats:
+        try:
+            return datetime.strptime(datetime_str, fmt)  # noqa: DTZ007
+        except ValueError:
+            continue
+    return None
+
+
 def cast_value_for_type(raw_value: Field, sql_type: TypeEngine[Field]) -> Field:
     """Cast a raw value to match the SQLAlchemy type."""
-    if isinstance(sql_type, Boolean):
+    if isinstance(sql_type, Boolean) and isinstance(raw_value, str):
         # Handle boolean conversion - bool("0") = True, so need special handling
-        if isinstance(raw_value, str):
-            return raw_value.lower() in ("1", "true", "yes", "y")
-    if isinstance(sql_type, Date):
-        # Handle date conversion from ISO string
-        if isinstance(raw_value, str):
-            return date.fromisoformat(raw_value)
-    if isinstance(sql_type, DateTime):
-        # Handle datetime conversion from ISO string
-        if isinstance(raw_value, str):
-            return datetime.fromisoformat(raw_value)
+        return raw_value.lower() in ("1", "true", "yes", "y")
+    if isinstance(sql_type, Date) and isinstance(raw_value, str):
+        # Handle date conversion from various string formats
+        parsed_date = _parse_date_string(raw_value)
+        return parsed_date if parsed_date is not None else raw_value
+    if isinstance(sql_type, DateTime) and isinstance(raw_value, str):
+        # Handle datetime conversion from various string formats
+        parsed_datetime = _parse_datetime_string(raw_value)
+        return parsed_datetime if parsed_datetime is not None else raw_value
     # For other types, try using SQLAlchemy's python_type
     try:
         python_type = sql_type.python_type
