@@ -6,11 +6,17 @@ from typing import Any
 
 from sqlalchemy import (
     Column,
+    Engine,
     Enum,
     ForeignKey,
+    Inspector,
+    MetaData,
     Row,
+    String,
     Table,
+    event,
 )
+from sqlalchemy.engine.interfaces import ReflectedColumn
 
 from migrate.type_registry import column_type
 from migrate.value_casters import Field, value_caster
@@ -19,6 +25,30 @@ type CastedRow = dict[str, Field]
 type CastedRows = list[CastedRow]
 type Columns = set[Column[Any]]
 type EnumByColumn = dict[Column[Any], set[str]]
+
+
+def genericize(
+    _inspector: Inspector,
+    _table_name: str,
+    column: ReflectedColumn,
+) -> None:
+    """Genericize for SQLAlchemy compatibility only."""
+    registry_type = column_type(column)
+    if isinstance(registry_type, Enum):
+        column["type"] = String()
+
+    column["type"] = registry_type.as_generic()
+
+
+def reflect_schema(source_database: Engine) -> MetaData:
+    """Reflect a database schema with basic SQLAlchemy compatibility.
+
+    No business logic type transformations - those are applied after data analysis.
+    """
+    schema = MetaData()
+    event.listen(schema, "column_reflect", genericize)
+    schema.reflect(bind=source_database)
+    return schema
 
 
 def parse_rows(
