@@ -8,8 +8,6 @@ from migrate.transformations import (
     CastedRows,
     add_foreign_keys_to_table,
     apply_enums_to_table,
-    apply_types_to_table,
-    genericize,
     mark_nullable_columns_in_table,
     parse_rows,
 )
@@ -26,13 +24,13 @@ def access(access_location: Path) -> Engine:
     return create_engine(f"access+pyodbc:///?odbc_connect={connection_string}")
 
 
-def reflect_schema(source_database: Engine) -> MetaData:
+def reflect_schema(source_database: Engine, registry: TypeRegistry) -> MetaData:
     """Reflect a database schema with basic SQLAlchemy compatibility.
 
     No business logic type transformations - those are applied after data analysis.
     """
     schema = MetaData()
-    event.listen(schema, "column_reflect", genericize)
+    event.listen(schema, "column_reflect", registry.genericize)
     schema.reflect(bind=source_database)
     return schema
 
@@ -55,7 +53,7 @@ def schema_and_data(
     if registry is None:
         registry = create_default_registry()
 
-    schema = reflect_schema(access_database)
+    schema = reflect_schema(access_database, registry)
 
     tables_with_rows: TablesWithRows = []
     with access_database.begin() as connection:
@@ -76,7 +74,6 @@ def schema_and_data(
                 table.kwargs["sqlite_with_rowid"] = False
 
             # Apply all transformations after data analysis
-            apply_types_to_table(table, registry)
             apply_enums_to_table(table, enum_by_column)
             mark_nullable_columns_in_table(table, nullable_columns)
             add_foreign_keys_to_table(table)

@@ -12,12 +12,9 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
-    Inspector,
-    Integer,
     Row,
     Table,
 )
-from sqlalchemy.engine.interfaces import ReflectedColumn
 from sqlalchemy.types import TypeEngine
 
 from migrate.type_registry import TypeRegistry
@@ -86,11 +83,11 @@ def cast_value_for_type(raw_value: Field, sql_type: TypeEngine[Field]) -> Field:
     if isinstance(sql_type, Date) and isinstance(raw_value, str):
         # Handle date conversion from various string formats
         parsed_date = _parse_date_string(raw_value)
-        return parsed_date or raw_value
+        return parsed_date if parsed_date is not None else raw_value
     if isinstance(sql_type, DateTime) and isinstance(raw_value, str):
         # Handle datetime conversion from various string formats
         parsed_datetime = _parse_datetime_string(raw_value)
-        return parsed_datetime or raw_value
+        return parsed_datetime if parsed_datetime is not None else raw_value
     # For other types, try using SQLAlchemy's python_type
     try:
         python_type = sql_type.python_type
@@ -98,19 +95,6 @@ def cast_value_for_type(raw_value: Field, sql_type: TypeEngine[Field]) -> Field:
     except (AttributeError, ValueError, TypeError):
         # Fallback - just return the raw value
         return raw_value
-
-
-def genericize(
-    _inspector: Inspector,
-    _table_name: str,
-    column: ReflectedColumn,
-) -> None:
-    """Genericize for SQLAlchemy compatibility only."""
-    column_type = column["type"]
-    if isinstance(column_type, Integer):
-        column["type"] = Integer()
-    else:
-        column["type"] = column_type.as_generic()
 
 
 def parse_rows(
@@ -135,7 +119,7 @@ def parse_rows(
                 nullable_columns.add(table_column)
                 continue
             # Get type from registry
-            registry_type = registry.get_sql_type(table_column)
+            registry_type = registry.column_type(column_name)
 
             if registry_type is None:
                 casted_value = raw_value
@@ -161,7 +145,7 @@ def apply_enums_to_table(table: Table, enum_by_column: EnumByColumn) -> None:
     """Set enum columns for a table."""
     for column in table.columns:
         if column in enum_by_column:
-            column.type = Enum(*enum_by_column[column])
+            column.type = Enum(*enum_by_column[column], create_constraint=True)
 
 
 def mark_nullable_columns_in_table(
@@ -190,14 +174,3 @@ def add_foreign_keys_to_table(table: Table) -> None:
     """Set missing foreign keys."""
     add_foreign_key_to_table(table, "RowGUID", "Concept.ConceptGUID")
     add_foreign_key_to_table(table, "ParentItemID", "Item.ItemID")
-
-
-def apply_types_to_table(table: Table, registry: TypeRegistry) -> None:
-    """Apply type corrections from registry to table schema.
-
-    This applies all business logic type transformations after data analysis.
-    """
-    for column in table.columns:
-        registry_type = registry.get_sql_type(column)
-        if registry_type is not None:
-            column.type = registry_type
