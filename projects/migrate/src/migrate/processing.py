@@ -2,13 +2,23 @@
 
 from pathlib import Path
 
-from sqlalchemy import Engine, MetaData, Table, create_engine, event, insert, select
+from sqlalchemy import (
+    Engine,
+    Enum,
+    Inspector,
+    MetaData,
+    Table,
+    create_engine,
+    event,
+    insert,
+    select,
+)
+from sqlalchemy.engine.interfaces import ReflectedColumn
 
 from migrate.transformations import (
     CastedRows,
     add_foreign_keys_to_table,
-    apply_enums_to_table,
-    mark_nullable_columns_in_table,
+    apply_types_to_table,
     parse_rows,
 )
 from migrate.type_registry import TypeRegistry, create_default_registry
@@ -24,13 +34,22 @@ def access(access_location: Path) -> Engine:
     return create_engine(f"access+pyodbc:///?odbc_connect={connection_string}")
 
 
-def reflect_schema(source_database: Engine, registry: TypeRegistry) -> MetaData:
+def genericize(
+    _inspector: Inspector,
+    _table_name: str,
+    column: ReflectedColumn,
+) -> None:
+    """Genericize for SQLAlchemy compatibility only."""
+    column["type"] = column["type"].as_generic()
+
+
+def reflect_schema(source_database: Engine) -> MetaData:
     """Reflect a database schema with basic SQLAlchemy compatibility.
 
     No business logic type transformations - those are applied after data analysis.
     """
     schema = MetaData()
-    event.listen(schema, "column_reflect", registry.genericize)
+    event.listen(schema, "column_reflect", genericize)
     schema.reflect(bind=source_database)
     return schema
 
@@ -53,7 +72,7 @@ def schema_and_data(
     if registry is None:
         registry = create_default_registry()
 
-    schema = reflect_schema(access_database, registry)
+    schema = reflect_schema(access_database)
 
     tables_with_rows: TablesWithRows = []
     with access_database.begin() as connection:
@@ -74,8 +93,13 @@ def schema_and_data(
                 table.kwargs["sqlite_with_rowid"] = False
 
             # Apply all transformations after data analysis
-            apply_enums_to_table(table, enum_by_column)
-            mark_nullable_columns_in_table(table, nullable_columns)
+            for column, enum in enum_by_column.items():
+                column.type = Enum(*enum)
+
+            for column in nullable_columns:
+                column.nullable = True
+
+            apply_types_to_table(table, registry)
             add_foreign_keys_to_table(table)
 
             if casted_rows:
