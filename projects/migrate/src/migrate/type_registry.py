@@ -7,10 +7,11 @@ Rules are checked in order with early return - no complex priority system needed
 from typing import Any
 
 from sqlalchemy import Boolean, Column, Date, DateTime, Enum, String, Uuid
+from sqlalchemy.engine.interfaces import ReflectedColumn
 from sqlalchemy.types import TypeEngine
 
 
-def column_type(column: Column[Any]) -> TypeEngine[Any]:
+def column_type(column: Column[Any] | ReflectedColumn) -> TypeEngine[Any]:
     """Get SQL type for column using direct rule matching.
 
     Rules are checked in order from most specific to least specific.
@@ -23,10 +24,14 @@ def column_type(column: Column[Any]) -> TypeEngine[Any]:
         SQLAlchemy type if match found, None otherwise
 
     """
-    name = column.name
-    name_lower = name.lower()
-
-    data_type = column.type
+    if isinstance(column, Column):
+        name = column.name
+        name_lower = name.lower()
+        data_type = column.type
+    else:
+        name = column["name"]
+        name_lower = name.lower()
+        data_type = column["type"]
 
     # Exact column name overrides (most specific)
     if name in ("ParentFirst", "UseIntervalArithmetics"):
