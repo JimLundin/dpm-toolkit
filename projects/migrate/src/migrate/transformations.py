@@ -119,7 +119,7 @@ def parse_rows(
                 nullable_columns.add(table_column)
                 continue
             # Get type from registry
-            registry_type = registry.column_type(column_name)
+            registry_type = registry.column_type(table_column)
 
             if registry_type is None:
                 casted_value = raw_value
@@ -141,21 +141,17 @@ def parse_rows(
     return casted_rows, enum_by_column, nullable_columns
 
 
-def apply_enums_to_table(table: Table, enum_by_column: EnumByColumn) -> None:
-    """Set enum columns for a table."""
-    for column in table.columns:
-        if column in enum_by_column:
-            column.type = Enum(*enum_by_column[column], create_constraint=True)
+def apply_types_to_table(table: Table, registry: TypeRegistry) -> None:
+    """Apply type corrections from registry to table schema.
 
-
-def mark_nullable_columns_in_table(
-    table: Table,
-    nullable_columns: Columns,
-) -> None:
-    """Set nullable status for columns based on data analysis."""
+    This applies all business logic type transformations after data analysis.
+    """
     for column in table.columns:
-        if column not in nullable_columns:
-            column.nullable = False
+        registry_type = registry.column_type(column)
+        if registry_type is not None:
+            if isinstance(registry_type, Enum):
+                continue
+            column.type = registry_type
 
 
 def add_foreign_key_to_table(

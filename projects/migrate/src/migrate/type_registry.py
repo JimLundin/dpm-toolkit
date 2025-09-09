@@ -8,11 +8,10 @@ consistently during schema reflection.
 from collections.abc import Callable
 from typing import Any
 
-from sqlalchemy import Boolean, Date, DateTime, Enum, Inspector, Uuid
-from sqlalchemy.engine.interfaces import ReflectedColumn
+from sqlalchemy import Boolean, Column, Date, DateTime, Enum, Uuid
 from sqlalchemy.types import TypeEngine
 
-type Matcher = Callable[[str], bool]
+type Matcher = Callable[[Column[Any]], bool]
 
 
 class TypeRegistry:
@@ -32,7 +31,7 @@ class TypeRegistry:
             priority: Rule priority (higher = evaluated first), defaults to 100
 
         """
-        self.register(lambda column_name: column_name == name, sql_type, priority)
+        self.register(lambda column: column.name == name, sql_type, priority)
 
     def suffix(
         self,
@@ -49,7 +48,7 @@ class TypeRegistry:
 
         """
         self.register(
-            lambda column_name: column_name.lower().endswith(suffix.lower()),
+            lambda column: column.name.lower().endswith(suffix.lower()),
             sql_type,
             priority,
         )
@@ -69,7 +68,7 @@ class TypeRegistry:
 
         """
         self.register(
-            lambda column_name: column_name.lower().startswith(prefix.lower()),
+            lambda column: column.name.lower().startswith(prefix.lower()),
             sql_type,
             priority,
         )
@@ -91,11 +90,11 @@ class TypeRegistry:
         self._rules.append((priority, matcher, sql_type))
         # Keep sorted by priority (highest first)
 
-    def column_type(self, column_name: str) -> TypeEngine[Any] | None:
+    def column_type(self, column: Column[Any]) -> TypeEngine[Any] | None:
         """Get SQL type for column name - first match by priority wins.
 
         Args:
-            column_name: Column name to look up
+            column: Column to look up
 
         Returns:
             SQLAlchemy type if match found, None otherwise
@@ -106,36 +105,9 @@ class TypeRegistry:
             key=lambda x: x[0],
             reverse=True,
         ):
-            if matcher(column_name):
+            if matcher(column):
                 return sql_type
         return None
-
-    def list_rules(self) -> list[tuple[int, str, str]]:
-        """List all registered rules for debugging/inspection.
-
-        Returns:
-            List of (priority, matcher_description, sql_type_name) tuples
-
-        """
-        rules: list[tuple[int, str, str]] = []
-        for priority, matcher, sql_type in self._rules:
-            # Try to get a description of the matcher function
-            matcher_desc = getattr(matcher, "__name__", "custom_matcher")
-            type_name = type(sql_type).__name__
-            rules.append((priority, matcher_desc, type_name))
-        return rules
-
-    def genericize(
-        self,
-        _inspector: Inspector,
-        _table_name: str,
-        column: ReflectedColumn,
-    ) -> None:
-        """Genericize for SQLAlchemy compatibility only."""
-        if new_type := self.column_type(column["name"]):
-            column["type"] = new_type
-        else:
-            column["type"] = column["type"].as_generic()
 
 
 def create_default_registry() -> TypeRegistry:
