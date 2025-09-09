@@ -107,6 +107,8 @@ def parse_rows(
     enum_by_column: EnumByColumn = defaultdict(set)
     nullable_columns: Columns = set()
 
+    column_types = {column: registry.column_type(column) for column in table.columns}
+
     for row in rows:
         casted_row = row._asdict()  # pyright: ignore[reportPrivateUsage]
 
@@ -119,7 +121,7 @@ def parse_rows(
                 nullable_columns.add(table_column)
                 continue
             # Get type from registry
-            registry_type = registry.column_type(table_column)
+            registry_type = column_types[table_column]
 
             if registry_type is None:
                 casted_value = raw_value
