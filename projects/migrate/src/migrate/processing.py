@@ -21,7 +21,6 @@ from migrate.transformations import (
     apply_types_to_table,
     parse_rows,
 )
-from migrate.type_registry import TypeRegistry, create_default_registry
 
 type TableWithRows = tuple[Table, CastedRows]
 type TablesWithRows = list[TableWithRows]
@@ -56,7 +55,6 @@ def reflect_schema(source_database: Engine) -> MetaData:
 
 def schema_and_data(
     access_database: Engine,
-    registry: TypeRegistry | None = None,
 ) -> tuple[MetaData, TablesWithRows]:
     """Extract data and schema from a single Access database.
 
@@ -69,9 +67,6 @@ def schema_and_data(
         TablesWithRows: Table rows
 
     """
-    if registry is None:
-        registry = create_default_registry()
-
     schema = reflect_schema(access_database)
 
     tables_with_rows: TablesWithRows = []
@@ -80,11 +75,7 @@ def schema_and_data(
             rows = connection.execute(select(table))
 
             # Process rows with registry-based logic
-            casted_rows, enum_by_column, nullable_columns = parse_rows(
-                table,
-                rows,
-                registry,
-            )
+            casted_rows, enum_by_column, nullable_columns = parse_rows(table, rows)
 
             # Clear indexes to avoid name collisions and save space
             table.indexes.clear()
@@ -99,7 +90,7 @@ def schema_and_data(
             for column in nullable_columns:
                 column.nullable = True
 
-            apply_types_to_table(table, registry)
+            apply_types_to_table(table)
             add_foreign_keys_to_table(table)
 
             if casted_rows:
