@@ -88,7 +88,7 @@ class TypeRegistry:
 
         """
         self._rules.append((priority, matcher, sql_type))
-        # Keep sorted by priority (highest first)
+        self._rules.sort(key=lambda x: x[0], reverse=True)
 
     def column_type(self, column: Column[Any]) -> TypeEngine[Any] | None:
         """Get SQL type for column name - first match by priority wins.
@@ -100,11 +100,7 @@ class TypeRegistry:
             SQLAlchemy type if match found, None otherwise
 
         """
-        for _priority, matcher, sql_type in sorted(
-            self._rules,
-            key=lambda x: x[0],
-            reverse=True,
-        ):
+        for _priority, matcher, sql_type in self._rules:
             if matcher(column):
                 return sql_type
         return None

@@ -93,6 +93,7 @@ def schema_and_data(
                 table.kwargs["sqlite_with_rowid"] = False
 
             # Apply all transformations after data analysis
+            print(enum_by_column)
             for column, enum in enum_by_column.items():
                 column.type = Enum(*enum)
 
