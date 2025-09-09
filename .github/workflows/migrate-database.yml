@@ -1,0 +1,71 @@
+name: Migrate Database
+
+env:
+  ACCESS_ENGINE_INSTALLER: accessdatabaseengine_X64.exe
+  ACCESS_ENGINE_URL: https://download.microsoft.com/download/3/5/C/35C84C36-661A-44E6-9324-8786B8DBE231/accessdatabaseengine_X64.exe
+
+on:
+  workflow_call:
+    inputs:
+      source_artifact_name:
+        description: "Name of artifact containing source database files"
+        required: true
+        type: string
+    outputs:
+      artifact_name:
+        description: "The name of the uploaded artifact containing the migrated SQLite database"
+        value: ${{ inputs.source_artifact_name }}-sqlite
+
+jobs:
+  migrate:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install python
+        run: uv python install
+
+      - name: Install project
+        run: uv sync --extra migrate
+
+      - name: Cache Access Database Engine
+        id: cache-access-engine
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.ACCESS_ENGINE_INSTALLER }}
+          key: ${{ env.ACCESS_ENGINE_INSTALLER }}
+
+      - name: Download Microsoft Access Database Engine
+        if: steps.cache-access-engine.outputs.cache-hit != 'true'
+        run: |
+          curl -L "${{ env.ACCESS_ENGINE_URL }}" -o "${{ env.ACCESS_ENGINE_INSTALLER }}"
+
+      - name: Install Microsoft Access Database Engine
+        shell: powershell
+        run: |
+          Start-Process -FilePath "${{ env.ACCESS_ENGINE_INSTALLER }}" -ArgumentList "/quiet" -Wait
+
+      - name: Download source database files
+        uses: actions/download-artifact@v5
+        with:
+          name: ${{ inputs.source_artifact_name }}
+          path: database-files/
+
+      - name: Convert to SQLite database
+        run: |
+          ACCDB_FILE=$(find database-files -name "*.accdb" -type f | head -1)
+          SQLITE_FILE="${{ inputs.source_artifact_name }}.sqlite"
+          uv run dpm-toolkit migrate "$ACCDB_FILE" "$SQLITE_FILE"
+
+      - name: Upload SQLite database artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.source_artifact_name }}-sqlite
+          path: ${{ inputs.source_artifact_name }}.sqlite
