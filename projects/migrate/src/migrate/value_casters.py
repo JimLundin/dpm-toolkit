@@ -80,24 +80,29 @@ def cast_datetime(raw_value: str) -> datetime | str:
 def cast_value_for_type(sql_type: TypeEngine[Field], raw_value: Field) -> Field:
     """Cast a raw value to match the SQLAlchemy type.
 
-    Simple type-based casting without complex registry system.
+    Uses direct type dispatch - no looping or registry creation overhead.
+
+    Args:
+        sql_type: SQLAlchemy type to cast to
+        raw_value: Raw value to cast
+
+    Returns:
+        Casted value or original value if no caster found
+
     """
+    if not isinstance(raw_value, str):
+        return raw_value
+
     # Boolean casting
-    if isinstance(sql_type, Boolean) and isinstance(raw_value, str):
+    if isinstance(sql_type, Boolean):
         return cast_boolean(raw_value)
 
     # Date casting
-    if isinstance(sql_type, Date) and isinstance(raw_value, str):
+    if isinstance(sql_type, Date):
         return cast_date(raw_value)
 
     # DateTime casting
-    if isinstance(sql_type, DateTime) and isinstance(raw_value, str):
+    if isinstance(sql_type, DateTime):
         return cast_datetime(raw_value)
 
-    # Fallback: try SQLAlchemy's built-in conversion
-    try:
-        python_type = sql_type.python_type
-        return python_type(raw_value)
-    except (AttributeError, ValueError, TypeError):
-        # Return original value if casting fails
-        return raw_value
+    return raw_value
