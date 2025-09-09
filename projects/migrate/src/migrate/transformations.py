@@ -13,7 +13,7 @@ from sqlalchemy import (
 )
 
 from migrate.type_registry import column_type
-from migrate.value_casters import Field, cast_value_for_type
+from migrate.value_casters import Field, value_caster
 
 type CastedRow = dict[str, Field]
 type CastedRows = list[CastedRow]
@@ -30,8 +30,11 @@ def parse_rows(
     enum_by_column: EnumByColumn = defaultdict(set)
     nullable_columns: Columns = set()
 
-    # Pre-compute column types for performance (don't lookup per row)
-    column_types = {column: column_type(column) for column in table.columns}
+    # Pre-compute column types and casters for performance (don't lookup per row)
+    type_by_column = {column: column_type(column) for column in table.columns}
+    caster_by_column = {
+        column: value_caster(type_by_column[column]) for column in table.columns
+    }
 
     for row in rows:
         casted_row = row._asdict()  # pyright: ignore[reportPrivateUsage]
@@ -45,7 +48,7 @@ def parse_rows(
                 continue
 
             # Get pre-computed type for this column
-            registry_type = column_types[table_column]
+            registry_type = type_by_column[table_column]
 
             if isinstance(registry_type, Enum):
                 # This is an enum candidate - collect raw values for later analysis
@@ -54,8 +57,8 @@ def parse_rows(
                 # Keep raw value for enum candidates
                 continue
 
-            # Cast using the value caster system directly
-            casted_row[column_name] = cast_value_for_type(registry_type, raw_value)
+            # Cast using pre-computed caster function
+            casted_row[column_name] = caster_by_column[table_column](raw_value)
 
         casted_rows.append(casted_row)
 
