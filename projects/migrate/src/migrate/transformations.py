@@ -35,7 +35,7 @@ def genericize(
     """Genericize for SQLAlchemy compatibility only."""
     registry_type = column_type(column)
     if isinstance(registry_type, Enum):
-        return
+        column["type"] = column["type"].as_generic()
     column["type"] = registry_type.as_generic()
 
 
