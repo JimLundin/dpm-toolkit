@@ -6,20 +6,17 @@ to their appropriate Python types based on SQLAlchemy type information.
 
 from collections.abc import Callable
 from datetime import date, datetime
+from uuid import UUID
 
-from sqlalchemy import Boolean, Date, DateTime
+from sqlalchemy import Boolean, Date, DateTime, Uuid
 from sqlalchemy.types import TypeEngine
 
 # Type definition - duplicated to avoid circular import
-Field = str | float | int | bool | date | datetime | None
+Field = str | float | int | bool | date | datetime | UUID | None
 
 
 def cast_boolean(raw_value: Field) -> bool:
     """Cast value to boolean with database-friendly logic and fallbacks."""
-    if isinstance(raw_value, bool):
-        return raw_value
-    if isinstance(raw_value, int):
-        return raw_value != 0
     if isinstance(raw_value, str):
         return raw_value.lower() in ("1", "true", "yes", "y")
     # Fallback for other types
@@ -106,6 +103,32 @@ def cast_datetime(raw_value: Field) -> datetime:
     raise TypeError(msg)
 
 
+def cast_uuid(raw_value: Field) -> UUID:
+    """Cast value to UUID with validation."""
+    if isinstance(raw_value, UUID):
+        return raw_value
+    if isinstance(raw_value, str):
+        try:
+            return UUID(raw_value)
+        except ValueError:
+            pass
+        # Try with common variations
+        # Remove hyphens and try again
+        try:
+            clean_value = raw_value.replace("-", "")
+            return UUID(clean_value)
+        except ValueError:
+            pass
+
+        # If all attempts fail, raise error
+        msg = f"Cannot convert '{raw_value}' to UUID"
+        raise ValueError(msg)
+
+    # For non-string, non-UUID types, raise error
+    msg = f"Cannot convert {type(raw_value).__name__} to UUID: {raw_value}"
+    raise TypeError(msg)
+
+
 def value_caster(sql_type: TypeEngine[Field]) -> Callable[[Field], Field]:
     """Get casting function for a SQLAlchemy type.
 
@@ -126,4 +149,6 @@ def value_caster(sql_type: TypeEngine[Field]) -> Callable[[Field], Field]:
         return cast_date
     if isinstance(sql_type, DateTime):
         return cast_datetime
+    if isinstance(sql_type, Uuid):
+        return cast_uuid
     return lambda raw_value: raw_value
