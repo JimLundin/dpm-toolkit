@@ -35,8 +35,11 @@ def genericize(
     """Genericize for SQLAlchemy compatibility only."""
     registry_type = column_type(column)
     if isinstance(registry_type, Enum):
+        # Don't transform enum types during reflection - keep original
         column["type"] = column["type"].as_generic()
-    column["type"] = registry_type.as_generic()
+    else:
+        # Only transform non-enum types
+        column["type"] = registry_type.as_generic()
 
 
 def reflect_schema(source_database: Engine) -> MetaData:
