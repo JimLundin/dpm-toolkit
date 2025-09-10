@@ -15,10 +15,10 @@ from sqlalchemy import (
 from migrate.transformations import (
     CastedRows,
     add_foreign_keys_to_table,
-    apply_types_to_table,
     parse_rows,
     reflect_schema,
 )
+from migrate.type_registry import column_type
 
 type TableWithRows = tuple[Table, CastedRows]
 type TablesWithRows = list[TableWithRows]
@@ -66,7 +66,13 @@ def schema_and_data(access_database: Engine) -> tuple[MetaData, TablesWithRows]:
             for column in table.columns:
                 column.nullable = column in nullable_columns
 
-            apply_types_to_table(table)
+            for column in table.columns:
+                # Skip columns that already have Enum types (set by enum analysis)
+                if isinstance(column.type, Enum):
+                    continue
+
+                column.type = column_type(column)
+
             add_foreign_keys_to_table(table)
 
             if casted_rows:

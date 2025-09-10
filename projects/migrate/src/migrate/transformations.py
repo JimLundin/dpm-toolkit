@@ -94,18 +94,6 @@ def parse_rows(
     return casted_rows, enum_by_column, nullable_columns
 
 
-def apply_types_to_table(table: Table) -> None:
-    """Apply type corrections from registry to table schema.
-
-    This applies all business logic type transformations after data analysis.
-    """
-    for column in table.columns:
-        registry_type = column_type(column)
-        if isinstance(registry_type, Enum):
-            continue
-        column.type = registry_type
-
-
 def add_foreign_key_to_table(
     table: Table,
     source_column_name: str,
