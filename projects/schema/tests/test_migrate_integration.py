@@ -6,7 +6,16 @@ from pathlib import Path
 from sqlite3 import connect
 
 import pytest
-from sqlalchemy import Column, Enum, Integer, MetaData, String, Table, create_engine
+from sqlalchemy import (
+    Column,
+    Enum,
+    Integer,
+    MetaData,
+    String,
+    Table,
+    create_engine,
+    inspect,
+)
 
 from schema.main import sqlite_to_sqlalchemy_schema
 
@@ -28,13 +37,16 @@ def migrate_output_database() -> str:
         metadata,
         Column("ID", Integer, primary_key=True),
         Column(
-            "StatusType", Enum("active", "inactive", "pending", create_constraint=True),
+            "StatusType",
+            Enum("active", "inactive", "pending", create_constraint=True),
         ),
         Column(
-            "UserStatus", Enum("new", "verified", "suspended", create_constraint=True),
+            "UserStatus",
+            Enum("new", "verified", "suspended", create_constraint=True),
         ),
         Column(
-            "DirectionSign", Enum("up", "down", "left", "right", create_constraint=True),
+            "DirectionSign",
+            Enum("up", "down", "left", "right", create_constraint=True),
         ),
         Column("ErrorCode", Enum("E001", "E002", "E003", create_constraint=True)),
         Column("Description", String(100)),  # Not an enum
@@ -46,7 +58,8 @@ def migrate_output_database() -> str:
         metadata,
         Column("LogID", Integer, primary_key=True),
         Column(
-            "ChangeType", Enum("insert", "update", "delete", create_constraint=True),
+            "ChangeType",
+            Enum("insert", "update", "delete", create_constraint=True),
         ),
         Column(
             "Severity",
@@ -109,16 +122,14 @@ def migrate_output_database() -> str:
 
 def test_migrate_output_has_check_constraints(migrate_output_db: str) -> None:
     """Verify that our mock migrate output actually creates CHECK constraints."""
-    from sqlalchemy import inspect
-
     engine = create_engine(f"sqlite:///{migrate_output_db}")
     inspector = inspect(engine)
 
     # Check TestData table constraints
     test_data_constraints = inspector.get_check_constraints("TestData")
-    assert len(test_data_constraints) == 4, (
-        f"Expected 4 constraints, got {len(test_data_constraints)}"
-    )
+    assert (
+        len(test_data_constraints) == 4
+    ), f"Expected 4 constraints, got {len(test_data_constraints)}"
 
     # Verify specific constraint content
     constraint_texts = [c["sqltext"] for c in test_data_constraints]
@@ -130,15 +141,15 @@ def test_migrate_output_has_check_constraints(migrate_output_db: str) -> None:
     ]
 
     for expected in expected_constraints:
-        assert any(expected in text for text in constraint_texts), (
-            f"Missing constraint: {expected}"
-        )
+        assert any(
+            expected in text for text in constraint_texts
+        ), f"Missing constraint: {expected}"
 
     # Check StatusLog table constraints
     status_log_constraints = inspector.get_check_constraints("StatusLog")
-    assert len(status_log_constraints) == 2, (
-        f"Expected 2 constraints, got {len(status_log_constraints)}"
-    )
+    assert (
+        len(status_log_constraints) == 2
+    ), f"Expected 2 constraints, got {len(status_log_constraints)}"
 
 
 def test_schema_generation_from_migrate_output(migrate_output_db: str) -> None:
@@ -160,9 +171,9 @@ def test_schema_generation_from_migrate_output(migrate_output_db: str) -> None:
     ]
 
     for expected_literal in expected_literals:
-        assert expected_literal in schema_code, (
-            f"Missing literal type: {expected_literal}"
-        )
+        assert (
+            expected_literal in schema_code
+        ), f"Missing literal type: {expected_literal}"
 
     # Verify non-enum columns are regular types
     assert "description: Mapped[str | None]" in schema_code
