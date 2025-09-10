@@ -60,7 +60,7 @@ def schema_and_data(access_database: Engine) -> tuple[MetaData, TablesWithRows]:
 
             # Apply all transformations after data analysis
             for column, enum in enum_by_column.items():
-                column.type = Enum(*enum)
+                column.type = Enum(*enum, create_constraint=True)
 
             for column in nullable_columns:
                 column.nullable = True
