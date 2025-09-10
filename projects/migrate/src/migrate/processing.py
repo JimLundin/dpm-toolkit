@@ -62,8 +62,9 @@ def schema_and_data(access_database: Engine) -> tuple[MetaData, TablesWithRows]:
             for column, enum in enum_by_column.items():
                 column.type = Enum(*enum, create_constraint=True)
 
-            for column in nullable_columns:
-                column.nullable = True
+            # Set columns that never had nulls to non-nullable
+            for column in table.columns:
+                column.nullable = column in nullable_columns
 
             apply_types_to_table(table)
             add_foreign_keys_to_table(table)
