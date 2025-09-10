@@ -5,18 +5,20 @@ from pathlib import Path
 from sqlalchemy import (
     Engine,
     Enum,
+    Inspector,
     MetaData,
     Table,
     create_engine,
+    event,
     insert,
     select,
 )
+from sqlalchemy.engine.interfaces import ReflectedColumn
 
 from migrate.transformations import (
     CastedRows,
     add_foreign_keys_to_table,
     parse_rows,
-    reflect_schema,
 )
 from migrate.type_registry import column_type
 
@@ -29,6 +31,22 @@ def access(access_location: Path) -> Engine:
     driver = "{Microsoft Access Driver (*.mdb, *.accdb)}"
     connection_string = f"DRIVER={driver};DBQ={access_location}"
     return create_engine(f"access+pyodbc:///?odbc_connect={connection_string}")
+
+
+def genericize(_inspector: Inspector, _table: Table, column: ReflectedColumn) -> None:
+    """Genericize for SQLAlchemy compatibility only."""
+    column["type"] = column_type(column).as_generic()
+
+
+def reflect_schema(source_database: Engine) -> MetaData:
+    """Reflect a database schema with basic SQLAlchemy compatibility.
+
+    No business logic type transformations - those are applied after data analysis.
+    """
+    schema = MetaData()
+    event.listen(schema, "column_reflect", genericize)
+    schema.reflect(bind=source_database)
+    return schema
 
 
 def schema_and_data(access_database: Engine) -> tuple[MetaData, TablesWithRows]:
@@ -65,13 +83,6 @@ def schema_and_data(access_database: Engine) -> tuple[MetaData, TablesWithRows]:
             # Set columns that never had nulls to non-nullable
             for column in table.columns:
                 column.nullable = column in nullable_columns
-
-            for column in table.columns:
-                # Skip columns that already have Enum types (set by enum analysis)
-                if isinstance(column.type, Enum):
-                    continue
-
-                column.type = column_type(column)
 
             add_foreign_keys_to_table(table)
 
