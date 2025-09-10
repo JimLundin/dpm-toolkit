@@ -4,14 +4,9 @@ from collections import defaultdict
 from collections.abc import Iterator
 from typing import Any
 
-from sqlalchemy import (
-    Column,
-    Enum,
-    ForeignKey,
-    Row,
-    Table,
-)
+from sqlalchemy import Column, ForeignKey, Row, Table
 
+from migrate.type_registry import enum_type
 from migrate.value_casters import Field, value_caster
 
 type CastedRow = dict[str, Field]
@@ -43,7 +38,7 @@ def parse_rows(
                 continue
 
             # Get pre-computed type for this column
-            if isinstance(table_column.type, Enum):
+            if enum_type(table_column):
                 # This is an enum candidate - collect raw values for later analysis
                 enum_by_column[table_column].add(raw_value)
                 continue
