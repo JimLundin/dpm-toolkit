@@ -40,11 +40,13 @@ def parse_rows(
 
             if raw_value is None:
                 nullable_columns.add(table_column)
+                continue
 
             # Get pre-computed type for this column
-            if isinstance(table_column, Enum):
+            if isinstance(table_column.type, Enum):
                 # This is an enum candidate - collect raw values for later analysis
                 enum_by_column[table_column].add(raw_value)
+                continue
 
             # Cast using pre-computed caster function
             casted_row[column_name] = caster_by_column[table_column](raw_value)
