@@ -2,7 +2,7 @@
 
 from sqlite3 import Connection
 
-from sqlalchemy import Engine, create_engine
+from sqlalchemy import Engine, Enum, create_engine
 
 from migrate.processing import load_data_to_database, schema_and_data
 
