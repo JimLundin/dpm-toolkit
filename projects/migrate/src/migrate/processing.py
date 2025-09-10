@@ -2,15 +2,22 @@
 
 from pathlib import Path
 
-from sqlalchemy import Engine, MetaData, Table, create_engine, event, insert, select
+from sqlalchemy import (
+    Engine,
+    Enum,
+    MetaData,
+    Table,
+    create_engine,
+    insert,
+    select,
+)
 
 from migrate.transformations import (
     CastedRows,
     add_foreign_keys_to_table,
-    apply_enums_to_table,
-    genericize,
-    mark_nullable_columns_in_table,
+    apply_types_to_table,
     parse_rows,
+    reflect_schema,
 )
 
 type TableWithRows = tuple[Table, CastedRows]
@@ -22,14 +29,6 @@ def access(access_location: Path) -> Engine:
     driver = "{Microsoft Access Driver (*.mdb, *.accdb)}"
     connection_string = f"DRIVER={driver};DBQ={access_location}"
     return create_engine(f"access+pyodbc:///?odbc_connect={connection_string}")
-
-
-def reflect_schema(source_database: Engine) -> MetaData:
-    """Reflect a database schema."""
-    schema = MetaData()
-    event.listen(schema, "column_reflect", genericize)
-    schema.reflect(bind=source_database)
-    return schema
 
 
 def schema_and_data(access_database: Engine) -> tuple[MetaData, TablesWithRows]:
@@ -49,7 +48,9 @@ def schema_and_data(access_database: Engine) -> tuple[MetaData, TablesWithRows]:
     with access_database.begin() as connection:
         for table in schema.tables.values():
             rows = connection.execute(select(table))
-            casted_rows, enum_by_column_name, nullable_column_names = parse_rows(rows)
+
+            # Process rows with registry-based logic
+            casted_rows, enum_by_column, nullable_columns = parse_rows(table, rows)
 
             # Clear indexes to avoid name collisions and save space
             table.indexes.clear()
@@ -57,8 +58,15 @@ def schema_and_data(access_database: Engine) -> tuple[MetaData, TablesWithRows]:
             if table.primary_key:
                 table.kwargs["sqlite_with_rowid"] = False
 
-            apply_enums_to_table(table, enum_by_column_name)
-            mark_nullable_columns_in_table(table, nullable_column_names)
+            # Apply all transformations after data analysis
+            for column, enum in enum_by_column.items():
+                column.type = Enum(*enum, create_constraint=True)
+
+            # Set columns that never had nulls to non-nullable
+            for column in table.columns:
+                column.nullable = column in nullable_columns
+
+            apply_types_to_table(table)
             add_foreign_keys_to_table(table)
 
             if casted_rows:
