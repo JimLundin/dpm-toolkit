@@ -77,8 +77,13 @@ def schema_and_data(access_database: Engine) -> tuple[MetaData, TablesWithRows]:
                 table.kwargs["sqlite_with_rowid"] = False
 
             # Apply all transformations after data analysis
-            for column, enum in enum_by_column.items():
-                column.type = Enum(*enum, create_constraint=True)
+            if enum_by_column:
+                print(f"DEBUG: Applying {len(enum_by_column)} enums to table '{table.name}':")
+                for column, enum in enum_by_column.items():
+                    print(f"  Setting {column.name} to Enum({sorted(enum)}, create_constraint=True)")
+                    column.type = Enum(*enum, create_constraint=True)
+            else:
+                print(f"DEBUG: No enums to apply to table '{table.name}'")
 
             # Set columns that never had nulls to non-nullable
             for column in table.columns:
