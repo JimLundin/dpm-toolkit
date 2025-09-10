@@ -35,7 +35,7 @@ def access(access_location: Path) -> Engine:
 
 def genericize(_inspector: Inspector, _table: Table, column: ReflectedColumn) -> None:
     """Genericize for SQLAlchemy compatibility only."""
-    column["type"] = column_type(column).as_generic()
+    column["type"] = column_type(column) or column["type"].as_generic()
 
 
 def reflect_schema(source_database: Engine) -> MetaData:
