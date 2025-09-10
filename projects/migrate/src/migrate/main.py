@@ -36,6 +36,23 @@ def access_to_sqlite(source_database: Engine) -> Connection:
         print("DEBUG: Creating schema with NO Enum types")
     
     schema.create_all(sqlite_database)
+    
+    # DEBUG: Check what constraints were actually created
+    from sqlalchemy import inspect
+    inspector = inspect(sqlite_database)
+    
+    total_created_constraints = 0
+    for table_name in schema.tables.keys():
+        try:
+            constraints = inspector.get_check_constraints(table_name)
+            if constraints:
+                total_created_constraints += len(constraints)
+                print(f"DEBUG: {table_name} created {len(constraints)} constraints")
+        except:
+            pass
+    
+    print(f"DEBUG: Total CHECK constraints created in SQLite: {total_created_constraints}")
+    
     load_data_to_database(sqlite_database, tables_with_rows)
 
     return sqlite_database.raw_connection().connection
