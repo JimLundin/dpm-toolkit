@@ -221,4 +221,3 @@ def test_missing_constraint_sqltext() -> None:
     """Test handling of constraints without sqltext."""
     # This is harder to test directly since it depends on SQLAlchemy internals,
     # but the error handling in main.py should prevent issues
-    pass

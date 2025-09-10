@@ -7,9 +7,11 @@ def _parse_enum_values_from_in_clause(constraint_text: str) -> list[str] | None:
     """Extract enum values from an IN clause constraint.
 
     Handles patterns like: column IN ('value1', 'value2', 'value3')
+    Also handles quoted column names: "column" IN ('value1', 'value2')
     """
-    # Pattern for IN clause: column IN ('val1', 'val2', 'val3')
-    in_pattern = r"\w+\s+IN\s*\(\s*([^)]+)\s*\)"
+    # Pattern for IN clause: supports quoted and unquoted column names
+    # Matches: column_name IN (...) or "column_name" IN (...) or 'column_name' IN (...)
+    in_pattern = r"(?:[\"'`]?\w+[\"'`]?)\s+IN\s*\(\s*([^)]+)\s*\)"
     match = re.search(in_pattern, constraint_text, re.IGNORECASE)
 
     if match:
@@ -26,9 +28,11 @@ def _parse_enum_values_from_or_clause(constraint_text: str) -> list[str] | None:
     """Extract enum values from an OR clause constraint.
 
     Handles patterns like: column = 'value1' OR column = 'value2' OR column = 'value3'
+    Also handles quoted column names: "column" = 'value1' OR "column" = 'value2'
     """
-    # Find all occurrences of column = 'value'
-    return re.findall(r"\w+\s*=\s*\'([^\']+)\'", constraint_text, re.IGNORECASE)
+    # Find all occurrences of column = 'value' with optional column quoting
+    pattern = r"(?:[\"'`]?\w+[\"'`]?)\s*=\s*\'([^\']+)\'"
+    return re.findall(pattern, constraint_text, re.IGNORECASE)
 
 
 def _parse_enum_values_from_constraint(constraint_text: str) -> list[str] | None:
