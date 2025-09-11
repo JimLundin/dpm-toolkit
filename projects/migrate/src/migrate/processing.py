@@ -14,6 +14,7 @@ from sqlalchemy import (
     select,
 )
 from sqlalchemy.engine.interfaces import ReflectedColumn
+from sqlalchemy.schema import CheckConstraint
 
 from migrate.transformations import (
     CastedRows,
@@ -77,9 +78,10 @@ def schema_and_data(access_database: Engine) -> tuple[MetaData, TablesWithRows]:
                 table.kwargs["sqlite_with_rowid"] = False
 
             # Apply all transformations after data analysis
-            if enum_by_column:
-                for column, enum in enum_by_column.items():
-                    column.type = Enum(*enum, create_constraint=True)
+            for column, enum in enum_by_column.items():
+                column.type = Enum(*enum)
+                constraint = CheckConstraint(column.in_(enum))
+                table.append_constraint(constraint)
 
             # Set columns that never had nulls to non-nullable
             for column in table.columns:
