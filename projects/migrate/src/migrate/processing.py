@@ -4,7 +4,6 @@ from pathlib import Path
 
 from sqlalchemy import (
     Engine,
-    Enum,
     Inspector,
     MetaData,
     Table,
@@ -79,9 +78,7 @@ def schema_and_data(access_database: Engine) -> tuple[MetaData, TablesWithRows]:
 
             # Apply all transformations after data analysis
             for column, enum in enum_by_column.items():
-                column.type = Enum(*enum)
-                constraint = CheckConstraint(column.in_(enum))
-                table.append_constraint(constraint)
+                table.append_constraint(CheckConstraint(column.in_(enum)))
 
             # Set columns that never had nulls to non-nullable
             for column in table.columns:
