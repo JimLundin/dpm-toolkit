@@ -24,7 +24,6 @@ def parse_rows(
     enum_by_column: EnumByColumn = defaultdict(set)
     nullable_columns: Columns = set()
 
-
     # Pre-compute column types and casters for performance (don't lookup per row)
     caster_by_column = {column: value_caster(column.type) for column in table.columns}
 
@@ -49,7 +48,6 @@ def parse_rows(
             casted_row[column_name] = caster_by_column[table_column](raw_value)
 
         casted_rows.append(casted_row)
-
 
     return casted_rows, enum_by_column, nullable_columns
 
