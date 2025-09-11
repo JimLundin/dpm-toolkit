@@ -91,3 +91,26 @@ jobs:
           echo "::group::Ty (beta) - Scrape Module"
           uv run ty check projects/scrape/src/ || echo "Ty found issues in scrape/ (beta tool)"
           echo "::endgroup::"
+
+      - name: Run Pyrefly type checking (beta)
+        continue-on-error: true # pyrefly is in beta
+        run: |
+          echo "::group::Pyrefly (beta) - Main CLI"
+          uv run pyrefly src/ || echo "Pyrefly found issues in src/ (beta tool)"
+          echo "::endgroup::"
+
+          echo "::group::Pyrefly (beta) - Archive Module"
+          uv run pyrefly projects/archive/src/ || echo "Pyrefly found issues in archive/ (beta tool)"
+          echo "::endgroup::"
+
+          echo "::group::Pyrefly (beta) - Compare Module"
+          uv run pyrefly projects/compare/src/ || echo "Pyrefly found issues in compare/ (beta tool)"
+          echo "::endgroup::"
+
+          echo "::group::Pyrefly (beta) - Schema Module"
+          uv run pyrefly projects/schema/src/ || echo "Pyrefly found issues in schema/ (beta tool)"
+          echo "::endgroup::"
+
+          echo "::group::Pyrefly (beta) - Scrape Module"
+          uv run pyrefly projects/scrape/src/ || echo "Pyrefly found issues in scrape/ (beta tool)"
+          echo "::endgroup::"
