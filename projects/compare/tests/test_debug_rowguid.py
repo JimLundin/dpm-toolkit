@@ -39,7 +39,9 @@ def test_simple_rowguid_different_pk() -> None:
     print("Changes found:")
     for i, change in enumerate(changes):
         print(
-            f"  {i}: old={dict(change.old) if change.old else None}, new={dict(change.new) if change.new else None}",
+            f"""  {i}:
+            old={dict(change.old) if change.old else None},
+            new={dict(change.new) if change.new else None}""",
         )
 
     modified = [c for c in changes if c.old and c.new]
