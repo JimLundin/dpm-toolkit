@@ -74,7 +74,7 @@ def validate_database_location(database_location: Path, *, exists: bool = True) 
     if exists != database_location.exists():
         print_error(
             f"Database file "
-            f"{"does not exist" if exists else "already exists"}: "
+            f"{'does not exist' if exists else 'already exists'}: "
             f"{database_location}",
         )
         raise Exit(1)
