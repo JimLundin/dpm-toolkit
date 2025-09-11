@@ -181,7 +181,7 @@ def test_dora_module_case_with_actual_change() -> None:
         assert (
             change.old["RowGUID"]
             == change.new["RowGUID"]
-            == "c0a78332d1ffb8448495194dfce5efe2"
+            == "c0a78332d1ffb8448495194df"
         )
         assert change.old["ModuleVID"] == 390
         assert change.new["ModuleVID"] == 391  # Different PK

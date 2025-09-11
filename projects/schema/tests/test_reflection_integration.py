@@ -180,9 +180,7 @@ def test_edge_case_constraints() -> None:
             id INTEGER PRIMARY KEY,
             single_value TEXT CHECK (single_value = 'only'),
             empty_check TEXT,
-            complex_enum TEXT CHECK (
-                complex_enum IN ('multi-word', 'with_underscore', 'with space')
-            ),
+            enum TEXT CHECK (enum IN ('da-sh', 'under_score', 'spa ce')),
             numeric_strings TEXT CHECK (numeric_strings IN ('1', '2', '3'))
         )
     """,
@@ -199,7 +197,7 @@ def test_edge_case_constraints() -> None:
         assert 'Literal["only"]' in schema_code
 
         # Complex enum values should be handled
-        assert 'Literal["multi-word", "with space", "with_underscore"]' in schema_code
+        assert 'Literal["da-sh", "spa ce", "under_score"]' in schema_code
 
         # Numeric strings should be handled
         assert 'Literal["1", "2", "3"]' in schema_code
