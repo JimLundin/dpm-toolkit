@@ -44,7 +44,6 @@ def test_null_rowguid_composite_sort_order() -> None:
             ],
         )
         old_conn.commit()
-        old_conn.close()
 
         # Create new database
         new_conn = connect(new_db)
@@ -90,7 +89,7 @@ def test_null_rowguid_composite_sort_order() -> None:
                     "David Wilson",
                     "active",
                 ),  # status changed (NULL RowGUID)
-                (5, "guid-eve", "eve@test.com", "Eve Davis", "inactive"),  # status changed
+                (5, "guid-eve", "eve@test.com", "Eve Davis", "inactive"),  # changed
                 (
                     6,
                     None,
@@ -101,7 +100,6 @@ def test_null_rowguid_composite_sort_order() -> None:
             ],
         )
         new_conn.commit()
-        new_conn.close()
 
         changes = next(iter(compare_databases(old_db, new_db))).body.rows.changes
         changes = list(changes)
