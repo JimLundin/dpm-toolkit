@@ -3,9 +3,47 @@ name: Run Type Checking
 on:
   workflow_call:
 
+env:
+  ACCESS_ENGINE_INSTALLER: accessdatabaseengine_X64.exe
+  ACCESS_ENGINE_URL: https://download.microsoft.com/download/3/5/C/35C84C36-661A-44E6-9324-8786B8DBE231/accessdatabaseengine_X64.exe
+  ACCESS_ENGINE_SHA256: "04e96c9f1a1f7d251a88aececf1dc10ff65950392787427c00814a43308003de"
+
 jobs:
   type-check:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        type-checker:
+          - name: MyPy
+            command: mypy
+            beta: false
+          - name: Pyright
+            command: pyright
+            beta: false
+          - name: Ty
+            command: ty check
+            beta: true
+          - name: Pyrefly
+            command: pyrefly
+            beta: true
+        project:
+          - name: Main CLI
+            path: src/
+          - name: Archive Module
+            path: projects/archive/src/
+          - name: Compare Module
+            path: projects/compare/src/
+          - name: Schema Module
+            path: projects/schema/src/
+          - name: Scrape Module
+            path: projects/scrape/src/
+          - name: Migrate Module
+            path: projects/migrate/src/
 
     steps:
       - name: Checkout repository
@@ -19,98 +57,45 @@ jobs:
       - name: Set up Python
         run: uv python install
 
+      - name: Cache Access Database Engine
+        id: cache-access-engine
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.ACCESS_ENGINE_INSTALLER }}
+          key: access-engine-${{ env.ACCESS_ENGINE_SHA256 }}
+
+      - name: Download Access Database Engine
+        if: steps.cache-access-engine.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          curl -L --fail --retry 3 --retry-delay 5 "${{ env.ACCESS_ENGINE_URL }}" -o "${{ env.ACCESS_ENGINE_INSTALLER }}"
+
+      - name: Verify file hash
+        if: steps.cache-access-engine.outputs.cache-hit != 'true'
+        shell: powershell
+        run: |
+          $expectedHash = "${{ env.ACCESS_ENGINE_SHA256 }}"
+          $actualHash = (Get-FileHash "${{ env.ACCESS_ENGINE_INSTALLER }}" -Algorithm SHA256).Hash.ToLower()
+
+          if ($actualHash -ne $expectedHash.ToLower()) {
+            Write-Error "Hash mismatch. Expected: $expectedHash, Got: $actualHash"
+            exit 1
+          }
+
+      - name: Install Microsoft Access Database Engine
+        shell: powershell
+        run: |
+          Start-Process -FilePath "${{ env.ACCESS_ENGINE_INSTALLER }}" -ArgumentList "/quiet" -Wait
+
       - name: Install dependencies
         run: |
           uv sync --dev
-          # Install only necessary submodule dependencies for type checking
-          uv sync --extra compare --extra schema --extra scrape
+          # Install all dependencies including Windows-specific migrate
+          uv sync --extra compare --extra schema --extra scrape --extra migrate
 
-      - name: Run MyPy type checking
+      - name: Run ${{ matrix.type-checker.name }} on ${{ matrix.project.name }}
+        continue-on-error: ${{ matrix.type-checker.beta }}
         run: |
-          echo "::group::MyPy - Main CLI"
-          uv run mypy src/
-          echo "::endgroup::"
-
-          echo "::group::MyPy - Archive Module"
-          uv run mypy projects/archive/src/
-          echo "::endgroup::"
-
-          echo "::group::MyPy - Compare Module"
-          uv run mypy projects/compare/src/
-          echo "::endgroup::"
-
-          echo "::group::MyPy - Schema Module"
-          uv run mypy projects/schema/src/
-          echo "::endgroup::"
-
-          echo "::group::MyPy - Scrape Module"
-          uv run mypy projects/scrape/src/
-          echo "::endgroup::"
-
-      - name: Run Pyright type checking
-        run: |
-          echo "::group::Pyright - Main CLI"
-          uv run pyright src/
-          echo "::endgroup::"
-
-          echo "::group::Pyright - Archive Module"
-          uv run pyright projects/archive/src/
-          echo "::endgroup::"
-
-          echo "::group::Pyright - Compare Module"
-          uv run pyright projects/compare/src/
-          echo "::endgroup::"
-
-          echo "::group::Pyright - Schema Module"
-          uv run pyright projects/schema/src/
-          echo "::endgroup::"
-
-          echo "::group::Pyright - Scrape Module"
-          uv run pyright projects/scrape/src/
-          echo "::endgroup::"
-
-      - name: Run Ty type checking (beta)
-        continue-on-error: true # ty is in beta
-        run: |
-          echo "::group::Ty (beta) - Main CLI"
-          uv run ty check src/
-          echo "::endgroup::"
-
-          echo "::group::Ty (beta) - Archive Module"
-          uv run ty check projects/archive/src/
-          echo "::endgroup::"
-
-          echo "::group::Ty (beta) - Compare Module"
-          uv run ty check projects/compare/src/
-          echo "::endgroup::"
-
-          echo "::group::Ty (beta) - Schema Module"
-          uv run ty check projects/schema/src/
-          echo "::endgroup::"
-
-          echo "::group::Ty (beta) - Scrape Module"
-          uv run ty check projects/scrape/src/
-          echo "::endgroup::"
-
-      - name: Run Pyrefly type checking (beta)
-        continue-on-error: true # pyrefly is in beta
-        run: |
-          echo "::group::Pyrefly (beta) - Main CLI"
-          uv run pyrefly src/
-          echo "::endgroup::"
-
-          echo "::group::Pyrefly (beta) - Archive Module"
-          uv run pyrefly projects/archive/src/
-          echo "::endgroup::"
-
-          echo "::group::Pyrefly (beta) - Compare Module"
-          uv run pyrefly projects/compare/src/
-          echo "::endgroup::"
-
-          echo "::group::Pyrefly (beta) - Schema Module"
-          uv run pyrefly projects/schema/src/
-          echo "::endgroup::"
-
-          echo "::group::Pyrefly (beta) - Scrape Module"
-          uv run pyrefly projects/scrape/src/
+          echo "::group::${{ matrix.type-checker.name }}${{ matrix.type-checker.beta && ' (beta)' || '' }} - ${{ matrix.project.name }}"
+          uv run ${{ matrix.type-checker.command }} ${{ matrix.project.path }}
           echo "::endgroup::"
