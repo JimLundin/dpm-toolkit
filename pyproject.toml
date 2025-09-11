@@ -41,6 +41,8 @@ strict = true
 [tool.pyright]
 typeCheckingMode = "strict"
 
+[tool.pyrefly]
+
 [build-system]
 requires = ["uv_build"]
 build-backend = "uv_build"
