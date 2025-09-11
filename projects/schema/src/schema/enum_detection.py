@@ -54,11 +54,11 @@ def values_from_constraint(constraint_text: str) -> list[str]:
     return []
 
 
-def detect_enum_for_column(constraint_text: str, column_name: str) -> list[str] | None:
+def detect_enum_for_column(constraint_text: str, column_name: str) -> list[str]:
     """Detect if a specific constraint defines an enum for a given column."""
     # Only process if the constraint references this specific column
     if column_name not in constraint_text:
-        return None
+        return []
 
     # Extract enum values from the constraint
     return values_from_constraint(constraint_text)
