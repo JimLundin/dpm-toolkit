@@ -8,7 +8,10 @@ from compare.main import compare_databases
 
 
 def test_dora_module_case() -> None:
-    """Test the actual DORA module case where same RowGUID rows should match despite different ModuleVID."""
+    """Test the actual DORA module case.
+
+    RowGUID rows should match despite different ModuleVID.
+    """
     with tempfile.TemporaryDirectory() as temp_dir:
         old_db = Path(temp_dir) / "old.db"
         new_db = Path(temp_dir) / "new.db"
@@ -92,13 +95,15 @@ def test_dora_module_case() -> None:
         added = [c for c in changes if c.new and not c.old]
         removed = [c for c in changes if c.old and not c.new]
 
-        print(f"Modified: {len(modified)}, Added: {len(added)}, Removed: {len(removed)}")
+        print(
+            f"Modified: {len(modified)}, Added: {len(added)}, Removed: {len(removed)}",
+        )
 
-        # Should be identified as 1 modification (matched by RowGUID) instead of removal + addition
+        # 1 modification (matched by RowGUID) instead of removal + addition
         assert len(removed) == 0, f"Expected 0 removals but got {len(removed)}"
         assert len(added) == 0, f"Expected 0 additions but got {len(added)}"
 
-        # Should be 1 modification since the ModuleVID (PK) changed, even though other content is the same
+        # 1 modification since the ModuleVID (PK) changed, other content is the same
         assert len(modified) == 1, f"Expected 1 modification but got {len(modified)}"
 
         # Verify the match is by RowGUID
@@ -113,7 +118,7 @@ def test_dora_module_case() -> None:
 
 
 def test_dora_module_case_with_actual_change() -> None:
-    """Test same case but with an actual content change to verify modification detection."""
+    """Same case but with an actual content change to verify modification detection."""
     with tempfile.TemporaryDirectory() as temp_dir:
         old_db = Path(temp_dir) / "old.db"
         new_db = Path(temp_dir) / "new.db"
@@ -131,7 +136,7 @@ def test_dora_module_case_with_actual_change() -> None:
             """,
         )
         old_conn.execute(
-            "INSERT INTO modules VALUES (390, 'c0a78332d1ffb8448495194dfce5efe2', 'DORA', 1)",
+            "INSERT INTO modules VALUES (390, 'c0a78332d1ffb8448495194df', 'DORA', 1)",
         )
         old_conn.commit()
         old_conn.close()
@@ -149,7 +154,7 @@ def test_dora_module_case_with_actual_change() -> None:
             """,
         )
         new_conn.execute(
-            "INSERT INTO modules VALUES (391, 'c0a78332d1ffb8448495194dfce5efe2', 'DORA', 0)",
+            "INSERT INTO modules VALUES (391, 'c0a78332d1ffb8448495194df', 'DORA', 0)",
         )
         new_conn.commit()
         new_conn.close()
@@ -162,7 +167,9 @@ def test_dora_module_case_with_actual_change() -> None:
         added = [c for c in changes if c.new and not c.old]
         removed = [c for c in changes if c.old and not c.new]
 
-        print(f"Modified: {len(modified)}, Added: {len(added)}, Removed: {len(removed)}")
+        print(
+            f"Modified: {len(modified)}, Added: {len(added)}, Removed: {len(removed)}",
+        )
 
         # Should be 1 modification (matched by RowGUID)
         assert len(removed) == 0, f"Expected 0 removals but got {len(removed)}"

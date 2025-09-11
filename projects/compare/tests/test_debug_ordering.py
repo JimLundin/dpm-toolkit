@@ -28,13 +28,17 @@ def test_ordering_impact() -> None:
         new_conn.execute(
             "CREATE TABLE test (id INTEGER PRIMARY KEY, RowGUID TEXT, name TEXT)",
         )
-        new_conn.execute("INSERT INTO test VALUES (10, 'guid-alpha', 'Item A Modified')")
+        new_conn.execute(
+            "INSERT INTO test VALUES (10, 'guid-alpha', 'Item A Modified')",
+        )
         new_conn.commit()
         new_conn.close()
 
         changes = list(next(iter(compare_databases(old_db, new_db))).body.rows.changes)
         modified = [c for c in changes if c.old and c.new]
-        print(f"Single row test: Modified={len(modified)}, Total changes={len(changes)}")
+        print(
+            f"Single row test: Modified={len(modified)}, Total changes={len(changes)}",
+        )
 
         print("\n=== Test 2: Two rows, both should match by RowGUID ===")
         old_db2 = Path(temp_dir) / "test2_old.db"
@@ -70,13 +74,18 @@ def test_ordering_impact() -> None:
         new_conn.commit()
         new_conn.close()
 
-        changes = list(next(iter(compare_databases(old_db2, new_db2))).body.rows.changes)
+        changes = list(
+            next(iter(compare_databases(old_db2, new_db2))).body.rows.changes,
+        )
         modified = [c for c in changes if c.old and c.new]
         added = [c for c in changes if c.new and not c.old]
         removed = [c for c in changes if c.old and not c.new]
 
         print(
-            f"Two row test: Modified={len(modified)}, Added={len(added)}, Removed={len(removed)}",
+            f"""Two row test: 
+            Modified={len(modified)},
+            Added={len(added)},
+            Removed={len(removed)}""",
         )
         for i, change in enumerate(changes):
             old_data = dict(change.old) if change.old else None
