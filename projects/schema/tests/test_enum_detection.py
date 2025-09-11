@@ -47,14 +47,14 @@ def test_in_clause_empty_values() -> None:
     """Test IN clause with no quoted values."""
     constraint = "status IN (1, 2, 3)"
     result = values_from_in_clause(constraint)
-    assert result is None
+    assert result == []
 
 
 def test_not_in_clause() -> None:
     """Test constraint that's not an IN clause."""
     constraint = "score >= 0 AND score <= 100"
     result = values_from_in_clause(constraint)
-    assert result is None
+    assert result == []
 
 
 def test_simple_or_clause() -> None:
@@ -119,7 +119,7 @@ def test_no_enum_detected() -> None:
     """Test constraint with no enum pattern."""
     constraint = "score >= 0 AND score <= 100"
     result = values_from_constraint(constraint)
-    assert result is None
+    assert result == []
 
 
 def test_single_value_detected() -> None:
@@ -140,7 +140,7 @@ def test_column_not_referenced() -> None:
     """Test no detection when column is not referenced."""
     constraint = "status IN ('active', 'inactive', 'pending')"
     result = detect_enum_for_column(constraint, "role")
-    assert result is None
+    assert result == []
 
 
 def test_partial_column_name_match() -> None:
@@ -166,20 +166,20 @@ def test_no_enum_pattern_for_column() -> None:
     """Test column referenced but no enum pattern."""
     constraint = "score >= 0 AND score <= 100"
     result = detect_enum_for_column(constraint, "score")
-    assert result is None
+    assert result == []
 
 
 def test_empty_constraint() -> None:
     """Test handling of empty constraint text."""
     result = detect_enum_for_column("", "status")
-    assert result is None
+    assert result == []
 
 
 def test_malformed_in_clause() -> None:
     """Test handling of malformed IN clause."""
     constraint = "status IN (active, inactive"  # Missing closing paren and quotes
     result = detect_enum_for_column(constraint, "status")
-    assert result is None
+    assert result == []
 
 
 def test_complex_values_in_enum() -> None:
@@ -204,4 +204,4 @@ def test_mixed_case_column_names() -> None:
     assert result == ["active", "inactive"]
     # Should not match different case (simple substring matching)
     result = detect_enum_for_column(constraint, "status")
-    assert result is None
+    assert result == []
