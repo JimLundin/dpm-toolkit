@@ -24,9 +24,6 @@ def parse_rows(
     enum_by_column: EnumByColumn = defaultdict(set)
     nullable_columns: Columns = set()
 
-    # DEBUG: Check for enum candidates in this table
-    enum_candidates = [col for col in table.columns if enum_type(col)]
-    print(f"DEBUG: Table '{table.name}' has enum candidates: {[col.name for col in enum_candidates]}")
 
     # Pre-compute column types and casters for performance (don't lookup per row)
     caster_by_column = {column: value_caster(column.type) for column in table.columns}
@@ -53,13 +50,6 @@ def parse_rows(
 
         casted_rows.append(casted_row)
 
-    # DEBUG: Show what enums were collected
-    if enum_by_column:
-        print(f"DEBUG: Table '{table.name}' collected enums:")
-        for column, values in enum_by_column.items():
-            print(f"  {column.name}: {sorted(values)} ({len(values)} distinct values)")
-    elif enum_candidates:
-        print(f"DEBUG: Table '{table.name}' had enum candidates but collected NO values!")
 
     return casted_rows, enum_by_column, nullable_columns
 
