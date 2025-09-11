@@ -180,7 +180,9 @@ def test_edge_case_constraints() -> None:
             id INTEGER PRIMARY KEY,
             single_value TEXT CHECK (single_value = 'only'),
             empty_check TEXT,
-            complex_enum TEXT CHECK (complex_enum IN ('multi-word', 'with_underscore', 'with space')),
+            complex_enum TEXT CHECK (
+                complex_enum IN ('multi-word', 'with_underscore', 'with space')
+            ),
             numeric_strings TEXT CHECK (numeric_strings IN ('1', '2', '3'))
         )
     """,
