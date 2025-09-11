@@ -31,13 +31,19 @@ def test_tables_with_added_columns() -> None:
         # Create new database with additional columns
         new_conn = connect(new_db)
         new_conn.execute(
-            "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, email TEXT, age INTEGER, city TEXT)",
+            """CREATE TABLE users (
+            id INTEGER PRIMARY KEY,
+            name TEXT,
+            email TEXT,
+            age INTEGER,
+            city TEXT
+            )""",
         )
         new_conn.executemany(
             "INSERT INTO users VALUES (?, ?, ?, ?, ?)",
             [
-                (1, "Alice", "alice@test.com", 30, "New York"),  # same data in common columns
-                (2, "Bob", "bob@test.com", 25, "Boston"),  # same data in common columns
+                (1, "Alice", "alice@test.com", 30, "New York"),  # same data
+                (2, "Bob", "bob@test.com", 25, "Boston"),  # same data
                 (3, "Charlie", "charlie@test.com", 35, "Chicago"),  # new row
             ],
         )
@@ -50,17 +56,21 @@ def test_tables_with_added_columns() -> None:
         schema_changes = list(comparison.body.columns.changes)
         added_columns = [c for c in schema_changes if c.new and not c.old]
 
-        assert len(added_columns) == 2, f"Expected 2 added columns, got {len(added_columns)}"
+        assert (
+            len(added_columns) == 2
+        ), f"Expected 2 added columns, got {len(added_columns)}"
         added_column_names = {c.new["name"] for c in added_columns}
         assert added_column_names == {"age", "city"}
 
-        # Check row changes - existing rows detected as modified due to structural changes
+        # Check row changes, existing rows detected as modified by structural changes
         row_changes = list(comparison.body.rows.changes)
         added_rows = [c for c in row_changes if c.new and not c.old]
         modified_rows = [c for c in row_changes if c.old and c.new]
 
         assert len(added_rows) == 1, f"Expected 1 added row, got {len(added_rows)}"
-        assert len(modified_rows) == 2, f"Expected 2 modified rows, got {len(modified_rows)}"
+        assert (
+            len(modified_rows) == 2
+        ), f"Expected 2 modified rows, got {len(modified_rows)}"
         assert added_rows[0].new["name"] == "Charlie"
 
         # Verify Alice and Bob are detected as modified due to structural differences
@@ -77,7 +87,13 @@ def test_tables_with_removed_columns() -> None:
         # Create old database with more columns
         old_conn = connect(old_db)
         old_conn.execute(
-            "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, email TEXT, phone TEXT, address TEXT)",
+            """CREATE TABLE users (
+            id INTEGER PRIMARY KEY,
+            name TEXT,
+            email TEXT,
+            phone TEXT,
+            address TEXT
+            )""",
         )
         old_conn.executemany(
             "INSERT INTO users VALUES (?, ?, ?, ?, ?)",
@@ -110,7 +126,9 @@ def test_tables_with_removed_columns() -> None:
         schema_changes = list(comparison.body.columns.changes)
         removed_columns = [c for c in schema_changes if c.old and not c.new]
 
-        assert len(removed_columns) == 2, f"Expected 2 removed columns, got {len(removed_columns)}"
+        assert (
+            len(removed_columns) == 2
+        ), f"Expected 2 removed columns, got {len(removed_columns)}"
         removed_column_names = {c.old["name"] for c in removed_columns}
         assert removed_column_names == {"phone", "address"}
 
@@ -118,16 +136,24 @@ def test_tables_with_removed_columns() -> None:
         row_changes = list(comparison.body.rows.changes)
         modified_rows = [c for c in row_changes if c.old and c.new]
 
-        assert len(modified_rows) == 2, f"Expected 2 modified rows, got {len(modified_rows)}"
+        assert (
+            len(modified_rows) == 2
+        ), f"Expected 2 modified rows, got {len(modified_rows)}"
 
         # Find Bob specifically to verify the name change
-        bob_change = next((c for c in modified_rows if c.new["name"].startswith("Bob")), None)
+        bob_change = next(
+            (c for c in modified_rows if c.new["name"].startswith("Bob")),
+            None,
+        )
         assert bob_change is not None, "Should find Bob's change"
         assert bob_change.old["name"] == "Bob"
         assert bob_change.new["name"] == "Bob Updated"
 
         # Verify Alice is also detected as modified due to structural differences
-        alice_change = next((c for c in modified_rows if c.new["name"] == "Alice"), None)
+        alice_change = next(
+            (c for c in modified_rows if c.new["name"] == "Alice"),
+            None,
+        )
         assert alice_change is not None, "Should find Alice's change"
 
 
@@ -140,7 +166,7 @@ def test_tables_with_column_type_changes() -> None:
         # Create old database
         old_conn = connect(old_db)
         old_conn.execute(
-            "CREATE TABLE products (id INTEGER PRIMARY KEY, name TEXT, price INTEGER)",  # price as INTEGER
+            "CREATE TABLE products (id INTEGER PRIMARY KEY, name TEXT, price INTEGER)",
         )
         old_conn.executemany(
             "INSERT INTO products VALUES (?, ?, ?)",
@@ -155,7 +181,7 @@ def test_tables_with_column_type_changes() -> None:
         # Create new database with different column type
         new_conn = connect(new_db)
         new_conn.execute(
-            "CREATE TABLE products (id INTEGER PRIMARY KEY, name TEXT, price REAL)",  # price as REAL
+            "CREATE TABLE products (id INTEGER PRIMARY KEY, name TEXT, price REAL)",
         )
         new_conn.executemany(
             "INSERT INTO products VALUES (?, ?, ?)",
@@ -208,7 +234,11 @@ def test_completely_different_columns() -> None:
         # Create old database with one set of columns
         old_conn = connect(old_db)
         old_conn.execute(
-            "CREATE TABLE data (id INTEGER PRIMARY KEY, old_col1 TEXT, old_col2 INTEGER)",
+            """CREATE TABLE data (
+            id INTEGER PRIMARY KEY,
+            old_col1 TEXT,
+            old_col2 INTEGER
+            )""",
         )
         old_conn.executemany(
             "INSERT INTO data VALUES (?, ?, ?)",
@@ -249,7 +279,7 @@ def test_completely_different_columns() -> None:
         row_changes = list(comparison.body.rows.changes)
 
         # Should detect:
-        # - Row 1: exists in both (matched by id PK) but no common non-PK columns to compare
+        # - Row 1: exists in both (matched by id PK) but no common non-PK columns
         # - Row 2: removed (exists in old, not in new)
         # - Row 3: added (exists in new, not in old)
         added_rows = [c for c in row_changes if c.new and not c.old]
@@ -257,9 +287,13 @@ def test_completely_different_columns() -> None:
         modified_rows = [c for c in row_changes if c.old and c.new]
 
         assert len(added_rows) == 1, f"Expected 1 added row, got {len(added_rows)}"
-        assert len(removed_rows) == 1, f"Expected 1 removed row, got {len(removed_rows)}"
+        assert (
+            len(removed_rows) == 1
+        ), f"Expected 1 removed row, got {len(removed_rows)}"
         # Row 1 should show as modified due to different structure
-        assert len(modified_rows) == 1, f"Expected 1 modified row, got {len(modified_rows)}"
+        assert (
+            len(modified_rows) == 1
+        ), f"Expected 1 modified row, got {len(modified_rows)}"
 
         # Verify it's row with id=1
         assert modified_rows[0].old["id"] == 1
@@ -275,7 +309,12 @@ def test_rowguid_with_different_columns() -> None:
         # Create old database
         old_conn = connect(old_db)
         old_conn.execute(
-            "CREATE TABLE entities (id INTEGER PRIMARY KEY, RowGUID TEXT, old_data TEXT, shared_data TEXT)",
+            """CREATE TABLE entities (
+            id INTEGER PRIMARY KEY,
+            RowGUID TEXT,
+            old_data TEXT,
+            shared_data TEXT
+            )""",
         )
         old_conn.executemany(
             "INSERT INTO entities VALUES (?, ?, ?, ?)",
@@ -290,13 +329,28 @@ def test_rowguid_with_different_columns() -> None:
         # Create new database with different PK and additional columns
         new_conn = connect(new_db)
         new_conn.execute(
-            "CREATE TABLE entities (new_id INTEGER PRIMARY KEY, RowGUID TEXT, new_data TEXT, shared_data TEXT)",
+            """CREATE TABLE entities (
+            new_id INTEGER PRIMARY KEY,
+            RowGUID TEXT,
+            new_data TEXT,
+            shared_data TEXT
+            )""",
         )
         new_conn.executemany(
             "INSERT INTO entities VALUES (?, ?, ?, ?)",
             [
-                (100, "guid-1", "new1", "shared1_updated"),  # RowGUID match, shared_data changed
-                (200, "guid-2", "new2", "shared2"),  # RowGUID match, no change in shared columns
+                (
+                    100,
+                    "guid-1",
+                    "new1",
+                    "shared1_updated",
+                ),  # RowGUID match, shared_data changed
+                (
+                    200,
+                    "guid-2",
+                    "new2",
+                    "shared2",
+                ),  # RowGUID match, no change in shared columns
             ],
         )
         new_conn.commit()
@@ -317,19 +371,29 @@ def test_rowguid_with_different_columns() -> None:
         modified_rows = [c for c in row_changes if c.old and c.new]
 
         # Should detect two modifications due to structural changes
-        assert len(modified_rows) == 2, f"Expected 2 modified rows, got {len(modified_rows)}"
+        assert (
+            len(modified_rows) == 2
+        ), f"Expected 2 modified rows, got {len(modified_rows)}"
 
         # Find the entity with actual data change
-        guid1_change = next((c for c in modified_rows if c.old["RowGUID"] == "guid-1"), None)
+        guid1_change = next(
+            (c for c in modified_rows if c.old["RowGUID"] == "guid-1"),
+            None,
+        )
         assert guid1_change is not None, "Should find guid-1 change"
         assert guid1_change.old["shared_data"] == "shared1"
         assert guid1_change.new["shared_data"] == "shared1_updated"  # change detected
 
         # Find the entity with only structural change
-        guid2_change = next((c for c in modified_rows if c.old["RowGUID"] == "guid-2"), None)
+        guid2_change = next(
+            (c for c in modified_rows if c.old["RowGUID"] == "guid-2"),
+            None,
+        )
         assert guid2_change is not None, "Should find guid-2 change"
         assert guid2_change.old["shared_data"] == "shared2"
-        assert guid2_change.new["shared_data"] == "shared2"  # no data change, just structural
+        assert (
+            guid2_change.new["shared_data"] == "shared2"
+        )  # no data change, just structural
 
 
 def test_no_common_columns_except_pk() -> None:
@@ -377,10 +441,14 @@ def test_no_common_columns_except_pk() -> None:
         modified_rows = [c for c in row_changes if c.old and c.new]
 
         assert len(added_rows) == 1, f"Expected 1 added row, got {len(added_rows)}"
-        assert len(removed_rows) == 1, f"Expected 1 removed row, got {len(removed_rows)}"
+        assert (
+            len(removed_rows) == 1
+        ), f"Expected 1 removed row, got {len(removed_rows)}"
         # Row with id=1 exists in both but has different structure,
         # so it should be flagged as modified
-        assert len(modified_rows) == 1, f"Expected 1 modified row, got {len(modified_rows)}"
+        assert (
+            len(modified_rows) == 1
+        ), f"Expected 1 modified row, got {len(modified_rows)}"
 
         # Verify it's the row with id=1
         assert modified_rows[0].old["id"] == 1

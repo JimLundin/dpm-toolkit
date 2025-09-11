@@ -16,7 +16,12 @@ def test_three_row_scenario() -> None:
         # Create old database
         old_conn = connect(old_db)
         old_conn.execute(
-            "CREATE TABLE products (id INTEGER PRIMARY KEY, RowGUID TEXT, name TEXT, category TEXT)",
+            """CREATE TABLE products ("
+            id INTEGER PRIMARY KEY,
+            RowGUID TEXT,
+            name TEXT,
+            category TEXT
+            )""",
         )
         old_conn.executemany(
             "INSERT INTO products VALUES (?, ?, ?, ?)",
@@ -32,7 +37,12 @@ def test_three_row_scenario() -> None:
         # Create new database
         new_conn = connect(new_db)
         new_conn.execute(
-            "CREATE TABLE products (id INTEGER PRIMARY KEY, RowGUID TEXT, name TEXT, category TEXT)",
+            """CREATE TABLE products (
+            id INTEGER PRIMARY KEY,
+            RowGUID TEXT,
+            name TEXT,
+            category TEXT
+            )""",
         )
         new_conn.executemany(
             "INSERT INTO products VALUES (?, ?, ?, ?)",
@@ -49,7 +59,12 @@ def test_three_row_scenario() -> None:
                     "Product Beta",
                     "Books",
                 ),  # Same PK, RowGUID match, no change
-                (30, "guid-gamma", "Product Gamma", "Home"),  # Different PK, RowGUID match
+                (
+                    30,
+                    "guid-gamma",
+                    "Product Gamma",
+                    "Home",
+                ),  # Different PK, RowGUID match
             ],
         )
         new_conn.commit()
