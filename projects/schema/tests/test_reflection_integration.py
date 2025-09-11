@@ -114,21 +114,31 @@ def test_enum_values_correctly_extracted(temp_db_with_enums: str) -> None:
     users_table = metadata.tables["users"]
 
     status_enum = users_table.columns["status"].type
-    assert set(status_enum.enums) == {"active", "inactive", "pending"}
+    assert isinstance(status_enum, Enum)
+    assert set(getattr(status_enum, "enums", [])) == {"active", "inactive", "pending"}
 
     role_enum = users_table.columns["role"].type
-    assert set(role_enum.enums) == {"admin", "user", "moderator"}
+    assert isinstance(role_enum, Enum)
+    assert set(getattr(role_enum, "enums", [])) == {"admin", "user", "moderator"}
 
     category_enum = users_table.columns["category"].type
-    assert set(category_enum.enums) == {"A", "B", "C"}
+    assert isinstance(category_enum, Enum)
+    assert set(getattr(category_enum, "enums", [])) == {"A", "B", "C"}
 
     products_table = metadata.tables["products"]
 
     type_enum = products_table.columns["type"].type
-    assert set(type_enum.enums) == {"physical", "digital", "service"}
+    assert isinstance(type_enum, Enum)
+    assert set(getattr(type_enum, "enums", [])) == {"physical", "digital", "service"}
 
     size_enum = products_table.columns["size"].type
-    assert set(size_enum.enums) == {"small", "medium", "large", "extra_large"}
+    assert isinstance(size_enum, Enum)
+    assert set(getattr(size_enum, "enums", [])) == {
+        "small",
+        "medium",
+        "large",
+        "extra_large",
+    }
 
 
 def test_full_schema_generation_with_enums(temp_db_with_enums: str) -> None:
