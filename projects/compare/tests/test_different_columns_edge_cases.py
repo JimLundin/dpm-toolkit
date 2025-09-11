@@ -56,9 +56,9 @@ def test_tables_with_added_columns() -> None:
         schema_changes = list(comparison.body.columns.changes)
         added_columns = [c for c in schema_changes if c.new and not c.old]
 
-        assert (
-            len(added_columns) == 2
-        ), f"Expected 2 added columns, got {len(added_columns)}"
+        assert len(added_columns) == 2, (
+            f"Expected 2 added columns, got {len(added_columns)}"
+        )
         added_column_names = {c.new["name"] for c in added_columns}
         assert added_column_names == {"age", "city"}
 
@@ -68,9 +68,9 @@ def test_tables_with_added_columns() -> None:
         modified_rows = [c for c in row_changes if c.old and c.new]
 
         assert len(added_rows) == 1, f"Expected 1 added row, got {len(added_rows)}"
-        assert (
-            len(modified_rows) == 2
-        ), f"Expected 2 modified rows, got {len(modified_rows)}"
+        assert len(modified_rows) == 2, (
+            f"Expected 2 modified rows, got {len(modified_rows)}"
+        )
         assert added_rows[0].new["name"] == "Charlie"
 
         # Verify Alice and Bob are detected as modified due to structural differences
@@ -126,9 +126,9 @@ def test_tables_with_removed_columns() -> None:
         schema_changes = list(comparison.body.columns.changes)
         removed_columns = [c for c in schema_changes if c.old and not c.new]
 
-        assert (
-            len(removed_columns) == 2
-        ), f"Expected 2 removed columns, got {len(removed_columns)}"
+        assert len(removed_columns) == 2, (
+            f"Expected 2 removed columns, got {len(removed_columns)}"
+        )
         removed_column_names = {c.old["name"] for c in removed_columns}
         assert removed_column_names == {"phone", "address"}
 
@@ -136,9 +136,9 @@ def test_tables_with_removed_columns() -> None:
         row_changes = list(comparison.body.rows.changes)
         modified_rows = [c for c in row_changes if c.old and c.new]
 
-        assert (
-            len(modified_rows) == 2
-        ), f"Expected 2 modified rows, got {len(modified_rows)}"
+        assert len(modified_rows) == 2, (
+            f"Expected 2 modified rows, got {len(modified_rows)}"
+        )
 
         # Find Bob specifically to verify the name change
         bob_change = next(
@@ -287,13 +287,13 @@ def test_completely_different_columns() -> None:
         modified_rows = [c for c in row_changes if c.old and c.new]
 
         assert len(added_rows) == 1, f"Expected 1 added row, got {len(added_rows)}"
-        assert (
-            len(removed_rows) == 1
-        ), f"Expected 1 removed row, got {len(removed_rows)}"
+        assert len(removed_rows) == 1, (
+            f"Expected 1 removed row, got {len(removed_rows)}"
+        )
         # Row 1 should show as modified due to different structure
-        assert (
-            len(modified_rows) == 1
-        ), f"Expected 1 modified row, got {len(modified_rows)}"
+        assert len(modified_rows) == 1, (
+            f"Expected 1 modified row, got {len(modified_rows)}"
+        )
 
         # Verify it's row with id=1
         assert modified_rows[0].old["id"] == 1
@@ -371,9 +371,9 @@ def test_rowguid_with_different_columns() -> None:
         modified_rows = [c for c in row_changes if c.old and c.new]
 
         # Should detect two modifications due to structural changes
-        assert (
-            len(modified_rows) == 2
-        ), f"Expected 2 modified rows, got {len(modified_rows)}"
+        assert len(modified_rows) == 2, (
+            f"Expected 2 modified rows, got {len(modified_rows)}"
+        )
 
         # Find the entity with actual data change
         guid1_change = next(
@@ -441,14 +441,14 @@ def test_no_common_columns_except_pk() -> None:
         modified_rows = [c for c in row_changes if c.old and c.new]
 
         assert len(added_rows) == 1, f"Expected 1 added row, got {len(added_rows)}"
-        assert (
-            len(removed_rows) == 1
-        ), f"Expected 1 removed row, got {len(removed_rows)}"
+        assert len(removed_rows) == 1, (
+            f"Expected 1 removed row, got {len(removed_rows)}"
+        )
         # Row with id=1 exists in both but has different structure,
         # so it should be flagged as modified
-        assert (
-            len(modified_rows) == 1
-        ), f"Expected 1 modified row, got {len(modified_rows)}"
+        assert len(modified_rows) == 1, (
+            f"Expected 1 modified row, got {len(modified_rows)}"
+        )
 
         # Verify it's the row with id=1
         assert modified_rows[0].old["id"] == 1
