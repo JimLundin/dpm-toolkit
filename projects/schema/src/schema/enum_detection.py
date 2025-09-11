@@ -2,50 +2,56 @@
 
 import re
 
+# Reusable regex components for better readability
+IDENTIFIER = r"[\"'`]?\w+[\"'`]?"  # Matches quoted/unquoted identifiers
+VALUE = r"'([^']+)'"  # Captures content inside single quotes
+WHITESPACE = r"\s*"
+OPEN_PAREN = r"\("
+CLOSE_PAREN = r"\)"
+EQUALS = r"="
+IN = r"IN"
+VALUES = r"([^)]+)"
 
-def _parse_enum_values_from_in_clause(constraint_text: str) -> list[str] | None:
+
+def values_from_in_clause(constraint_text: str) -> list[str]:
     """Extract enum values from an IN clause constraint.
 
     Handles patterns like: column IN ('value1', 'value2', 'value3')
     Also handles quoted column names: "column" IN ('value1', 'value2')
     """
-    # Pattern for IN clause: supports quoted and unquoted column names
-    # Matches: column_name IN (...) or "column_name" IN (...) or 'column_name' IN (...)
-    in_pattern = r"(?:[\"'`]?\w+[\"'`]?)\s+IN\s*\(\s*([^)]+)\s*\)"
-    match = re.search(in_pattern, constraint_text, re.IGNORECASE)
+    in_pattern = re.compile(
+        WHITESPACE.join((IDENTIFIER, IN, OPEN_PAREN, VALUES, CLOSE_PAREN)),
+        re.IGNORECASE,
+    )
 
-    if match:
-        values_text = match.group(1)
-        # Extract quoted string values
-        value_pattern = r"'([^']+)'"
-        values = re.findall(value_pattern, values_text)
-        return values if values else None
+    # Extract parentheses content and find all quoted values in one expression
+    if values := re.search(in_pattern, constraint_text):
+        return re.findall(VALUE, values.group(1))
 
-    return None
+    return []
 
 
-def _parse_enum_values_from_or_clause(constraint_text: str) -> list[str] | None:
+def values_from_or_clause(constraint_text: str) -> list[str]:
     """Extract enum values from an OR clause constraint.
 
     Handles patterns like: column = 'value1' OR column = 'value2' OR column = 'value3'
     Also handles quoted column names: "column" = 'value1' OR "column" = 'value2'
     """
-    # Find all occurrences of column = 'value' with optional column quoting
-    pattern = r"(?:[\"'`]?\w+[\"'`]?)\s*=\s*\'([^\']+)\'"
-    return re.findall(pattern, constraint_text, re.IGNORECASE)
+    or_pattern = re.compile(WHITESPACE.join((IDENTIFIER, EQUALS, VALUE)), re.IGNORECASE)
+    return or_pattern.findall(constraint_text)
 
 
-def _parse_enum_values_from_constraint(constraint_text: str) -> list[str] | None:
+def values_from_constraint(constraint_text: str) -> list[str]:
     """Extract enum values from a check constraint using both detection algorithms."""
     # Try IN clause first
-    if values := _parse_enum_values_from_in_clause(constraint_text):
+    if values := values_from_in_clause(constraint_text):
         return values
 
     # Try OR clause
-    if values := _parse_enum_values_from_or_clause(constraint_text):
+    if values := values_from_or_clause(constraint_text):
         return values
 
-    return None
+    return []
 
 
 def detect_enum_for_column(constraint_text: str, column_name: str) -> list[str] | None:
@@ -55,4 +61,4 @@ def detect_enum_for_column(constraint_text: str, column_name: str) -> list[str] 
         return None
 
     # Extract enum values from the constraint
-    return _parse_enum_values_from_constraint(constraint_text)
+    return values_from_constraint(constraint_text)

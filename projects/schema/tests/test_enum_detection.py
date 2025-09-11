@@ -1,108 +1,108 @@
 """Tests for enum detection from SQLite check constraints."""
 
 from schema.enum_detection import (
-    _parse_enum_values_from_constraint,
-    _parse_enum_values_from_in_clause,
-    _parse_enum_values_from_or_clause,
     detect_enum_for_column,
+    values_from_constraint,
+    values_from_in_clause,
+    values_from_or_clause,
 )
 
 
 def test_simple_in_clause() -> None:
     """Test basic IN clause with string values."""
     constraint = "status IN ('active', 'inactive', 'pending')"
-    result = _parse_enum_values_from_in_clause(constraint)
+    result = values_from_in_clause(constraint)
     assert result == ["active", "inactive", "pending"]
 
 
 def test_in_clause_with_spaces() -> None:
     """Test IN clause with various spacing."""
     constraint = "role IN( 'admin' , 'user' , 'moderator' )"
-    result = _parse_enum_values_from_in_clause(constraint)
+    result = values_from_in_clause(constraint)
     assert result == ["admin", "user", "moderator"]
 
 
 def test_in_clause_case_insensitive() -> None:
     """Test that IN matching is case insensitive."""
     constraint = "status in ('active', 'inactive')"
-    result = _parse_enum_values_from_in_clause(constraint)
+    result = values_from_in_clause(constraint)
     assert result == ["active", "inactive"]
 
 
 def test_in_clause_with_mixed_quotes() -> None:
     """Test IN clause with single quotes."""
     constraint = "type IN ('physical', 'digital', 'service')"
-    result = _parse_enum_values_from_in_clause(constraint)
+    result = values_from_in_clause(constraint)
     assert result == ["physical", "digital", "service"]
 
 
 def test_in_clause_single_value() -> None:
     """Test IN clause with single value."""
     constraint = "status IN ('active')"
-    result = _parse_enum_values_from_in_clause(constraint)
+    result = values_from_in_clause(constraint)
     assert result == ["active"]
 
 
 def test_in_clause_empty_values() -> None:
     """Test IN clause with no quoted values."""
     constraint = "status IN (1, 2, 3)"
-    result = _parse_enum_values_from_in_clause(constraint)
+    result = values_from_in_clause(constraint)
     assert result is None
 
 
 def test_not_in_clause() -> None:
     """Test constraint that's not an IN clause."""
     constraint = "score >= 0 AND score <= 100"
-    result = _parse_enum_values_from_in_clause(constraint)
+    result = values_from_in_clause(constraint)
     assert result is None
 
 
 def test_simple_or_clause() -> None:
     """Test basic OR clause with string values."""
     constraint = "category = 'A' OR category = 'B' OR category = 'C'"
-    result = _parse_enum_values_from_or_clause(constraint)
+    result = values_from_or_clause(constraint)
     assert result == ["A", "B", "C"]
 
 
 def test_or_clause_with_spaces() -> None:
     """Test OR clause with various spacing."""
     constraint = "size='small' OR size = 'large'"
-    result = _parse_enum_values_from_or_clause(constraint)
+    result = values_from_or_clause(constraint)
     assert result == ["small", "large"]
 
 
 def test_or_clause_case_insensitive() -> None:
     """Test that OR matching is case insensitive."""
     constraint = "status = 'active' or status = 'inactive'"
-    result = _parse_enum_values_from_or_clause(constraint)
+    result = values_from_or_clause(constraint)
     assert result == ["active", "inactive"]
 
 
 def test_or_clause_single_value() -> None:
     """Test OR clause with single value (should not be detected as enum)."""
     constraint = "status = 'active'"
-    result = _parse_enum_values_from_or_clause(constraint)
+    result = values_from_or_clause(constraint)
     assert result == ["active"]  # Returns the single value found
 
 
 def test_not_or_clause() -> None:
     """Test constraint that's not an OR clause."""
     constraint = "score >= 0 AND score <= 100"
-    result = _parse_enum_values_from_or_clause(constraint)
+    result = values_from_or_clause(constraint)
     assert result == []
 
 
 def test_in_clause_detected() -> None:
     """Test that IN clause is detected by combined parser."""
     constraint = "status IN ('active', 'inactive', 'pending')"
-    result = _parse_enum_values_from_constraint(constraint)
+    result = values_from_constraint(constraint)
     assert result == ["active", "inactive", "pending"]
 
 
 def test_or_clause_detected() -> None:
     """Test that OR clause is detected by combined parser."""
     constraint = "category = 'A' OR category = 'B' OR category = 'C'"
-    result = _parse_enum_values_from_constraint(constraint)
+    result = values_from_constraint(constraint)
     assert result == ["A", "B", "C"]
 
 
@@ -110,7 +110,7 @@ def test_in_clause_priority() -> None:
     """Test that IN clause takes priority over OR clause."""
     # This is a contrived example but tests the priority
     constraint = "status IN ('active', 'inactive') OR status = 'pending'"
-    result = _parse_enum_values_from_constraint(constraint)
+    result = values_from_constraint(constraint)
     # Should detect the IN clause first
     assert result == ["active", "inactive"]
 
@@ -118,14 +118,14 @@ def test_in_clause_priority() -> None:
 def test_no_enum_detected() -> None:
     """Test constraint with no enum pattern."""
     constraint = "score >= 0 AND score <= 100"
-    result = _parse_enum_values_from_constraint(constraint)
+    result = values_from_constraint(constraint)
     assert result is None
 
 
 def test_single_value_detected() -> None:
     """Test that single values are detected (but may be filtered later)."""
     constraint = "status = 'active'"
-    result = _parse_enum_values_from_constraint(constraint)
+    result = values_from_constraint(constraint)
     assert result == ["active"]  # Single value is detected at parse level
 
 
