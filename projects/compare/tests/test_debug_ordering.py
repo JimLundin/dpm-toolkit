@@ -82,7 +82,7 @@ def test_ordering_impact() -> None:
         removed = [c for c in changes if c.old and not c.new]
 
         print(
-            f"""Two row test: 
+            f"""Two row test:
             Modified={len(modified)},
             Added={len(added)},
             Removed={len(removed)}""",
