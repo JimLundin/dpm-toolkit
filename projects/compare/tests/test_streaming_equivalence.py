@@ -275,7 +275,7 @@ def test_no_common_primary_keys() -> None:
     # When tables have different PK structures, rows are detected as modified
     # due to structural differences, even if common column data is identical
     total_changes = len(changes)
-    assert total_changes == 2  # Should detect Alice and Bob as modified due to structural changes
+    assert total_changes == 2  # Alice and Bob modified due to structural changes
 
     # Both should be modifications (not add/remove) since they match by common columns
     modified_rows = [c for c in changes if c.old and c.new]
