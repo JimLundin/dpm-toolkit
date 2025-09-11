@@ -16,7 +16,7 @@ def test_three_row_scenario() -> None:
         # Create old database
         old_conn = connect(old_db)
         old_conn.execute(
-            """CREATE TABLE products ("
+            """CREATE TABLE products (
             id INTEGER PRIMARY KEY,
             RowGUID TEXT,
             name TEXT,
@@ -86,12 +86,16 @@ def test_three_row_scenario() -> None:
     removed = [c for c in changes if c.old and not c.new]
 
     print(
-        f"Summary: Modified={len(modified)}, Added={len(added)}, Removed={len(removed)}",
+        f"""Summary:
+        Modified={len(modified)},
+        Added={len(added)},
+        Removed={len(removed)}""",
     )
 
     for i, mod in enumerate(modified):
         print(
-            f"Modification {i}: {mod.old['RowGUID']} (id: {mod.old['id']} -> {mod.new['id']})",
+            f"Modification {i}: {mod.old['RowGUID']}"
+            f"(id: {mod.old['id']} -> {mod.new['id']})",
         )
 
 
