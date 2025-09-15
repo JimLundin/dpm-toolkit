@@ -288,6 +288,41 @@ def compare(
         return
 
 
+@app.command()
+def diagram(sqlite_location: Path, output_format: OutputFormats = OutputFormats.JSON) -> None:
+    """Generate ER diagram from SQLite database."""
+    try:
+        from diagram import read_only_sqlite, sqlite_to_diagram_json, create_standalone_html
+    except ImportError as e:
+        print_error("Diagram generation requires [diagram] extra dependencies")
+        raise Exit(1) from e
+
+    validate_database_location(sqlite_location, exists=True)
+    validate_database_extension(sqlite_location, SQLITE_EXTENSIONS)
+    print_info(f"Source database: {sqlite_location}")
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=err_console,
+    ) as progress:
+        progress.add_task("Generating ER diagram...", total=None)
+        sqlite_database = read_only_sqlite(sqlite_location)
+        diagram_json = sqlite_to_diagram_json(sqlite_database)
+
+    if output_format == OutputFormats.JSON:
+        stdout.write(diagram_json)
+    elif output_format == OutputFormats.HTML:
+        database_name = sqlite_location.stem
+        html_content = create_standalone_html(diagram_json, f"ER Diagram - {database_name}")
+        stdout.write(html_content)
+    elif output_format == OutputFormats.TABLE:
+        print_error("Table format not available for diagrams, use JSON or HTML")
+        raise Exit(1)
+
+    print_success("ER diagram generation completed successfully")
+
+
 def main() -> None:
     """Entry point for the CLI."""
     app()
