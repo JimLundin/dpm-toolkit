@@ -10,11 +10,11 @@ env:
 
 jobs:
   type-check:
-    runs-on: windows-latest
+    runs-on: ${{ matrix.project.os }}
     defaults:
       run:
         shell: bash
-    
+
     strategy:
       fail-fast: false
       matrix:
@@ -34,16 +34,28 @@ jobs:
         project:
           - name: Main CLI
             path: src/
+            extras: "--all-extras"
+            os: windows-latest
           - name: Archive Module
             path: projects/archive/src/
+            extras: ""
+            os: ubuntu-latest
           - name: Compare Module
             path: projects/compare/src/
+            extras: "--extra compare"
+            os: ubuntu-latest
           - name: Schema Module
             path: projects/schema/src/
+            extras: "--extra schema"
+            os: ubuntu-latest
           - name: Scrape Module
             path: projects/scrape/src/
+            extras: "--extra scrape"
+            os: ubuntu-latest
           - name: Migrate Module
             path: projects/migrate/src/
+            extras: "--extra migrate"
+            os: windows-latest
 
     steps:
       - name: Checkout repository
@@ -57,7 +69,9 @@ jobs:
       - name: Set up Python
         run: uv python install
 
+      # Windows-specific steps for Access Engine (conditional)
       - name: Cache Access Database Engine
+        if: matrix.project.os == 'windows-latest'
         id: cache-access-engine
         uses: actions/cache@v4
         with:
@@ -65,13 +79,13 @@ jobs:
           key: access-engine-${{ env.ACCESS_ENGINE_SHA256 }}
 
       - name: Download Access Database Engine
-        if: steps.cache-access-engine.outputs.cache-hit != 'true'
+        if: matrix.project.os == 'windows-latest' && steps.cache-access-engine.outputs.cache-hit != 'true'
         shell: bash
         run: |
           curl -L --fail --retry 3 --retry-delay 5 "${{ env.ACCESS_ENGINE_URL }}" -o "${{ env.ACCESS_ENGINE_INSTALLER }}"
 
       - name: Verify file hash
-        if: steps.cache-access-engine.outputs.cache-hit != 'true'
+        if: matrix.project.os == 'windows-latest' && steps.cache-access-engine.outputs.cache-hit != 'true'
         shell: powershell
         run: |
           $expectedHash = "${{ env.ACCESS_ENGINE_SHA256 }}"
@@ -83,6 +97,7 @@ jobs:
           }
 
       - name: Install Microsoft Access Database Engine
+        if: matrix.project.os == 'windows-latest'
         shell: powershell
         run: |
           Start-Process -FilePath "${{ env.ACCESS_ENGINE_INSTALLER }}" -ArgumentList "/quiet" -Wait
@@ -90,8 +105,9 @@ jobs:
       - name: Install dependencies
         run: |
           uv sync --dev
-          # Install all dependencies including Windows-specific migrate
-          uv sync --extra compare --extra schema --extra scrape --extra migrate
+          if [ -n "${{ matrix.project.extras }}" ]; then
+            uv sync ${{ matrix.project.extras }}
+          fi
 
       - name: Run ${{ matrix.type-checker.name }} on ${{ matrix.project.name }}
         continue-on-error: ${{ matrix.type-checker.beta }}
