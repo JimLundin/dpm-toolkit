@@ -9,6 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `uv sync --extra migrate` - Install with migration tools (Windows only)
 - `uv sync --extra schema` - Install with schema generation tools
 - `uv sync --extra compare` - Install with database comparison tools
+- `uv sync --extra diagram` - Install with ER diagram generation tools
 - `uv sync --extra scrape` - Install with web scraping tools
 
 ### Code Quality
@@ -39,6 +40,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `dpm-toolkit compare old.db new.db --output-format html > report.html` - HTML report
 - `dpm-toolkit compare old.db new.db | jq '.[] | select(.name=="users")` - Filter specific table changes
 
+#### ER Diagram Generation
+- `dpm-toolkit diagram database.sqlite > diagram.json` - Generate JSON diagram data
+- `dpm-toolkit diagram database.sqlite --output-format html > diagram.html` - Generate standalone HTML viewer
+- `dpm-toolkit diagram database.sqlite --output-format json | jq '.tables[] | .name'` - Extract table names
+
 ## Architecture Overview
 
 DPM Toolkit is a UV workspace with multiple specialized subprojects built around EBA DPM database processing:
@@ -54,6 +60,7 @@ DPM Toolkit is a UV workspace with multiple specialized subprojects built around
 - **`scrape/`**: Automated discovery of new EBA releases via web scraping
 - **`schema/`**: Python model generation from SQLite databases with SQLAlchemy
 - **`compare/`**: Database comparison functionality for schema and data change detection
+- **`diagram/`**: ER diagram generation and interactive visualization from SQLite databases
 - **`dpm2/`**: Generated Python packages with type-safe SQLAlchemy models
 
 ### Compare Module Architecture
@@ -64,6 +71,15 @@ The `compare` module uses a streaming, memory-efficient approach:
 - **`main.py`**: Core comparison logic with streaming row comparison algorithm
 - **Sorting Strategy**: Consistent key hierarchy (RowGUID > PKs > all columns) for reliable comparison
 - **Output Formats**: JSON and HTML reports with Jinja2 templating, streamed to stdout for POSIX compatibility
+
+### Diagram Module Architecture
+The `diagram` module provides ER diagram generation and visualization:
+
+- **`main.py`**: Core database introspection and JSON generation using SQLAlchemy
+- **`html_export.py`**: Standalone HTML generation with embedded D3.js visualization
+- **`webapp/`**: Static web application for interactive ER diagram viewing with D3.js force-directed layout
+- **JSON Schema**: Structured format with metadata, tables, relationships, and layout information
+- **Interactive Features**: Pan, zoom, table selection, relationship highlighting, keyboard shortcuts
 
 ### CLI Design Patterns
 - **Modern Typer**: Clean command definitions with focused functionality
