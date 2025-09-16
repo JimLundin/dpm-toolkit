@@ -29,21 +29,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `dpm-toolkit versions --group all --json` - JSON output of all versions
 - `dpm-toolkit versions --latest` - Show only the latest release version
 
-#### Database Operations  
+#### Database Operations
 - `dpm-toolkit download 4.1-final` - Download latest final release
 - `dpm-toolkit download 4.0-release --variant converted --output ./dbs/` - Download converted SQLite version
 - `dpm-toolkit migrate database.accdb --target output.sqlite` - Convert Access to SQLite (Windows only)
-- `dpm-toolkit schema database.sqlite --output models.py` - Generate SQLAlchemy models
+- `dpm-toolkit schema database.sqlite` - Generate SQLAlchemy models (default)
+- `dpm-toolkit schema database.sqlite --format python` - Generate SQLAlchemy models (explicit)
+- `dpm-toolkit schema database.sqlite --format json` - Generate JSON schema
+- `dpm-toolkit schema database.sqlite --format html` - Generate interactive ER diagram
 
 #### Database Comparison (POSIX-style)
 - `dpm-toolkit compare old.db new.db > changes.json` - JSON diff to file
 - `dpm-toolkit compare old.db new.db --output-format html > report.html` - HTML report
 - `dpm-toolkit compare old.db new.db | jq '.[] | select(.name=="users")` - Filter specific table changes
-
-#### ER Diagram Generation
-- `dpm-toolkit diagram database.sqlite > diagram.json` - Generate JSON diagram data
-- `dpm-toolkit diagram database.sqlite --output-format html > diagram.html` - Generate standalone HTML viewer
-- `dpm-toolkit diagram database.sqlite --output-format json | jq '.tables[] | .name'` - Extract table names
 
 ## Architecture Overview
 
@@ -58,10 +56,21 @@ DPM Toolkit is a UV workspace with multiple specialized subprojects built around
 - **`archive/`**: Version management, downloads, and release tracking with structured types
 - **`migrate/`**: Access-to-SQLite migration engine (Windows-only, requires ODBC drivers)
 - **`scrape/`**: Automated discovery of new EBA releases via web scraping
-- **`schema/`**: Python model generation from SQLite databases with SQLAlchemy
+- **`schema/`**: Unified database schema extraction with multiple output formats (SQLAlchemy, JSON, HTML)
 - **`compare/`**: Database comparison functionality for schema and data change detection
-- **`diagram/`**: ER diagram generation and interactive visualization from SQLite databases
 - **`dpm2/`**: Generated Python packages with type-safe SQLAlchemy models
+
+### Schema Module Architecture
+The `schema` module provides unified database introspection with multiple output formats:
+
+- **`main.py`**: Core database introspection using SQLAlchemy with enum detection support
+- **`types.py`**: TypedDict schemas for type-safe JSON structure validation
+- **`sqlalchemy_export.py`**: Generate typed SQLAlchemy Python models with relationship mapping
+- **`json_export.py`**: Clean JSON schema export with minimal structure
+- **`html_export.py`**: Interactive HTML diagram generation with Jinja2 templates
+- **`templates/`**: Modular HTML, CSS, and JavaScript for interactive visualization
+- **Enum Detection**: Automatic detection of constrained values from check constraints
+- **Multiple Formats**: Single introspection pass supports Python code, JSON, and HTML outputs
 
 ### Compare Module Architecture
 The `compare` module uses a streaming, memory-efficient approach:
@@ -71,15 +80,6 @@ The `compare` module uses a streaming, memory-efficient approach:
 - **`main.py`**: Core comparison logic with streaming row comparison algorithm
 - **Sorting Strategy**: Consistent key hierarchy (RowGUID > PKs > all columns) for reliable comparison
 - **Output Formats**: JSON and HTML reports with Jinja2 templating, streamed to stdout for POSIX compatibility
-
-### Diagram Module Architecture
-The `diagram` module provides ER diagram generation and visualization:
-
-- **`main.py`**: Core database introspection and JSON generation using SQLAlchemy
-- **`html_export.py`**: Standalone HTML generation with embedded D3.js visualization
-- **`webapp/`**: Static web application for interactive ER diagram viewing with D3.js force-directed layout
-- **JSON Schema**: Structured format with metadata, tables, relationships, and layout information
-- **Interactive Features**: Pan, zoom, table selection, relationship highlighting, keyboard shortcuts
 
 ### CLI Design Patterns
 - **Modern Typer**: Clean command definitions with focused functionality
