@@ -4,16 +4,17 @@ This subproject provides ER diagram generation and visualization functionality f
 
 ## Features
 
-- **Database Introspection**: Automatically extracts table schemas, relationships, and metadata from SQLite databases
-- **JSON Export**: Generates structured JSON representation of the database schema
-- **Interactive Visualization**: Static web application for viewing and manipulating ER diagrams
-- **Force-Directed Layout**: Automatic positioning of tables using physics-based algorithms
+- **Database Introspection**: Automatically extracts table schemas and relationships from SQLite databases
+- **JSON Export**: Generates clean, structured JSON representation of the database schema
+- **HTML Export**: Creates interactive diagrams with movable table nodes and connecting arrows
+- **TypedDict Schema**: Type-safe JSON structure with comprehensive validation
 
 ## API
 
 ### Core Functions
 
-- `sqlite_to_diagram_json(engine: Engine) -> str`: Generate ER diagram JSON from SQLite database
+- `sqlite_to_diagram(engine: Engine) -> DiagramSchema`: Generate ER diagram from SQLite database
+- `diagram_to_html(diagram: DiagramSchema, title: str) -> str`: Create interactive HTML visualization
 - `read_only_sqlite(path: Path) -> Engine`: Create read-only SQLAlchemy engine
 
 ### CLI Integration
@@ -24,29 +25,17 @@ The diagram functionality is integrated into the main DPM Toolkit CLI:
 # Generate JSON diagram
 dpm-toolkit diagram database.sqlite > diagram.json
 
-# With explicit JSON output format
-dpm-toolkit diagram database.sqlite --output-format json > diagram.json
+# Generate interactive HTML
+dpm-toolkit diagram database.sqlite --output-format html > diagram.html
 ```
 
 ## JSON Schema
 
-The generated JSON follows a structured format with:
-
-- **Metadata**: Database information, generation timestamp, table/relationship counts
-- **Tables**: Complete table definitions with columns, types, constraints, and row counts
-- **Relationships**: Foreign key relationships with cardinality information
-- **Layout**: Viewport and positioning information for visualization
-
-Example output structure:
+The generated JSON follows a clean, minimal structure:
 
 ```json
 {
-  "metadata": {
-    "database_name": "sample.db",
-    "generated_at": "2024-01-01T12:00:00",
-    "table_count": 5,
-    "relationship_count": 8
-  },
+  "name": "database.sqlite",
   "tables": [
     {
       "name": "users",
@@ -54,56 +43,66 @@ Example output structure:
         {
           "name": "id",
           "type": "INTEGER",
-          "nullable": false,
-          "primary_key": true,
-          "foreign_key": false
+          "nullable": false
+        },
+        {
+          "name": "email",
+          "type": "VARCHAR(255)",
+          "nullable": false
         }
       ],
       "primary_keys": ["id"],
-      "row_count": 150
-    }
-  ],
-  "relationships": [
+      "foreign_keys": []
+    },
     {
-      "id": "1",
-      "from_table": "posts",
-      "from_column": "user_id",
-      "to_table": "users",
-      "to_column": "id",
-      "relationship_type": "many-to-one"
+      "name": "posts",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "nullable": false
+        },
+        {
+          "name": "user_id",
+          "type": "INTEGER",
+          "nullable": false
+        }
+      ],
+      "primary_keys": ["id"],
+      "foreign_keys": [
+        {
+          "target_table": "users",
+          "column_mappings": [
+            {
+              "source_column": "user_id",
+              "target_column": "id"
+            }
+          ]
+        }
+      ]
     }
   ]
 }
 ```
 
-## Web Application
+## HTML Visualization
 
-The `webapp/` directory contains a static web application for interactive ER diagram visualization:
+The HTML export creates a simple, interactive diagram with:
 
-### Features
+- **Movable Table Nodes**: Drag tables to reposition them
+- **Connecting Arrows**: Visual representation of foreign key relationships
+- **Clean Styling**: Professional look with table headers and column lists
+- **Full-Screen Layout**: Uses entire viewport for maximum space
+- **Template-Based**: Maintainable separation of HTML, CSS, and JavaScript
 
-- **File Loading**: Load JSON diagram files via file input or drag-and-drop
-- **Interactive Visualization**: Pan, zoom, and manipulate the diagram
-- **Table Selection**: Click tables for detailed information
-- **Relationship Highlighting**: Hover over relationships to see details
-- **Responsive Design**: Works on desktop and mobile devices
+### Template Structure
 
-### Usage
-
-1. Open `webapp/index.html` in a web browser
-2. Load a JSON diagram file using the file input or drag-and-drop
-3. Use the controls to navigate and explore the diagram:
-   - **Pan**: Click and drag the diagram background
-   - **Zoom**: Use zoom controls or mouse wheel
-   - **Reset View**: Return to original viewport
-   - **Fit to Screen**: Auto-scale to fit all tables
-
-### Keyboard Shortcuts
-
-- `Ctrl/Cmd + +`: Zoom in
-- `Ctrl/Cmd + -`: Zoom out
-- `Ctrl/Cmd + 0`: Reset view
-- `Ctrl/Cmd + F`: Fit to screen
+```
+src/diagram/templates/
+├── diagram.html    # Main HTML template
+├── diagram.css     # Styling
+└── diagram.js      # Interactive functionality
+```
 
 ## Development
 
@@ -132,13 +131,13 @@ pyright projects/diagram/src/
 ## Dependencies
 
 - **SQLAlchemy**: Database introspection and metadata extraction
-- **D3.js**: Web-based visualization (loaded via CDN in webapp)
+- **Jinja2**: HTML template rendering
+- **D3.js**: Interactive visualization (loaded via CDN)
 
-## Future Enhancements
+## Architecture
 
-- HTML export with embedded visualization
-- More layout algorithms (hierarchical, circular)
-- Table grouping and clustering
-- Export to image formats (PNG, SVG)
-- Custom styling and themes
-- Database schema comparison visualization
+- **Functional Design**: List comprehensions and pure functions for data processing
+- **TypedDict Schemas**: Type-safe JSON structure validation
+- **Template Separation**: Clean separation of HTML, CSS, and JavaScript
+- **Minimal Schema**: No unnecessary metadata or redundant relationships
+- **Memory Efficient**: Streaming approach suitable for large databases
