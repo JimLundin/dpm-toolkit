@@ -97,7 +97,7 @@ def test_sqlite_to_diagram_json(sample_database: Path) -> None:
     diagram = sqlite_to_diagram(engine)
 
     # Verify new simplified structure
-    assert "database_name" in diagram
+    assert "name" in diagram
     assert "tables" in diagram
     # No more metadata, relationships, or layout sections
 
@@ -113,7 +113,7 @@ def test_sqlite_to_diagram_json(sample_database: Path) -> None:
     assert "columns" in users_table
     assert "primary_key" in users_table
     assert "foreign_keys" in users_table
-    assert users_table["primary_key"] == ["id"]
+    assert users_table["primary_keys"] == ["id"]
 
     # Verify columns have simplified fields
     for column in users_table["columns"]:
@@ -128,7 +128,7 @@ def test_sqlite_to_diagram_json(sample_database: Path) -> None:
 
     # Verify foreign key structure
     user_fk = posts_table["foreign_keys"][0]  # Should be the FK to users
-    assert "referenced_table" in user_fk
+    assert "target_table" in user_fk
     assert "column_mappings" in user_fk
     assert user_fk["target_table"] == "users"
 
@@ -152,7 +152,7 @@ def test_diagram_json_schema_compliance(sample_database: Path) -> None:
     for table in diagram["tables"]:
         assert isinstance(table["name"], str)
         assert isinstance(table["columns"], list)
-        assert isinstance(table["primary_key"], list)
+        assert isinstance(table["primary_keys"], list)
         assert isinstance(table["foreign_keys"], list)
 
         # Test columns schema
@@ -163,7 +163,7 @@ def test_diagram_json_schema_compliance(sample_database: Path) -> None:
             # No more primary_key, foreign_key flags
 
         # Test primary key is list of strings
-        for pk_col in table["primary_key"]:
+        for pk_col in table["primary_keys"]:
             assert isinstance(pk_col, str)
 
         # Test foreign keys schema

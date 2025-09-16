@@ -30,7 +30,7 @@ class TableSchema(TypedDict):
 
     name: str
     columns: list[ColumnSchema]
-    primary_key: list[str]  # Flattened list of column names
+    primary_keys: list[str]  # Flattened list of column names
     foreign_keys: list[ForeignKeySchema]
 
 
