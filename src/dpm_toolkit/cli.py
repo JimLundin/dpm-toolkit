@@ -289,10 +289,13 @@ def compare(
 
 
 @app.command()
-def diagram(sqlite_location: Path, output_format: OutputFormats = OutputFormats.JSON) -> None:
+def diagram(
+    sqlite_location: Path,
+    output_format: OutputFormats = OutputFormats.JSON,
+) -> None:
     """Generate ER diagram from SQLite database."""
     try:
-        from diagram import read_only_sqlite, sqlite_to_diagram_json, create_standalone_html
+        from diagram import create_standalone_html, read_only_sqlite, sqlite_to_diagram
     except ImportError as e:
         print_error("Diagram generation requires [diagram] extra dependencies")
         raise Exit(1) from e
@@ -308,13 +311,14 @@ def diagram(sqlite_location: Path, output_format: OutputFormats = OutputFormats.
     ) as progress:
         progress.add_task("Generating ER diagram...", total=None)
         sqlite_database = read_only_sqlite(sqlite_location)
-        diagram_json = sqlite_to_diagram_json(sqlite_database)
+        diagram = sqlite_to_diagram(sqlite_database)
 
     if output_format == OutputFormats.JSON:
+        diagram_json = dumps(diagram)
         stdout.write(diagram_json)
     elif output_format == OutputFormats.HTML:
         database_name = sqlite_location.stem
-        html_content = create_standalone_html(diagram_json, f"ER Diagram - {database_name}")
+        html_content = create_standalone_html(diagram, f"ER Diagram - {database_name}")
         stdout.write(html_content)
     elif output_format == OutputFormats.TABLE:
         print_error("Table format not available for diagrams, use JSON or HTML")
