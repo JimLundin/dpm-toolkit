@@ -141,7 +141,7 @@ class ERDiagramApp {
 
         dbInfo.innerHTML = `
             <div class="info-item">
-                <strong>Database:</strong> ${this.currentData.database_name || 'Unknown'}
+                <strong>Database:</strong> ${this.currentData.name}
             </div>
             <div class="info-item">
                 <strong>Tables:</strong> ${this.currentData.tables.length}
@@ -164,8 +164,8 @@ class ERDiagramApp {
             .sort((a, b) => a.name.localeCompare(b.name))
             .map(table => {
                 const columnCount = table.columns.length;
-                const pkCount = table.primary_key ? table.primary_key.length : 0;
-                const fkCount = table.foreign_keys ? table.foreign_keys.length : 0;
+                const pkCount = table.primary_key.length;
+                const fkCount = table.foreign_keys.length;
 
                 return `
                     <div class="table-item" data-table="${table.name}">

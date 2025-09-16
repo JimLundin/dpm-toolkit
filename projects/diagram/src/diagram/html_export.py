@@ -3,11 +3,13 @@
 import json
 from pathlib import Path
 
+from diagram.schema_types import DiagramSchema
+
 
 def _remove_dom_content_loaded(js_content: str) -> str:
     """Remove the DOMContentLoaded event listener from app.js to avoid conflicts."""
-    lines = js_content.split('\n')
-    result_lines = []
+    lines = js_content.split("\n")
+    result_lines: list[str] = []
     skip_mode = False
     brace_count = 0
 
@@ -20,8 +22,8 @@ def _remove_dom_content_loaded(js_content: str) -> str:
 
         if skip_mode:
             # Count braces to find the end of the event listener
-            brace_count += line.count('{') - line.count('}')
-            if brace_count <= 0 and '});' in line:
+            brace_count += line.count("{") - line.count("}")
+            if brace_count <= 0 and "});" in line:
                 skip_mode = False
                 result_lines.append("// });")
                 continue
@@ -29,10 +31,10 @@ def _remove_dom_content_loaded(js_content: str) -> str:
         if not skip_mode:
             result_lines.append(line)
 
-    return '\n'.join(result_lines)
+    return "\n".join(result_lines)
 
 
-def create_standalone_html(diagram_json: str, title: str = "ER Diagram") -> str:
+def create_standalone_html(diagram: DiagramSchema, title: str = "ER Diagram") -> str:
     """Create a standalone HTML file with embedded ER diagram."""
     # Read the webapp files
     webapp_dir = Path(__file__).parent.parent.parent / "webapp"
@@ -43,7 +45,7 @@ def create_standalone_html(diagram_json: str, title: str = "ER Diagram") -> str:
         app_js = (webapp_dir / "js" / "app.js").read_text()
     except FileNotFoundError:
         # Fallback for minimal HTML if webapp files are not available
-        return create_minimal_html(diagram_json, title)
+        return create_minimal_html(diagram, title)
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -117,7 +119,7 @@ def create_standalone_html(diagram_json: str, title: str = "ER Diagram") -> str:
 
     <script>
 // Embedded diagram data
-const EMBEDDED_DIAGRAM_DATA = {json.dumps(json.loads(diagram_json), indent=2)};
+const EMBEDDED_DIAGRAM_DATA = {json.dumps(diagram, indent=2)};
 
 {diagram_js}
 
@@ -208,19 +210,19 @@ class EmbeddedERDiagramApp {{
         const dbInfo = document.getElementById('dbInfo');
         if (!dbInfo) return;
 
-        const metadata = this.currentData.metadata;
+        // Count foreign keys across all tables
+        const fkCount = this.currentData.tables.reduce((count, table) =>
+            count + table.foreign_keys.length, 0);
+
         dbInfo.innerHTML = `
             <div class="info-item">
-                <strong>Database:</strong> ${{metadata.database_name || 'Unknown'}}
+                <strong>Database:</strong> ${{this.currentData.name}}
             </div>
             <div class="info-item">
-                <strong>Tables:</strong> ${{metadata.table_count || this.currentData.tables.length}}
+                <strong>Tables:</strong> ${{this.currentData.tables.length}}
             </div>
             <div class="info-item">
-                <strong>Relationships:</strong> ${{metadata.relationship_count || this.currentData.relationships.length}}
-            </div>
-            <div class="info-item">
-                <strong>Generated:</strong> ${{this.formatDate(metadata.generated_at)}}
+                <strong>Foreign Keys:</strong> ${{fkCount}}
             </div>
         `;
     }}
@@ -238,12 +240,13 @@ class EmbeddedERDiagramApp {{
             .sort((a, b) => a.name.localeCompare(b.name))
             .map(table => {{
                 const columnCount = table.columns.length;
-                const rowCount = table.row_count !== undefined ? ` • ${{table.row_count}} rows` : '';
+                const pkCount = table.primary_key.length;
+                const fkCount = table.foreign_keys.length;
                 return `
                     <div class="table-item" data-table="${{table.name}}">
                         <div class="table-name">${{table.name}}</div>
                         <div class="table-stats">
-                            ${{columnCount}} cols${{rowCount}}
+                            ${{columnCount}} cols • ${{pkCount}} PK • ${{fkCount}} FK
                         </div>
                     </div>
                 `;
@@ -281,7 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {{
 
         // Load the embedded diagram data
         if (EMBEDDED_DIAGRAM_DATA) {{
-            console.log('Loading embedded diagram data:', EMBEDDED_DIAGRAM_DATA.metadata);
+            console.log('Loading embedded diagram data:', EMBEDDED_DIAGRAM_DATA.name);
             window.app.loadDiagramData(EMBEDDED_DIAGRAM_DATA);
         }} else {{
             console.error('No embedded diagram data found');
@@ -295,21 +298,27 @@ document.addEventListener('DOMContentLoaded', () => {{
 </html>"""
 
 
-def create_minimal_html(diagram_json: str, title: str = "ER Diagram") -> str:
+def create_minimal_html(diagram: DiagramSchema, title: str = "ER Diagram") -> str:
     """Create a minimal HTML file when webapp assets are not available."""
-    data = json.loads(diagram_json)
-    metadata = data.get("metadata", {})
-    tables = data.get("tables", [])
-    relationships = data.get("relationships", [])
+    tables = diagram["tables"]
+
+    # Count total foreign keys
+    total_fks = sum(len(table["foreign_keys"]) for table in tables)
 
     table_html = ""
     for table in tables:
-        columns_html = "".join(
-            [
-                f"<tr><td>{col['name']}</td><td>{col['type']}</td><td>{'✓' if col.get('primary_key') else ''}</td><td>{'✓' if col.get('foreign_key') else ''}</td></tr>"
-                for col in table.get("columns", [])
-            ]
-        )
+        # Build columns HTML with PK/FK indicators
+        columns_html = ""
+        for col in table["columns"]:
+            is_pk = col["name"] in table["primary_key"]
+            is_fk = any(
+                any(
+                    mapping["source_column"] == col["name"]
+                    for mapping in fk["column_mappings"]
+                )
+                for fk in table["foreign_keys"]
+            )
+            columns_html += f"<tr><td>{col['name']}</td><td>{col['type']}</td><td>{'✓' if is_pk else ''}</td><td>{'✓' if is_fk else ''}</td></tr>"
 
         table_html += f"""
         <div class="table-section">
@@ -325,12 +334,12 @@ def create_minimal_html(diagram_json: str, title: str = "ER Diagram") -> str:
         </div>
         """
 
-    relationships_html = "".join(
-        [
-            f"<tr><td>{rel['from_table']}.{rel['from_column']}</td><td>{rel['to_table']}.{rel['to_column']}</td><td>{rel['relationship_type']}</td></tr>"
-            for rel in relationships
-        ]
-    )
+    # Build relationships HTML from foreign keys
+    relationships_html = ""
+    for table in tables:
+        for fk in table["foreign_keys"]:
+            for mapping in fk["column_mappings"]:
+                relationships_html += f"<tr><td>{table['name']}.{mapping['source_column']}</td><td>{fk['target_table']}.{mapping['target_column']}</td><td>many-to-one</td></tr>"
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -354,10 +363,9 @@ def create_minimal_html(diagram_json: str, title: str = "ER Diagram") -> str:
 
     <div class="metadata">
         <h2>Database Information</h2>
-        <p><strong>Database:</strong> {metadata.get("database_name", "Unknown")}</p>
-        <p><strong>Tables:</strong> {metadata.get("table_count", len(tables))}</p>
-        <p><strong>Relationships:</strong> {metadata.get("relationship_count", len(relationships))}</p>
-        <p><strong>Generated:</strong> {metadata.get("generated_at", "Unknown")}</p>
+        <p><strong>Database:</strong> {diagram["name"]}</p>
+        <p><strong>Tables:</strong> {len(tables)}</p>
+        <p><strong>Foreign Keys:</strong> {total_fks}</p>
     </div>
 
     <h2>Tables</h2>
@@ -376,7 +384,7 @@ def create_minimal_html(diagram_json: str, title: str = "ER Diagram") -> str:
     </div>
 
     <script>
-        const diagramData = {json.dumps(data, indent=2)};
+        const diagramData = {json.dumps(diagram, indent=2)};
         console.log('Diagram data loaded:', diagramData);
     </script>
 </body>

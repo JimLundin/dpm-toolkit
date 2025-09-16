@@ -87,11 +87,11 @@ class ERDiagram {
                 // Create a link for each foreign key
                 const link = {
                     source: table.name,
-                    target: fk.referenced_table,
+                    target: fk.target_table,
                     sourceColumns: fk.column_mappings.map(m => m.source_column),
                     targetColumns: fk.column_mappings.map(m => m.target_column),
                     // Generate a unique ID for this relationship
-                    id: `${table.name}_${fk.referenced_table}_${fk.column_mappings.map(m => m.source_column).join('_')}`
+                    id: `${table.name}_${fk.target_table}_${fk.column_mappings.map(m => m.source_column).join('_')}`
                 };
                 this.links.push(link);
             });
@@ -303,8 +303,8 @@ class ERDiagram {
     }
 
     generateTableTooltip(table) {
-        const pkCount = table.primary_key ? table.primary_key.length : 0;
-        const fkCount = table.foreign_keys ? table.foreign_keys.length : 0;
+        const pkCount = table.primary_key.length;
+        const fkCount = table.foreign_keys.length;
 
         return `
             <h4>${table.name}</h4>

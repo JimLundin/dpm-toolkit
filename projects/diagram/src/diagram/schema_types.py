@@ -21,7 +21,7 @@ class ColumnMapping(TypedDict):
 class ForeignKeySchema(TypedDict):
     """Schema for foreign key definition."""
 
-    referenced_table: str
+    target_table: str
     column_mappings: list[ColumnMapping]
 
 
@@ -37,5 +37,5 @@ class TableSchema(TypedDict):
 class DiagramSchema(TypedDict):
     """Root schema for the complete ER diagram."""
 
-    database_name: str
+    name: str
     tables: list[TableSchema]

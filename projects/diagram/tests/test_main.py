@@ -1,17 +1,18 @@
 """Tests for the main diagram generation functionality."""
 
-import json
 import sqlite3
 import tempfile
+from collections.abc import Generator
 from pathlib import Path
 
 import pytest
+from sqlalchemy import text
 
-from diagram import read_only_sqlite, sqlite_to_diagram_json
+from diagram import read_only_sqlite, sqlite_to_diagram
 
 
-@pytest.fixture
-def sample_database():
+@pytest.fixture(name="sample_database")
+def social_media_sample_database() -> Generator[Path]:
     """Create a sample SQLite database for testing."""
     with tempfile.NamedTemporaryFile(suffix=".sqlite", delete=False) as f:
         db_path = Path(f.name)
@@ -21,15 +22,18 @@ def sample_database():
     cursor = conn.cursor()
 
     # Create tables
-    cursor.execute("""
+    cursor.execute(
+        """
         CREATE TABLE users (
             id INTEGER PRIMARY KEY,
             email VARCHAR(255) UNIQUE NOT NULL,
             name VARCHAR(100)
         )
-    """)
+    """,
+    )
 
-    cursor.execute("""
+    cursor.execute(
+        """
         CREATE TABLE posts (
             id INTEGER PRIMARY KEY,
             user_id INTEGER NOT NULL,
@@ -37,9 +41,11 @@ def sample_database():
             content TEXT,
             FOREIGN KEY (user_id) REFERENCES users(id)
         )
-    """)
+    """,
+    )
 
-    cursor.execute("""
+    cursor.execute(
+        """
         CREATE TABLE comments (
             id INTEGER PRIMARY KEY,
             post_id INTEGER NOT NULL,
@@ -48,7 +54,8 @@ def sample_database():
             FOREIGN KEY (post_id) REFERENCES posts(id),
             FOREIGN KEY (user_id) REFERENCES users(id)
         )
-    """)
+    """,
+    )
 
     # Insert sample data
     cursor.execute(
@@ -73,34 +80,29 @@ def sample_database():
     db_path.unlink()
 
 
-def test_read_only_sqlite(sample_database) -> None:
+def test_read_only_sqlite(sample_database: Path) -> None:
     """Test creating a read-only SQLAlchemy engine."""
     engine = read_only_sqlite(sample_database)
     assert engine is not None
 
     # Test that we can query the database
     with engine.connect() as conn:
-        from sqlalchemy import text
-
         result = conn.execute(text("SELECT COUNT(*) FROM users"))
         assert result.scalar() == 1
 
 
-def test_sqlite_to_diagram_json(sample_database) -> None:
+def test_sqlite_to_diagram_json(sample_database: Path) -> None:
     """Test generating diagram JSON from SQLite database."""
     engine = read_only_sqlite(sample_database)
-    diagram_json = sqlite_to_diagram_json(engine)
-
-    # Parse the JSON to verify it's valid
-    data = json.loads(diagram_json)
+    diagram = sqlite_to_diagram(engine)
 
     # Verify new simplified structure
-    assert "database_name" in data
-    assert "tables" in data
+    assert "database_name" in diagram
+    assert "tables" in diagram
     # No more metadata, relationships, or layout sections
 
     # Verify tables
-    tables = data["tables"]
+    tables = diagram["tables"]
     assert len(tables) == 3
 
     table_names = {table["name"] for table in tables}
@@ -128,7 +130,7 @@ def test_sqlite_to_diagram_json(sample_database) -> None:
     user_fk = posts_table["foreign_keys"][0]  # Should be the FK to users
     assert "referenced_table" in user_fk
     assert "column_mappings" in user_fk
-    assert user_fk["referenced_table"] == "users"
+    assert user_fk["target_table"] == "users"
 
     # Verify column mapping structure
     mapping = user_fk["column_mappings"][0]
@@ -138,18 +140,16 @@ def test_sqlite_to_diagram_json(sample_database) -> None:
     assert mapping["target_column"] == "id"
 
 
-def test_diagram_json_schema_compliance(sample_database) -> None:
+def test_diagram_json_schema_compliance(sample_database: Path) -> None:
     """Test that generated JSON complies with new TypedDict schema."""
     engine = read_only_sqlite(sample_database)
-    diagram_json = sqlite_to_diagram_json(engine)
-    data = json.loads(diagram_json)
-
+    diagram = sqlite_to_diagram(engine)
     # Test root schema compliance
-    assert isinstance(data["database_name"], str)
-    assert isinstance(data["tables"], list)
+    assert isinstance(diagram["name"], str)
+    assert isinstance(diagram["tables"], list)
 
     # Test each table has required fields
-    for table in data["tables"]:
+    for table in diagram["tables"]:
         assert isinstance(table["name"], str)
         assert isinstance(table["columns"], list)
         assert isinstance(table["primary_key"], list)
@@ -168,7 +168,7 @@ def test_diagram_json_schema_compliance(sample_database) -> None:
 
         # Test foreign keys schema
         for fk in table["foreign_keys"]:
-            assert isinstance(fk["referenced_table"], str)
+            assert isinstance(fk["target_table"], str)
             assert isinstance(fk["column_mappings"], list)
 
             # Test column mappings
