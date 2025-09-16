@@ -295,7 +295,7 @@ def diagram(
 ) -> None:
     """Generate ER diagram from SQLite database."""
     try:
-        from diagram import create_standalone_html, read_only_sqlite, sqlite_to_diagram
+        from diagram import diagram_to_html, read_only_sqlite, sqlite_to_diagram
     except ImportError as e:
         print_error("Diagram generation requires [diagram] extra dependencies")
         raise Exit(1) from e
@@ -318,7 +318,7 @@ def diagram(
         stdout.write(diagram_json)
     elif output_format == OutputFormats.HTML:
         database_name = sqlite_location.stem
-        html_content = create_standalone_html(diagram, f"ER Diagram - {database_name}")
+        html_content = diagram_to_html(diagram, f"ER Diagram - {database_name}")
         stdout.write(html_content)
     elif output_format == OutputFormats.TABLE:
         print_error("Table format not available for diagrams, use JSON or HTML")

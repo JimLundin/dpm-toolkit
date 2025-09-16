@@ -55,7 +55,7 @@ def _build_table(inspector: Inspector, table_name: str) -> TableSchema:
     return {
         "name": table_name,
         "columns": [_build_column(col_info) for col_info in columns_info],
-        "primary_key": pk_constraint["constrained_columns"],
+        "primary_keys": pk_constraint["constrained_columns"],
         "foreign_keys": [_build_foreign_key(fk) for fk in foreign_keys],
     }
 

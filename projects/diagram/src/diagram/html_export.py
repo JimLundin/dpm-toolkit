@@ -34,7 +34,7 @@ def _remove_dom_content_loaded(js_content: str) -> str:
     return "\n".join(result_lines)
 
 
-def create_standalone_html(diagram: DiagramSchema, title: str = "ER Diagram") -> str:
+def diagram_to_html(diagram: DiagramSchema, title: str = "ER Diagram") -> str:
     """Create a standalone HTML file with embedded ER diagram."""
     # Read the webapp files
     webapp_dir = Path(__file__).parent.parent.parent / "webapp"
@@ -310,7 +310,7 @@ def create_minimal_html(diagram: DiagramSchema, title: str = "ER Diagram") -> st
         # Build columns HTML with PK/FK indicators
         columns_html = ""
         for col in table["columns"]:
-            is_pk = col["name"] in table["primary_key"]
+            is_pk = col["name"] in table["primary_keys"]
             is_fk = any(
                 any(
                     mapping["source_column"] == col["name"]
