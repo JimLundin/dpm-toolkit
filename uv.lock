@@ -6,7 +6,6 @@ requires-python = ">=3.13"
 members = [
     "archive",
     "compare",
-    "diagram",
     "dpm-toolkit",
     "dpm2",
     "migrate",
@@ -102,21 +101,6 @@ dependencies = [
 requires-dist = [{ name = "jinja2", specifier = ">=3.1.0" }]
 
 [[package]]
-name = "diagram"
-version = "0.0.0"
-source = { editable = "projects/diagram" }
-dependencies = [
-    { name = "jinja2" },
-    { name = "sqlalchemy" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "jinja2", specifier = ">=3.1.0" },
-    { name = "sqlalchemy", specifier = ">=2.0.37" },
-]
-
-[[package]]
 name = "dpm-toolkit"
 version = "0.0.0"
 source = { editable = "." }
@@ -128,9 +112,6 @@ dependencies = [
 [package.optional-dependencies]
 compare = [
     { name = "compare" },
-]
-diagram = [
-    { name = "diagram" },
 ]
 migrate = [
     { name = "migrate" },
@@ -158,13 +139,12 @@ dev = [
 requires-dist = [
     { name = "archive", editable = "projects/archive" },
     { name = "compare", marker = "extra == 'compare'", editable = "projects/compare" },
-    { name = "diagram", marker = "extra == 'diagram'", editable = "projects/diagram" },
     { name = "migrate", marker = "extra == 'migrate'", virtual = "projects/migrate" },
     { name = "schema", marker = "extra == 'schema'", editable = "projects/schema" },
     { name = "scrape", marker = "extra == 'scrape'", editable = "projects/scrape" },
     { name = "typer", specifier = ">=0.16.1" },
 ]
-provides-extras = ["scrape", "migrate", "schema", "compare", "diagram"]
+provides-extras = ["scrape", "migrate", "schema", "compare"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -498,11 +478,15 @@ name = "schema"
 version = "0.0.0"
 source = { editable = "projects/schema" }
 dependencies = [
+    { name = "jinja2" },
     { name = "sqlalchemy" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "sqlalchemy", specifier = ">=2.0.37" }]
+requires-dist = [
+    { name = "jinja2", specifier = ">=3.1.0" },
+    { name = "sqlalchemy", specifier = ">=2.0.37" },
+]
 
 [[package]]
 name = "scrape"

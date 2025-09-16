@@ -216,17 +216,34 @@ def migrate(access_location: Path, sqlite_location: Path) -> None:
 
 
 @app.command()
-def schema(sqlite_location: Path) -> None:
-    """Generate SQLAlchemy schema from SQLite database."""
+def schema(
+    sqlite_location: Path,
+    format: str = "python",  # python (default), json, html
+) -> None:
+    """Generate database schema in multiple formats."""
     try:
-        from schema import read_only_sqlite, sqlite_to_sqlalchemy_schema
+        from schema import (
+            read_only_sqlite,
+            schema_to_html,
+            schema_to_sqlalchemy,
+            sqlite_to_schema,
+        )
     except ImportError as e:
         print_error("Schema generation requires [schema] extra dependencies")
         raise Exit(1) from e
 
+    # Validate format
+    valid_formats = {"python", "json", "html"}
+    if format not in valid_formats:
+        print_error(
+            f"Invalid format: {format}. Valid formats: {', '.join(valid_formats)}"
+        )
+        raise Exit(1)
+
     validate_database_location(sqlite_location, exists=True)
     validate_database_extension(sqlite_location, SQLITE_EXTENSIONS)
     print_info(f"Source database: {sqlite_location}")
+    print_info(f"Output format: {format}")
 
     with Progress(
         SpinnerColumn(),
@@ -235,8 +252,17 @@ def schema(sqlite_location: Path) -> None:
     ) as progress:
         progress.add_task("Generating schema...", total=None)
         sqlite_database = read_only_sqlite(sqlite_location)
-        sqlalchemy_schema = sqlite_to_sqlalchemy_schema(sqlite_database)
-        stdout.write(sqlalchemy_schema)
+        schema_data = sqlite_to_schema(sqlite_database)
+
+        if format == "python":
+            sqlalchemy_schema = schema_to_sqlalchemy(sqlite_database)
+            stdout.write(sqlalchemy_schema)
+        elif format == "json":
+            json_output = dumps(schema_data)
+            stdout.write(json_output)
+        elif format == "html":
+            html_output = schema_to_html(schema_data)
+            stdout.write(html_output)
 
     print_success("Schema generation completed successfully")
 
@@ -286,45 +312,6 @@ def compare(
     if output_format == OutputFormats.TABLE:
         format_comparison_table(comparisons)
         return
-
-
-@app.command()
-def diagram(
-    sqlite_location: Path,
-    output_format: OutputFormats = OutputFormats.JSON,
-) -> None:
-    """Generate ER diagram from SQLite database."""
-    try:
-        from diagram import diagram_to_html, read_only_sqlite, sqlite_to_diagram
-    except ImportError as e:
-        print_error("Diagram generation requires [diagram] extra dependencies")
-        raise Exit(1) from e
-
-    validate_database_location(sqlite_location, exists=True)
-    validate_database_extension(sqlite_location, SQLITE_EXTENSIONS)
-    print_info(f"Source database: {sqlite_location}")
-
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        console=err_console,
-    ) as progress:
-        progress.add_task("Generating ER diagram...", total=None)
-        sqlite_database = read_only_sqlite(sqlite_location)
-        diagram = sqlite_to_diagram(sqlite_database)
-
-    if output_format == OutputFormats.JSON:
-        diagram_json = dumps(diagram)
-        stdout.write(diagram_json)
-    elif output_format == OutputFormats.HTML:
-        database_name = sqlite_location.stem
-        html_content = diagram_to_html(diagram, f"ER Diagram - {database_name}")
-        stdout.write(html_content)
-    elif output_format == OutputFormats.TABLE:
-        print_error("Table format not available for diagrams, use JSON or HTML")
-        raise Exit(1)
-
-    print_success("ER diagram generation completed successfully")
 
 
 def main() -> None:

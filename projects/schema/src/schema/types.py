@@ -1,14 +1,15 @@
-"""TypedDict schemas for ER diagram JSON structure."""
+"""TypedDict schemas for database schema representation."""
 
-from typing import TypedDict
+from typing import NotRequired, TypedDict
 
 
 class ColumnSchema(TypedDict):
-    """Schema for a database column."""
+    """Schema for a database column with enhanced type support."""
 
     name: str
     type: str
     nullable: bool
+    enum_values: NotRequired[list[str] | None]  # For enum detection support
 
 
 class ColumnMapping(TypedDict):
@@ -34,8 +35,8 @@ class TableSchema(TypedDict):
     foreign_keys: list[ForeignKeySchema]
 
 
-class DiagramSchema(TypedDict):
-    """Root schema for the complete ER diagram."""
+class DatabaseSchema(TypedDict):
+    """Root schema for the complete database schema."""
 
     name: str
     tables: list[TableSchema]
