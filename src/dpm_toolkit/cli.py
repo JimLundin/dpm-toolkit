@@ -1,12 +1,12 @@
 """Command line interface for DPM Toolkit."""
 
+import sys
 from collections.abc import Iterable
 from datetime import date
-from enum import StrEnum, auto
 from json import dumps
 from pathlib import Path
 from sys import stdout
-from typing import Any
+from typing import Any, Literal
 
 from archive import (
     Group,
@@ -19,20 +19,15 @@ from archive import (
     get_versions_by_type,
     latest_version,
 )
+from cyclopts import App
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
-from typer import Exit, Typer
 
-app = Typer(name="dpm-toolkit", help="DPM Toolkit CLI tool", no_args_is_help=True)
+app = App(help="DPM Toolkit CLI tool")
 
 
-class OutputFormats(StrEnum):
-    """Output format types."""
-
-    TABLE = auto()
-    JSON = auto()
-    HTML = auto()
+type OutputFormat = Literal["table", "json", "html"]
 
 
 def serializer[T](obj: date | Iterable[T]) -> str | tuple[T, ...] | None:
@@ -77,7 +72,7 @@ def validate_database_location(database_location: Path, *, exists: bool = True) 
             f"{'does not exist' if exists else 'already exists'}: "
             f"{database_location}",
         )
-        raise Exit(1)
+        sys.exit(1)
 
 
 def validate_database_extension(
@@ -89,7 +84,7 @@ def validate_database_extension(
         print_error(
             f"Database file has invalid extension: {', '.join(file_extensions)}",
         )
-        raise Exit(1)
+        sys.exit(1)
 
 
 def format_version_table(version: Version) -> None:
@@ -127,10 +122,10 @@ def format_comparison_table(data: Iterable[dict[str, Any]], length: int = 100) -
     console.print(table)
 
 
-@app.command()
+@app.command
 def versions(
-    group: Group = Group.ALL,
-    output_format: OutputFormats = OutputFormats.TABLE,
+    group: Group = "all",
+    output_format: OutputFormat = "table",
     *,
     latest: bool = False,
 ) -> None:
@@ -138,32 +133,32 @@ def versions(
     version_group = get_versions_by_type(VERSIONS, group)
     if latest:
         version = latest_version(version_group)
-        if output_format == OutputFormats.JSON:
+        if output_format == "json":
             console.print_json(dumps(version, default=serializer))
-        elif output_format == OutputFormats.HTML:
+        elif output_format == "html":
             print_error("HTML format for versions is not yet implemented")
-            raise Exit(1)
-        elif output_format == OutputFormats.TABLE:
+            sys.exit(1)
+        elif output_format == "table":
             format_version_table(version)
         return
 
-    if output_format == OutputFormats.JSON:
+    if output_format == "json":
         console.print_json(dumps(version_group, default=serializer))
-    elif output_format == OutputFormats.HTML:
+    elif output_format == "html":
         print_error("HTML format for versions is not yet implemented")
-        raise Exit(1)
-    elif output_format == OutputFormats.TABLE:
+        sys.exit(1)
+    elif output_format == "table":
         for version in version_group:
             format_version_table(version)
 
 
-@app.command()
-def download(version_id: str, variant: SourceType = SourceType.ORIGINAL) -> None:
+@app.command
+def download(version_id: str, variant: SourceType = "original") -> None:
     """Download databases."""
     version = get_version(VERSIONS, version_id)
     if not version:
         print_error(f"Invalid version '{version_id}'")
-        raise Exit(1)
+        sys.exit(1)
 
     database_source = get_source(version, variant)
     with Progress(
@@ -183,14 +178,14 @@ def download(version_id: str, variant: SourceType = SourceType.ORIGINAL) -> None
     print_success(f"Downloaded version {version_id} ({variant})")
 
 
-@app.command()
+@app.command
 def migrate(access_location: Path, sqlite_location: Path) -> None:
     """Migrate Access database to SQLite."""
     try:
         from migrate import access, access_to_sqlite
-    except ImportError as e:
+    except ImportError:
         print_error("Migration requires [migrate] extra dependencies")
-        raise Exit(1) from e
+        sys.exit(1)
 
     validate_database_location(access_location, exists=True)
     validate_database_extension(access_location, ACCESS_EXTENSIONS)
@@ -215,14 +210,14 @@ def migrate(access_location: Path, sqlite_location: Path) -> None:
     print_success("Migration completed successfully")
 
 
-@app.command()
+@app.command
 def schema(sqlite_location: Path) -> None:
     """Generate SQLAlchemy schema from SQLite database."""
     try:
         from schema import read_only_sqlite, sqlite_to_sqlalchemy_schema
-    except ImportError as e:
+    except ImportError:
         print_error("Schema generation requires [schema] extra dependencies")
-        raise Exit(1) from e
+        sys.exit(1)
 
     validate_database_location(sqlite_location, exists=True)
     validate_database_extension(sqlite_location, SQLITE_EXTENSIONS)
@@ -241,18 +236,18 @@ def schema(sqlite_location: Path) -> None:
     print_success("Schema generation completed successfully")
 
 
-@app.command()
+@app.command
 def compare(
     old_location: Path,
     new_location: Path,
-    output_format: OutputFormats = OutputFormats.TABLE,
+    output_format: OutputFormat = "table",
 ) -> None:
     """Compare two SQLite databases."""
     try:
         from compare import compare_databases, comparisons_to_html
-    except ImportError as e:
+    except ImportError:
         print_error("Comparison requires [compare] extra dependencies")
-        raise Exit(1) from e
+        sys.exit(1)
 
     validate_database_location(old_location, exists=True)
     validate_database_extension(old_location, SQLITE_EXTENSIONS)
@@ -273,17 +268,17 @@ def compare(
         comparisons = compare_databases(old_location, new_location)
 
     # Output to stdout in requested format (keep stdout clean for data)
-    if output_format == OutputFormats.HTML:
+    if output_format == "html":
         html_stream = comparisons_to_html(comparisons)
         for chunk in html_stream:
             stdout.write(chunk)
         return
 
-    if output_format == OutputFormats.JSON:
+    if output_format == "json":
         console.print_json(dumps(comparisons, default=serializer))
         return
 
-    if output_format == OutputFormats.TABLE:
+    if output_format == "table":
         format_comparison_table(comparisons)
         return
 
