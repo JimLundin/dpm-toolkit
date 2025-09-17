@@ -213,7 +213,7 @@ def migrate(access_location: Path, sqlite_location: Path) -> None:
 @app.command()
 def schema(
     sqlite_location: Path,
-    format_type: str = "python",  # python (default), json, html
+    fmt: Literal["json", "html", "python"] = "python",
 ) -> None:
     """Generate database schema in multiple formats."""
     try:
@@ -223,17 +223,9 @@ def schema(
             schema_to_sqlalchemy,
             sqlite_to_schema,
         )
-    except ImportError as e:
+    except ImportError:
         print_error("Schema generation requires [schema] extra dependencies")
         sys.exit(1)
-
-    # Validate format
-    valid_formats = {"python", "json", "html"}
-    if format_type not in valid_formats:
-        print_error(
-            f"Invalid format: {format}. Valid formats: {', '.join(valid_formats)}",
-        )
-        raise Exit(1)
 
     validate_database_location(sqlite_location, exists=True)
     validate_database_extension(sqlite_location, SQLITE_EXTENSIONS)
@@ -249,13 +241,13 @@ def schema(
         sqlite_database = read_only_sqlite(sqlite_location)
         schema_data = sqlite_to_schema(sqlite_database)
 
-        if format_type == "python":
+        if fmt == "python":
             sqlalchemy_schema = schema_to_sqlalchemy(sqlite_database)
             stdout.write(sqlalchemy_schema)
-        elif format_type == "json":
+        elif fmt == "json":
             json_output = dumps(schema_data)
             stdout.write(json_output)
-        elif format_type == "html":
+        elif fmt == "html":
             html_output = schema_to_html(schema_data)
             stdout.write(html_output)
 
