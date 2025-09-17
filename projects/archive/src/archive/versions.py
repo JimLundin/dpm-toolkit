@@ -3,38 +3,18 @@
 from collections import defaultdict
 from collections.abc import Iterable
 from datetime import date
-from enum import StrEnum, auto
 from pathlib import Path
 from tomllib import load
-from typing import NotRequired, TypedDict
+from typing import Literal, NotRequired, TypedDict
 
 type VersionUrls = dict[str, set[str]]
 
 
-class VersionType(StrEnum):
-    """Enumeration for version types."""
+type VersionType = Literal["sample", "draft", "final", "release", "errata"]
 
-    SAMPLE = auto()
-    DRAFT = auto()
-    FINAL = auto()
-    RELEASE = auto()
-    ERRATA = auto()
+type Group = Literal["all", "release", "draft"]
 
-
-class Group(StrEnum):
-    """Enumeration for version groups."""
-
-    ALL = auto()
-    RELEASE = auto()
-    DRAFT = auto()
-
-
-class SourceType(StrEnum):
-    """Enumeration for source types."""
-
-    ORIGINAL = auto()
-    ARCHIVE = auto()
-    CONVERTED = auto()
+type SourceType = Literal["original", "archive", "converted"]
 
 
 class Source(TypedDict):
@@ -61,13 +41,11 @@ class Version(TypedDict):
 
 def get_source(version: Version, source_type: SourceType) -> Source:
     """Get source by type from version."""
-    if source_type == SourceType.ORIGINAL:
-        return version["original"]
-    if source_type == SourceType.ARCHIVE:
-        return version["archive"]
-    if source_type == SourceType.CONVERTED:
-        return version["converted"]
-    return None
+    try:
+        return version[source_type]
+    except KeyError as err:
+        msg = f"Unknown source type: {source_type}"
+        raise ValueError(msg) from err
 
 
 type Versions = Iterable[Version]
