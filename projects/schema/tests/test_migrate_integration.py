@@ -17,7 +17,7 @@ from sqlalchemy import (
     inspect,
 )
 
-from schema.main import schema_to_sqlalchemy
+from schema.sqlalchemy_export import schema_to_sqlalchemy
 
 
 @pytest.fixture(name="migrate_output_db")
