@@ -7,7 +7,7 @@ readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">= 3.13"
 
-dependencies = ["archive", "typer>=0.16.1"]
+dependencies = ["archive", "cyclopts>=3.1.0"]
 
 [project.scripts]
 dpm-toolkit = "dpm_toolkit.cli:main"
