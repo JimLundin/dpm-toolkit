@@ -41,13 +41,11 @@ class Version(TypedDict):
 
 def get_source(version: Version, source_type: SourceType) -> Source:
     """Get source by type from version."""
-    if source_type == "original":
-        return version["original"]
-    if source_type == "archive":
-        return version["archive"]
-    if source_type == "converted":
-        return version["converted"]
-    return None
+    try:
+        return version[source_type]
+    except KeyError as err:
+        msg = f"Unknown source type: {source_type}"
+        raise ValueError(msg) from err
 
 
 type Versions = Iterable[Version]
