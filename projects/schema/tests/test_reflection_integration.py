@@ -9,7 +9,7 @@ import pytest
 from sqlalchemy import Enum, MetaData, create_engine, event
 from sqlalchemy.exc import DatabaseError
 
-from schema.main import enum_detection, sqlite_to_sqlalchemy_schema
+from schema.sqlalchemy_export import enum_reflection, schema_to_sqlalchemy
 
 
 @pytest.fixture(name="temp_db_with_enums")
@@ -72,7 +72,7 @@ def test_enum_columns_detected_in_reflection(temp_db_with_enums: str) -> None:
     engine = create_engine(f"sqlite:///{temp_db_with_enums}")
     metadata = MetaData()
 
-    event.listen(metadata, "column_reflect", enum_detection)
+    event.listen(metadata, "column_reflect", enum_reflection)
     metadata.reflect(bind=engine)
 
     # Test users table
@@ -107,7 +107,7 @@ def test_enum_values_correctly_extracted(temp_db_with_enums: str) -> None:
     engine = create_engine(f"sqlite:///{temp_db_with_enums}")
     metadata = MetaData()
 
-    event.listen(metadata, "column_reflect", enum_detection)
+    event.listen(metadata, "column_reflect", enum_reflection)
     metadata.reflect(bind=engine)
 
     # Check specific enum values
@@ -144,7 +144,7 @@ def test_enum_values_correctly_extracted(temp_db_with_enums: str) -> None:
 def test_full_schema_generation_with_enums(temp_db_with_enums: str) -> None:
     """Test complete schema generation including enum detection."""
     engine = create_engine(f"sqlite:///{temp_db_with_enums}")
-    schema_code = sqlite_to_sqlalchemy_schema(engine)
+    schema_code = schema_to_sqlalchemy(engine)
 
     # Verify the generated code contains Literal types for enum columns
     assert 'Literal["active", "inactive", "pending"]' in schema_code
@@ -191,7 +191,7 @@ def test_edge_case_constraints() -> None:
 
     try:
         engine = create_engine(f"sqlite:///{db_path}")
-        schema_code = sqlite_to_sqlalchemy_schema(engine)
+        schema_code = schema_to_sqlalchemy(engine)
 
         # Single value is detected by our implementation
         assert 'Literal["only"]' in schema_code
@@ -218,7 +218,7 @@ def test_malformed_database_handling() -> None:
     try:
         engine = create_engine(f"sqlite:///{db_path}")
         # Should not raise an exception due to error handling
-        schema_code = sqlite_to_sqlalchemy_schema(engine)
+        schema_code = schema_to_sqlalchemy(engine)
         # Should return basic schema without enum detection
         assert isinstance(schema_code, str)
     except DatabaseError:
