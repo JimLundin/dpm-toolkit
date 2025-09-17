@@ -41,7 +41,7 @@ jobs:
       - name: Find previous version
         id: version
         run: |
-          PREVIOUS=$(uv run dpm-toolkit versions --output-format json | jq -r --arg version "${{ inputs.version_id }}" '
+          PREVIOUS=$(uv run dpm-toolkit versions --fmt json | jq -r --arg version "${{ inputs.version_id }}" '
             map(select(.id == $version)) | .[0].previous // empty
           ')
           echo "previous_version=$PREVIOUS" >> $GITHUB_OUTPUT
@@ -114,7 +114,7 @@ jobs:
           uv run dpm-toolkit compare \
             "${{ steps.find-dbs.outputs.old_db }}" \
             "${{ steps.find-dbs.outputs.new_db }}" \
-            --output-format ${{ inputs.output_format }} \
+            --fmt ${{ inputs.output_format }} \
             > comparison-results/comparison-report.${{ inputs.output_format }}
 
       - name: Upload comparison results
