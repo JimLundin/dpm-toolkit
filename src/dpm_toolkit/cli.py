@@ -27,7 +27,7 @@ from rich.table import Table
 app = App(help="DPM Toolkit CLI tool")
 
 
-type OutputFormat = Literal["table", "json", "html"]
+type Format = Literal["table", "json", "html"]
 
 
 def serializer[T](obj: date | Iterable[T]) -> str | tuple[T, ...] | None:
@@ -125,7 +125,7 @@ def format_comparison_table(data: Iterable[dict[str, Any]], length: int = 100) -
 @app.command
 def versions(
     group: Group = "all",
-    output_format: OutputFormat = "table",
+    fmt: Format = "table",
     *,
     latest: bool = False,
 ) -> None:
@@ -133,21 +133,21 @@ def versions(
     version_group = get_versions_by_type(VERSIONS, group)
     if latest:
         version = latest_version(version_group)
-        if output_format == "json":
+        if fmt == "json":
             console.print_json(dumps(version, default=serializer))
-        elif output_format == "html":
+        elif fmt == "html":
             print_error("HTML format for versions is not yet implemented")
             sys.exit(1)
-        elif output_format == "table":
+        elif fmt == "table":
             format_version_table(version)
         return
 
-    if output_format == "json":
+    if fmt == "json":
         console.print_json(dumps(version_group, default=serializer))
-    elif output_format == "html":
+    elif fmt == "html":
         print_error("HTML format for versions is not yet implemented")
         sys.exit(1)
-    elif output_format == "table":
+    elif fmt == "table":
         for version in version_group:
             format_version_table(version)
 
@@ -237,11 +237,7 @@ def schema(sqlite_location: Path) -> None:
 
 
 @app.command
-def compare(
-    old_location: Path,
-    new_location: Path,
-    output_format: OutputFormat = "table",
-) -> None:
+def compare(old_location: Path, new_location: Path, fmt: Format = "table") -> None:
     """Compare two SQLite databases."""
     try:
         from compare import compare_databases, comparisons_to_html
@@ -257,7 +253,7 @@ def compare(
     validate_database_extension(new_location, SQLITE_EXTENSIONS)
     print_info(f"New database: {new_location}")
 
-    print_info(f"Output format: {output_format}")
+    print_info(f"Output format: {fmt}")
 
     with Progress(
         SpinnerColumn(),
@@ -268,19 +264,16 @@ def compare(
         comparisons = compare_databases(old_location, new_location)
 
     # Output to stdout in requested format (keep stdout clean for data)
-    if output_format == "html":
+    if fmt == "html":
         html_stream = comparisons_to_html(comparisons)
         for chunk in html_stream:
             stdout.write(chunk)
-        return
 
-    if output_format == "json":
+    if fmt == "json":
         console.print_json(dumps(comparisons, default=serializer))
-        return
 
-    if output_format == "table":
+    if fmt == "table":
         format_comparison_table(comparisons)
-        return
 
 
 def main() -> None:
