@@ -9,7 +9,7 @@ import pytest
 from sqlalchemy import Enum, MetaData, create_engine, event
 from sqlalchemy.exc import DatabaseError
 
-from schema.main import enum_reflection, sqlite_to_sqlalchemy_schema
+from schema.main import enum_detection, sqlite_to_sqlalchemy_schema
 
 
 @pytest.fixture(name="temp_db_with_enums")
@@ -72,7 +72,7 @@ def test_enum_columns_detected_in_reflection(temp_db_with_enums: str) -> None:
     engine = create_engine(f"sqlite:///{temp_db_with_enums}")
     metadata = MetaData()
 
-    event.listen(metadata, "column_reflect", enum_reflection)
+    event.listen(metadata, "column_reflect", enum_detection)
     metadata.reflect(bind=engine)
 
     # Test users table
@@ -107,7 +107,7 @@ def test_enum_values_correctly_extracted(temp_db_with_enums: str) -> None:
     engine = create_engine(f"sqlite:///{temp_db_with_enums}")
     metadata = MetaData()
 
-    event.listen(metadata, "column_reflect", enum_reflection)
+    event.listen(metadata, "column_reflect", enum_detection)
     metadata.reflect(bind=engine)
 
     # Check specific enum values
