@@ -218,7 +218,7 @@ def migrate(access_location: Path, sqlite_location: Path) -> None:
 @app.command()
 def schema(
     sqlite_location: Path,
-    format: str = "python",  # python (default), json, html
+    format_type: str = "python",  # python (default), json, html
 ) -> None:
     """Generate database schema in multiple formats."""
     try:
@@ -234,9 +234,9 @@ def schema(
 
     # Validate format
     valid_formats = {"python", "json", "html"}
-    if format not in valid_formats:
+    if format_type not in valid_formats:
         print_error(
-            f"Invalid format: {format}. Valid formats: {', '.join(valid_formats)}"
+            f"Invalid format: {format}. Valid formats: {', '.join(valid_formats)}",
         )
         raise Exit(1)
 
@@ -254,13 +254,13 @@ def schema(
         sqlite_database = read_only_sqlite(sqlite_location)
         schema_data = sqlite_to_schema(sqlite_database)
 
-        if format == "python":
+        if format_type == "python":
             sqlalchemy_schema = schema_to_sqlalchemy(sqlite_database)
             stdout.write(sqlalchemy_schema)
-        elif format == "json":
+        elif format_type == "json":
             json_output = dumps(schema_data)
             stdout.write(json_output)
-        elif format == "html":
+        elif format_type == "html":
             html_output = schema_to_html(schema_data)
             stdout.write(html_output)
 
