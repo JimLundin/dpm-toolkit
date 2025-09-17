@@ -30,7 +30,7 @@ jobs:
         id: set-matrix
         shell: bash
         run: |
-          echo version_ids={\"includes\":$(uv run dpm-toolkit versions --output-format json | jq 'map(.id)')} >> $GITHUB_OUTPUT
+          echo version_ids={\"includes\":$(uv run dpm-toolkit versions --fmt json | jq 'map(.id)')} >> $GITHUB_OUTPUT
 
   build-versions:
     needs: list-versions

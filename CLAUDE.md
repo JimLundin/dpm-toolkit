@@ -36,7 +36,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 #### Database Comparison (POSIX-style)
 - `dpm-toolkit compare old.db new.db > changes.json` - JSON diff to file
-- `dpm-toolkit compare old.db new.db --output-format html > report.html` - HTML report
+- `dpm-toolkit compare old.db new.db --fmt html > report.html` - HTML report
 - `dpm-toolkit compare old.db new.db | jq '.[] | select(.name=="users")` - Filter specific table changes
 
 ## Architecture Overview
