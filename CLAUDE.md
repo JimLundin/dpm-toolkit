@@ -40,7 +40,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 #### Database Comparison (POSIX-style)
 - `dpm-toolkit compare old.db new.db > changes.json` - JSON diff to file
-- `dpm-toolkit compare old.db new.db --output-format html > report.html` - HTML report
+- `dpm-toolkit compare old.db new.db --fmt html > report.html` - HTML report
 - `dpm-toolkit compare old.db new.db | jq '.[] | select(.name=="users")` - Filter specific table changes
 
 ## Architecture Overview
@@ -48,7 +48,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 DPM Toolkit is a UV workspace with multiple specialized subprojects built around EBA DPM database processing:
 
 ### Main Package (`src/dpm_toolkit/`)
-- **CLI Interface**: `cli.py` uses modern Typer framework with type-annotated commands
+- **CLI Interface**: `cli.py` uses modern Cyclopts framework with type-annotated commands
 - **Entry Point**: `__main__.py` provides the package entry point
 - **Core Functionality**: Coordinates between subprojects via dynamic imports
 
@@ -82,9 +82,9 @@ The `compare` module uses a streaming, memory-efficient approach:
 - **Output Formats**: JSON and HTML reports with Jinja2 templating, streamed to stdout for POSIX compatibility
 
 ### CLI Design Patterns
-- **Modern Typer**: Clean command definitions with focused functionality
+- **Modern Cyclopts**: Clean command definitions with focused functionality using type hints
 - **Type Safety**: Full type annotations with `TYPE_CHECKING` imports
-- **Error Handling**: Consistent `typer.Exit(1)` with proper error messages
+- **Error Handling**: Consistent `sys.exit(1)` with proper error messages
 - **Optional Dependencies**: Graceful handling of missing subproject imports
 - **POSIX Philosophy**: Stdout for data, stderr for messages, composable with pipes and redirection
 - **Core Functionality Focus**: Essential options only, avoiding feature bloat
