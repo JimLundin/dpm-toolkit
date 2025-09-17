@@ -17,7 +17,7 @@ def schema_to_html(schema: DatabaseSchema) -> str:
     env = Environment(loader=FileSystemLoader(template_dir), autoescape=True)
     template = env.get_template("diagram.html")
 
-    title = f"ER Diagram - {schema["name"]}"
+    title = f"ER Diagram - {schema['name']}"
 
     # Load CSS and JS content
     css_content = (template_dir / "diagram.css").read_text()
