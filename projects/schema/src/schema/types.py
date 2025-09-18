@@ -1,15 +1,88 @@
 """TypedDict schemas for database schema representation."""
 
-from typing import NotRequired, TypedDict
+from typing import Literal, TypedDict
+
+# Base type classes similar to SQLAlchemy's type hierarchy
+
+
+class IntegerType(TypedDict):
+    """Integer column type."""
+
+    type: Literal["integer"]
+
+
+class TextType(TypedDict):
+    """Text column type with optional length constraint."""
+
+    type: Literal["text"]
+    length: int | None
+
+
+class RealType(TypedDict):
+    """Real/float column type."""
+
+    type: Literal["real"]
+
+
+class NumericType(TypedDict):
+    """Numeric column type with precision and scale."""
+
+    type: Literal["numeric"]
+    precision: int | None
+    scale: int | None
+
+
+class BlobType(TypedDict):
+    """Binary large object column type."""
+
+    type: Literal["blob"]
+
+
+class BooleanType(TypedDict):
+    """Boolean column type."""
+
+    type: Literal["boolean"]
+
+
+class DateType(TypedDict):
+    """Date column type."""
+
+    type: Literal["date"]
+
+
+class DateTimeType(TypedDict):
+    """DateTime column type."""
+
+    type: Literal["datetime"]
+
+
+class EnumType(TypedDict):
+    """Enum column type with constrained values."""
+
+    type: Literal["enum"]
+    values: list[str]
+
+
+# Union type for all column types
+type DataType = (
+    IntegerType
+    | TextType
+    | RealType
+    | NumericType
+    | BlobType
+    | BooleanType
+    | DateType
+    | DateTimeType
+    | EnumType
+)
 
 
 class ColumnSchema(TypedDict):
-    """Schema for a database column with enhanced type support."""
+    """Schema for a database column."""
 
     name: str
-    type: str
+    type: DataType
     nullable: bool
-    enum_values: NotRequired[list[str] | None]  # For enum detection support
 
 
 class ColumnMapping(TypedDict):

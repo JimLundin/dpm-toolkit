@@ -6,10 +6,12 @@ from sqlalchemy import Engine, Inspector, create_engine, inspect
 from sqlalchemy.engine.interfaces import ReflectedColumn, ReflectedForeignKeyConstraint
 
 from schema.enum_detection import detect_enum_for_column
+from schema.type_conversion import sql_to_data_type
 from schema.types import (
     ColumnMapping,
     ColumnSchema,
     DatabaseSchema,
+    EnumType,
     ForeignKeySchema,
     TableSchema,
 )
@@ -27,21 +29,17 @@ def _build_column(
     inspector: Inspector,
 ) -> ColumnSchema:
     """Build a column schema with enum detection support."""
-    # Check for enum values using existing enum detection
-    enum_values = None
-    check_constraints = inspector.get_check_constraints(table_name)
+    data_type = sql_to_data_type(col_info["type"])
 
-    for constraint in check_constraints:
-        constraint_text = constraint["sqltext"]
-        if detected_values := detect_enum_for_column(constraint_text, col_info["name"]):
-            enum_values = detected_values
+    for constraint in inspector.get_check_constraints(table_name):
+        if values := detect_enum_for_column(constraint["sqltext"], col_info["name"]):
+            data_type = EnumType(type="enum", values=values)
             break
 
     return {
         "name": col_info["name"],
-        "type": str(col_info["type"]),
+        "type": data_type,
         "nullable": col_info["nullable"],
-        "enum_values": enum_values,
     }
 
 
