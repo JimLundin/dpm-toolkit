@@ -56,8 +56,8 @@ def sql_to_data_type(sql_type: TypeEngine[Any]) -> DataType:
     match sql_type:
         case Enum():
             values: list[str] = (
-                sql_type.enums
-            )  # pyright: ignore [reportUnknownMemberType]
+                sql_type.enums  # pyright: ignore [reportUnknownMemberType, reportUnknownVariableType]
+            )
             data_type = EnumType(type="enum", values=values)
         case Integer():
             data_type = IntegerType(type="integer")
@@ -129,8 +129,8 @@ def sql_to_string(sql_type: TypeEngine[Any]) -> str:
             return "Numeric"
         case Enum():
             values: list[str] = (
-                sql_type.enums
-            )  # pyright: ignore [reportUnknownMemberType]
+                sql_type.enums  # pyright: ignore [reportUnknownMemberType, reportUnknownVariableType]
+            )
             values_string = ", ".join(f'"{v}"' for v in sorted(values))
             return f"Enum({values_string})"
         case _:
@@ -147,8 +147,8 @@ def sql_to_python(sql_type: TypeEngine[Any]) -> TypeInfo:
         # Special case: Enum types need Literal type hints
         case Enum():
             values: list[str] = (
-                sql_type.enums
-            )  # pyright: ignore [reportUnknownMemberType]
+                sql_type.enums  # pyright: ignore [reportUnknownMemberType, reportUnknownVariableType]
+            )
             values_string = ", ".join(f'"{v}"' for v in sorted(values))
             return TypeInfo(
                 module="typing",
