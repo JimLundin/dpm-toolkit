@@ -1,6 +1,6 @@
 """Module for parsing SQLAlchemy TypeEngine into structured column types."""
 
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, cast
 
 from sqlalchemy.types import (
     Boolean,
@@ -51,11 +51,12 @@ def sql_to_data_type(sql_type: TypeEngine[Any]) -> DataType:
 
     """
     # Default fallback
-    data_type: DataType = TextType(type="text", length=None)
+    data_type: DataType
 
     match sql_type:
         case Enum():
-            data_type = EnumType(type="enum", values=list(sql_type.enums))
+            values: list[str] = sql_type.enums
+            data_type = EnumType(type="enum", values=values)
         case Integer():
             data_type = IntegerType(type="integer")
         case String():
@@ -76,6 +77,8 @@ def sql_to_data_type(sql_type: TypeEngine[Any]) -> DataType:
             data_type = DateType(type="date")
         case DateTime():
             data_type = DateTimeType(type="datetime")
+        case _:
+            data_type = TextType(type="text", length=None)
 
     return data_type
 
@@ -123,8 +126,9 @@ def sql_to_string(sql_type: TypeEngine[Any]) -> str:
         case Numeric():
             return "Numeric"
         case Enum():
-            values = ", ".join(f'"{v}"' for v in sorted(sql_type.enums))
-            return f"Enum({values})"
+            values: list[str] = sql_type.enums
+            values_string = ", ".join(f'"{v}"' for v in sorted(values))
+            return f"Enum({values_string})"
         case _:
             return sql_type.__class__.__name__
 
