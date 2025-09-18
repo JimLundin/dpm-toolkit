@@ -55,7 +55,7 @@ def sql_to_data_type(sql_type: TypeEngine[Any]) -> DataType:
 
     match sql_type:
         case Enum():
-            values: list[str] = sql_type.enums
+            values = cast("list[str]", sql_type.enums)
             data_type = EnumType(type="enum", values=values)
         case Integer():
             data_type = IntegerType(type="integer")
@@ -126,7 +126,7 @@ def sql_to_string(sql_type: TypeEngine[Any]) -> str:
         case Numeric():
             return "Numeric"
         case Enum():
-            values: list[str] = sql_type.enums
+            values = cast("list[str]", sql_type.enums)
             values_string = ", ".join(f'"{v}"' for v in sorted(values))
             return f"Enum({values_string})"
         case _:
