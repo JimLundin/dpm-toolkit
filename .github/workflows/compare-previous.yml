@@ -1,0 +1,125 @@
+name: Compare with Previous Version
+
+on:
+  workflow_call:
+    inputs:
+      version_id:
+        description: "The version ID to compare against its predecessor"
+        required: true
+        type: string
+      output_format:
+        description: "Output format for comparison"
+        required: false
+        type: string
+        default: "json"
+    outputs:
+      comparison_artifact_name:
+        description: "The name of the uploaded artifact containing the comparison results"
+        value: ${{ jobs.compare.outputs.artifact_name }}
+
+jobs:
+  get-previous-version:
+    runs-on: ubuntu-latest
+    outputs:
+      previous_version: ${{ steps.version.outputs.previous_version }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Find previous version
+        id: version
+        run: |
+          PREVIOUS=$(uv run dpm-toolkit versions --fmt json | jq -r --arg version "${{ inputs.version_id }}" '
+            map(select(.id == $version)) | .[0].previous // empty
+          ')
+          echo "previous_version=$PREVIOUS" >> $GITHUB_OUTPUT
+
+  download-previous:
+    needs: get-previous-version
+    if: needs.get-previous-version.outputs.previous_version != ''
+    uses: ./.github/workflows/download-database.yml
+    with:
+      version_id: ${{ needs.get-previous-version.outputs.previous_version }}
+      database_type: "converted"
+
+  compare:
+    needs: [get-previous-version, download-previous]
+    if: needs.get-previous-version.outputs.previous_version != ''
+    runs-on: ubuntu-latest
+    outputs:
+      artifact_name: database-comparison-${{ needs.get-previous-version.outputs.previous_version }}-to-${{ inputs.version_id }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Install dependencies
+        run: uv sync --extra compare
+
+      - name: Download previous database artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: ${{ needs.download-previous.outputs.artifact_name }}
+          path: ./old-db/
+
+      - name: Download current database artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: ${{ inputs.version_id }}-original-sqlite
+          path: ./new-db/
+
+      - name: Find database files
+        id: find-dbs
+        run: |
+          OLD_DB=$(find ./old-db -name "*.sqlite" | head -1)
+          NEW_DB=$(find ./new-db -name "*.sqlite" | head -1)
+          if [[ -z "$OLD_DB" ]]; then
+            echo "Error: No .sqlite file found in ./old-db" >&2
+            exit 1
+          fi
+          if [[ -z "$NEW_DB" ]]; then
+            echo "Error: No .sqlite file found in ./new-db" >&2
+            exit 1
+          fi
+          echo "old_db=$OLD_DB" >> $GITHUB_OUTPUT
+          echo "new_db=$NEW_DB" >> $GITHUB_OUTPUT
+          echo "Found old database: $OLD_DB"
+          echo "Found new database: $NEW_DB"
+
+      - name: Run database comparison
+        run: |
+          mkdir -p comparison-results
+
+          # Generate comparison report
+          uv run dpm-toolkit compare \
+            "${{ steps.find-dbs.outputs.old_db }}" \
+            "${{ steps.find-dbs.outputs.new_db }}" \
+            --fmt ${{ inputs.output_format }} \
+            > comparison-results/comparison-report.${{ inputs.output_format }}
+
+      - name: Upload comparison results
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-comparison-${{ needs.get-previous-version.outputs.previous_version }}-to-${{ inputs.version_id }}
+          path: comparison-results/
+          retention-days: 30

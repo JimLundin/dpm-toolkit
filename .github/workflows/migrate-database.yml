@@ -1,0 +1,86 @@
+name: Migrate Database
+
+
+on:
+  workflow_call:
+    inputs:
+      source_artifact_name:
+        description: "Name of artifact containing source database files"
+        required: true
+        type: string
+    outputs:
+      artifact_name:
+        description: "The name of the uploaded artifact containing the migrated SQLite database"
+        value: ${{ inputs.source_artifact_name }}-sqlite
+
+env:
+  ACCESS_ENGINE_INSTALLER: accessdatabaseengine_X64.exe
+  ACCESS_ENGINE_URL: https://download.microsoft.com/download/3/5/C/35C84C36-661A-44E6-9324-8786B8DBE231/accessdatabaseengine_X64.exe
+  ACCESS_ENGINE_SHA256: "04e96c9f1a1f7d251a88aececf1dc10ff65950392787427c00814a43308003de"
+
+jobs:
+  migrate:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install python
+        run: uv python install
+
+      - name: Install project
+        run: uv sync --extra migrate
+
+      - name: Cache Access Database Engine
+        id: cache-access-engine
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.ACCESS_ENGINE_INSTALLER }}
+          key: access-engine-${{ env.ACCESS_ENGINE_SHA256 }}
+
+      - name: Download Access Database Engine
+        if: steps.cache-access-engine.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          curl -L --fail --retry 3 --retry-delay 5 "${{ env.ACCESS_ENGINE_URL }}" -o "${{ env.ACCESS_ENGINE_INSTALLER }}"
+
+      - name: Verify file hash
+        if: steps.cache-access-engine.outputs.cache-hit != 'true'
+        shell: powershell
+        run: |
+          $expectedHash = "${{ env.ACCESS_ENGINE_SHA256 }}"
+          $actualHash = (Get-FileHash "${{ env.ACCESS_ENGINE_INSTALLER }}" -Algorithm SHA256).Hash.ToLower()
+
+          if ($actualHash -ne $expectedHash.ToLower()) {
+            Write-Error "Hash mismatch. Expected: $expectedHash, Got: $actualHash"
+            exit 1
+          }
+
+      - name: Install Microsoft Access Database Engine
+        shell: powershell
+        run: |
+          Start-Process -FilePath "${{ env.ACCESS_ENGINE_INSTALLER }}" -ArgumentList "/quiet" -Wait
+
+      - name: Download source database files
+        uses: actions/download-artifact@v5
+        with:
+          name: ${{ inputs.source_artifact_name }}
+          path: database-files/
+
+      - name: Convert to SQLite database
+        run: |
+          ACCDB_FILE=$(find database-files -name "*.accdb" -type f | head -1)
+          SQLITE_FILE="${{ inputs.source_artifact_name }}.sqlite"
+          uv run dpm-toolkit migrate "$ACCDB_FILE" "$SQLITE_FILE"
+
+      - name: Upload SQLite database artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.source_artifact_name }}-sqlite
+          path: ${{ inputs.source_artifact_name }}.sqlite

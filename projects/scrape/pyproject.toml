@@ -1,0 +1,11 @@
+[project]
+name = "scrape"
+version = "0.0.0"
+description = "Web scraping tools for automated discovery of EBA DPM releases"
+authors = [{ name = "Jim Lundin", email = "jimeriklundin@gmail.com" }]
+requires-python = ">=3.13"
+dependencies = ["beautifulsoup4>=4.13.4", "requests>=2.32.3"]
+
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"

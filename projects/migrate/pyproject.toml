@@ -1,0 +1,21 @@
+[project]
+name = "migrate"
+version = "0.1.0"
+description = "Database migration tools for converting Access to SQLite"
+authors = [{ name = "Jim Lundin", email = "jimeriklundin@gmail.com" }]
+requires-python = ">=3.13"
+dependencies = ["sqlalchemy>=2.0.37", "sqlalchemy-access>=2.0.3"]
+
+[tool.ruff]
+unsafe-fixes = true
+
+[tool.ruff.lint]
+fixable = ["ALL"]
+select = ["ALL"]
+ignore = ["T201"]
+
+[tool.mypy]
+strict = true
+
+[tool.pyright]
+typeCheckingMode = "strict"
