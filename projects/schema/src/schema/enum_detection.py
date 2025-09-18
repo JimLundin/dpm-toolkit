@@ -26,7 +26,7 @@ def values_from_in_clause(constraint_text: str) -> list[str]:
 
     # Extract parentheses content and find all quoted values in one expression
     if values := re.search(in_pattern, constraint_text):
-        return re.findall(VALUE, values.group(1))
+        return re.findall(VALUE, values[1])
 
     return []
 

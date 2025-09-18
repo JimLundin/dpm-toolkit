@@ -81,6 +81,6 @@ def sqlite_to_schema(sqlite_database: Engine) -> DatabaseSchema:
     table_names = inspector.get_table_names()
 
     return {
-        "name": str(sqlite_database.url.database),
+        "name": sqlite_database.url.database or "unknown",
         "tables": [_build_table(inspector, table_name) for table_name in table_names],
     }
