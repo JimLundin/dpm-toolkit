@@ -61,14 +61,14 @@ def sql_to_data_type(sql_type: TypeEngine[Any]) -> DataType:
             data_type = IntegerType(type="integer")
         case String():
             data_type = TextType(type="text", length=sql_type.length)
+        case Float():
+            data_type = RealType(type="real")
         case Numeric():
             data_type = NumericType(
                 type="numeric",
                 precision=sql_type.precision,
                 scale=sql_type.scale,
             )
-        case Float():
-            data_type = RealType(type="real")
         case LargeBinary():
             data_type = BlobType(type="blob")
         case Boolean():

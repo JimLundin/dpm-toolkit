@@ -78,7 +78,11 @@ def _build_table(inspector: Inspector, table_name: str) -> TableSchema:
 def sqlite_to_schema(sqlite_database: Engine) -> DatabaseSchema:
     """Generate unified schema data from SQLite database."""
     inspector = inspect(sqlite_database)
-    table_names = inspector.get_table_names()
+    table_names = (
+        table_name
+        for table_name, _fkc in inspector.get_sorted_table_and_fkc_names()
+        if table_name
+    )
 
     return {
         "name": sqlite_database.url.database or "unknown",
