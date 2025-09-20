@@ -242,8 +242,8 @@ def schema(
         schema_data = sqlite_to_schema(sqlite_database)
 
         if fmt == "python":
-            sqlalchemy_schema = schema_to_sqlalchemy(sqlite_database)
-            stdout.write(sqlalchemy_schema)
+            sqlalchemy_code = schema_to_sqlalchemy(schema_data)
+            stdout.write(sqlalchemy_code)
         elif fmt == "json":
             json_output = dumps(schema_data)
             stdout.write(json_output)
