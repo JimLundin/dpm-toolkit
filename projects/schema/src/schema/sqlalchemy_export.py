@@ -26,9 +26,9 @@ def snake_case(name: str) -> str:
     return sub("([a-z0-9])([A-Z])|([A-Z])([A-Z][a-z])", r"\1\3_\2\4", name).lower()
 
 
-def foreign_key(key: str) -> str:
-    """Render a foreign key."""
-    return f"ForeignKey({key})"
+def foreign_key(key: str, *, quoted: bool = False) -> str:
+    """Render a foreign key with optional quoting."""
+    return f'ForeignKey("{key}")' if quoted else f"ForeignKey({key})"
 
 
 class JSONModel:
@@ -38,7 +38,6 @@ class JSONModel:
         """Initialize the model generator."""
         self.schema = schema
         self.imports: dict[str, set[str]] = defaultdict(set)
-        self.typing_imports: dict[str, set[str]] = defaultdict(set)
         self.base = "DPM"
 
     def render(self) -> str:
@@ -63,12 +62,10 @@ class JSONModel:
     def _generate_file(self, models: list[str]) -> str:
         """Render the complete model file."""
         base_class = self._generate_base_class()
-        typing_imports = self._generate_typing_imports()
         imports = self._generate_imports()
         header = [
             '"""SQLAlchemy models generated from DPM by the DPM Toolkit project."""',
             imports,
-            typing_imports,
             base_class,
         ]
 
@@ -89,14 +86,6 @@ class JSONModel:
         return "\n".join(
             f"from {module} import {', '.join(names)}" if names else f"import {module}"
             for module, names in self.imports.items()
-        )
-
-    def _generate_typing_imports(self) -> str:
-        """Generate typing import statements."""
-        self.imports["typing"].add("TYPE_CHECKING")
-        return "if TYPE_CHECKING:\n" + "\n".join(
-            f"{INDENT}from {module} import {', '.join(names)}"
-            for module, names in self.typing_imports.items()
         )
 
     def _generate_table(self, table: TableSchema) -> str:
@@ -122,9 +111,7 @@ class JSONModel:
 
         self.imports["sqlalchemy"].add("Column")
         return (
-            f'Column("{column["name"]}", {sql_type_str})'
-            if column["nullable"]
-            else f'Column("{column["name"]}", {sql_type_str}, nullable={column["nullable"]})'
+            f'Column("{column["name"]}", {sql_type_str}, nullable={column["nullable"]})'
         )
 
     def _generate_class(self, table: TableSchema) -> str:
@@ -161,10 +148,10 @@ class JSONModel:
         if row_guid_col is None or row_guid_col["nullable"]:
             return ""
 
-        self.typing_imports["typing"].add("ClassVar")
+        self.imports["typing"].add("ClassVar")
         return (
             "__mapper_args__: ClassVar = {\n"
-            f'{INDENT}"primary_key": (row_guid,)\n'
+            f'{INDENT}"primary_key": ({snake_case(row_guid_col["name"])},)\n'
             "}\n"
         )
 
@@ -191,22 +178,17 @@ class JSONModel:
         return f"{declaration} = mapped_column({combined_args})"
 
     def _get_python_type(self, column: ColumnSchema) -> str:
-        """Get Python type for a column."""
+        """Get Python type for a column using structured type info."""
         sql_type = data_type_to_sql(column["type"])
         type_info = sql_to_python(sql_type)
 
-        # Add imports for special types
-        if type_info.module == "datetime":
-            self.typing_imports["datetime"].add(type_info.name)
-        elif type_info.module == "decimal":
-            self.typing_imports["decimal"].add(type_info.name)
-        elif type_info.module == "uuid":
-            self.typing_imports["uuid"].add(type_info.name)
-        elif type_info.module == "typing":
-            self.imports["typing"].add(type_info.name)
+        self.imports[type_info.module].add(type_info.name)
 
-        python_type_name = type_info.expression
-        return f"{python_type_name} | None" if column["nullable"] else python_type_name
+        return (
+            f"{type_info.expression} | None"
+            if column["nullable"]
+            else type_info.expression
+        )
 
     def _generate_column_key_attributes(
         self,
@@ -225,59 +207,53 @@ class JSONModel:
         table_foreign_keys: list[ForeignKeySchema],
         table_name: str,
     ) -> list[str]:
-        """Process foreign keys of a column with domain-specific logic."""
-        # Find foreign keys that reference this column
+        """Generate foreign key references for a column."""
         foreign_keys: list[str] = []
 
-        for fk in table_foreign_keys:
-            for mapping in fk["column_mappings"]:
+        # Find all foreign key mappings that involve this column
+        for fk_def in table_foreign_keys:
+            for mapping in fk_def["column_mappings"]:
                 if mapping["source_column"] == column["name"]:
-                    target_table = fk["target_table"]
+                    target_table = fk_def["target_table"]
                     target_col = mapping["target_column"]
 
-                    # Domain-specific foreign key reference logic
-                    if table_name == "Concept":
-                        # For Concept, we quote the references to avoid circular dependencies
-                        foreign_keys.append(
-                            f'"{pascal_case(target_table)}.{snake_case(target_col)}"',
-                        )
-                    elif target_table == table_name and target_col == column["name"]:
-                        # Self-referential FKs
-                        foreign_keys.append(f'"{snake_case(target_col)}"')
+                    # Build the foreign key reference
+                    if table_name == target_table:
+                        # Self-referential foreign key
+                        fk_ref = snake_case(target_col)
+                        foreign_keys.append(foreign_key(fk_ref, quoted=True))
+                    elif table_name == "Concept":
+                        # Quote Concept table references to avoid circular dependencies
+                        fk_ref = f"{pascal_case(target_table)}.{snake_case(target_col)}"
+                        foreign_keys.append(foreign_key(fk_ref, quoted=True))
                     else:
-                        # External pointing FKs
-                        foreign_keys.append(
-                            f"{pascal_case(target_table)}.{snake_case(target_col)}",
-                        )
+                        # Standard external reference
+                        fk_ref = f"{pascal_case(target_table)}.{snake_case(target_col)}"
+                        foreign_keys.append(foreign_key(fk_ref))
 
-        if not foreign_keys:
-            return []
+        if foreign_keys:
+            self.imports["sqlalchemy"].add("ForeignKey")
 
-        self.imports["sqlalchemy"].add("ForeignKey")
-        return [foreign_key(fk) for fk in foreign_keys]
+        return foreign_keys
 
     def _generate_relationships(self, table: TableSchema) -> list[str]:
-        """Generate SQLAlchemy relationship definitions using domain-specific logic."""
+        """Generate SQLAlchemy relationship definitions."""
         relationships: list[str] = []
 
-        # Process all foreign keys in the table
-        for foreign_key_schema in table["foreign_keys"]:
-            for column_mapping in foreign_key_schema["column_mappings"]:
-                source_col_name = column_mapping["source_column"]
-                target_table = foreign_key_schema["target_table"]
-                target_col_name = column_mapping["target_column"]
+        # Create column lookup for efficient access
+        columns_by_name = {col["name"]: col for col in table["columns"]}
 
-                # Find the source column to get nullable info
-                source_col = next(
-                    col for col in table["columns"] if col["name"] == source_col_name
-                )
+        # Generate one relationship per foreign key mapping
+        for fk in table["foreign_keys"]:
+            for mapping in fk["column_mappings"]:
+                source_col = columns_by_name[mapping["source_column"]]
 
                 relationships.append(
                     self._generate_relationship(
                         table["name"],
                         source_col,
-                        target_table,
-                        target_col_name,
+                        fk["target_table"],
+                        mapping["target_column"],
                     ),
                 )
 
@@ -291,36 +267,39 @@ class JSONModel:
         ref_col_name: str,
     ) -> str:
         """Generate a SQLAlchemy relationship definition with domain-specific naming."""
-        src_name = relation_name(src_col["name"])
+        # Start with the domain-specific relation name
+        rel_name = relation_name(src_col["name"])
 
-        # Domain-specific relationship naming rules
-        if (
-            src_col["name"] == "RowGUID"
-        ):  # for entities that reference Concept and RowGUID
-            src_name = "UniqueConcept"
-        if src_name == src_table_name:  # this covers PK to PK relationships
-            src_name = ref_table_name
-        if (
-            src_name == src_col["name"]
-        ):  # avoid name collision when the name = column name
-            if ref_table_name in src_name:  # for 'CreatedRelease' and 'LanguageCode'
-                src_name = ref_table_name
-            else:  # for 'SubtypeDiscriminator'
-                src_name = f"{src_name}{ref_table_name}"
+        # Apply domain-specific naming rules
+        if src_col["name"] == "RowGUID":
+            rel_name = "UniqueConcept"
+        elif rel_name == src_table_name:
+            # PK to PK relationships use the target table name
+            rel_name = ref_table_name
+        elif rel_name == src_col["name"]:
+            # Avoid name collision between relationship and column
+            if ref_table_name in rel_name:
+                rel_name = ref_table_name
+            else:
+                rel_name = f"{rel_name}{ref_table_name}"
+        elif src_table_name == ref_table_name and src_col["name"] == ref_col_name:
+            # Self-referential relationships
+            rel_name = "Self"
 
-        if src_table_name == ref_table_name and src_col["name"] == ref_col_name:
-            src_name = "Self"
+        # Convert to snake_case and handle Python keywords
+        rel_name = snake_case(rel_name)
+        if rel_name in keyword.kwlist:
+            rel_name = f"{rel_name}_"
 
-        src_type = f"{ref_table_name} | None" if src_col["nullable"] else ref_table_name
+        # Determine type annotation
+        type_annotation = (
+            f"{ref_table_name} | None" if src_col["nullable"] else ref_table_name
+        )
 
-        src_name = snake_case(src_name)
-
-        if src_name in keyword.kwlist:
-            src_name = f"{src_name}_"
-
+        # Generate the relationship
         self.imports["sqlalchemy.orm"].update(("Mapped", "relationship"))
         return (
-            f"{INDENT}{src_name}: Mapped[{pascal_case(src_type)}]"
+            f"{INDENT}{rel_name}: Mapped[{pascal_case(type_annotation)}]"
             f" = relationship(foreign_keys={snake_case(src_col['name'])})"
         )
 

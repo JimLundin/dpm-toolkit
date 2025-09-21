@@ -117,6 +117,10 @@ def data_type_to_sql(data_type: DataType) -> TypeEngine[Any]:
 def sql_to_string(sql_type: TypeEngine[Any]) -> str:
     """Convert a SQLAlchemy type to its string representation for code generation."""
     match sql_type:
+        case Enum():
+            values: list[str] = sql_type.enums
+            values_string = ", ".join(f'"{v}"' for v in sorted(values))
+            return f"Enum({values_string})"
         case String() if sql_type.length:
             return f"String({sql_type.length})"
         case Numeric() if sql_type.precision and sql_type.scale:
@@ -125,10 +129,6 @@ def sql_to_string(sql_type: TypeEngine[Any]) -> str:
             return f"Numeric({sql_type.precision})"
         case Numeric():
             return "Numeric"
-        case Enum():
-            values: list[str] = sql_type.enums
-            values_string = ", ".join(f'"{v}"' for v in sorted(values))
-            return f"Enum({values_string})"
         case _:
             return sql_type.__class__.__name__
 
@@ -160,13 +160,3 @@ def sql_to_python(sql_type: TypeEngine[Any]) -> TypeInfo:
                 name=type_name,
                 expression=type_name,
             )
-
-
-def data_type_to_python(data_type: DataType) -> str:
-    """Get the Python type expression for code generation.
-
-    This returns the full expression (e.g., "Literal["active", "inactive"]").
-    """
-    sql_type = data_type_to_sql(data_type)
-    type_info = sql_to_python(sql_type)
-    return type_info.expression
