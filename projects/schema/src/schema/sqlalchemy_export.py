@@ -215,9 +215,8 @@ def generate_imports(imports: Imports) -> str:
     return "\n".join(lines)
 
 
-def generate_base_class(base_name: str, imports: Imports) -> str:
+def generate_base_class(base_name: str) -> str:
     """Generate the base class definition."""
-    imports["sqlalchemy.orm"].add("DeclarativeMeta")
     return f"""# We use DeclarativeMeta instead of DeclarativeBase
 # to be compatible with mypy and __mapper_args__
 class {base_name}(metaclass=DeclarativeMeta):
@@ -228,24 +227,25 @@ def schema_to_sqlalchemy(schema: DatabaseSchema) -> str:
     """Generate SQLAlchemy models from schema - clean and direct approach."""
     imports: Imports = defaultdict(set)
     imports["__future__"].add("annotations")
+    imports["sqlalchemy.orm"].add("DeclarativeMeta")
 
     base_class = "DPM"
 
-    # Generate models
-    models = (
+    # Generate models (force evaluation to populate imports)
+    models = [
         (
             generate_class_definition(table, base_class, imports)
             if table["primary_keys"] or has_row_guid(table)
             else generate_table_definition(table, base_class, imports)
         )
         for table in schema["tables"]
-    )
+    ]
 
     # Assemble final file
     parts = (
         '"""SQLAlchemy models generated from DPM by the DPM Toolkit project."""',
         generate_imports(imports),
-        generate_base_class(base_class, imports),
+        generate_base_class(base_class),
         *models,
     )
 
