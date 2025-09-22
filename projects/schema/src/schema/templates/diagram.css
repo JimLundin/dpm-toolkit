@@ -1,0 +1,40 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f5f5f5;
+}
+
+#diagram {
+    width: 100vw;
+    height: 100vh;
+}
+
+.table-node {
+    cursor: grab;
+}
+
+.table-node:active {
+    cursor: grabbing;
+}
+
+.table-body {
+    fill: white;
+    stroke: #333;
+    stroke-width: 1;
+}
+
+.table-header {
+    fill: #4a90e2;
+}
+
+.table-name {
+    fill: white;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+.relationship-line {
+    stroke: #3498db;
+    stroke-width: 2;
+    marker-end: url(#arrowhead);
+}
