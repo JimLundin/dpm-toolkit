@@ -55,7 +55,7 @@ def sql_to_data_type(sql_type: TypeEngine[Any]) -> DataType:
 
     match sql_type:
         case Enum():
-            values: list[str] = sql_type.enums
+            values: list[str] = sql_type.enums  # pyright: ignore
             data_type = EnumType(type="enum", values=values)
         case Integer():
             data_type = IntegerType(type="integer")
@@ -118,7 +118,7 @@ def sql_to_string(sql_type: TypeEngine[Any]) -> str:
     """Convert a SQLAlchemy type to its string representation for code generation."""
     match sql_type:
         case Enum():
-            values: list[str] = sql_type.enums
+            values: list[str] = sql_type.enums  # pyright: ignore
             values_string = ", ".join(f'"{v}"' for v in sorted(values))
             return f"Enum({values_string})"
         case String() if sql_type.length:
@@ -142,7 +142,7 @@ def sql_to_python(sql_type: TypeEngine[Any]) -> TypeInfo:
     match sql_type:
         # Special case: Enum types need Literal type hints
         case Enum():
-            values: list[str] = sql_type.enums
+            values: list[str] = sql_type.enums  # pyright: ignore
             values_string = ", ".join(f'"{v}"' for v in sorted(values))
             return TypeInfo(
                 module="typing",
