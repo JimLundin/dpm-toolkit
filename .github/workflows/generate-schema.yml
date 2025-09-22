@@ -52,8 +52,22 @@ jobs:
         run: |
           uv run ty check *.py --exit-zero
 
+      - name: Generate HTML diagram
+        run: |
+          SQLITE_FILE=$(find . -name "*.sqlite" -type f | head -1)
+          uv run dpm-toolkit schema "$SQLITE_FILE" --fmt html > ${{ inputs.sqlite_artifact_name }}-diagram.html
+
+      - name: Validate HTML diagram is well-formed
+        run: |
+          # Install and use htmlhint for HTML validation
+          npm install -g htmlhint
+          htmlhint ${{ inputs.sqlite_artifact_name }}-diagram.html
+          echo "✅ HTML diagram is well-formed"
+
       - name: Upload schema artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.sqlite_artifact_name }}-schema
-          path: "*.py"
+          path: |
+            *.py
+            *-diagram.html
