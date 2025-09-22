@@ -521,11 +521,15 @@ name = "schema"
 version = "0.0.0"
 source = { editable = "projects/schema" }
 dependencies = [
+    { name = "jinja2" },
     { name = "sqlalchemy" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "sqlalchemy", specifier = ">=2.0.37" }]
+requires-dist = [
+    { name = "jinja2", specifier = ">=3.1.0" },
+    { name = "sqlalchemy", specifier = ">=2.0.37" },
+]
 
 [[package]]
 name = "scrape"

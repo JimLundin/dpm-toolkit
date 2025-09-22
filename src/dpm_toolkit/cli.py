@@ -210,11 +210,19 @@ def migrate(access_location: Path, sqlite_location: Path) -> None:
     print_success("Migration completed successfully")
 
 
-@app.command
-def schema(sqlite_location: Path) -> None:
-    """Generate SQLAlchemy schema from SQLite database."""
+@app.command()
+def schema(
+    sqlite_location: Path,
+    fmt: Literal["json", "html", "python"] = "python",
+) -> None:
+    """Generate database schema in multiple formats."""
     try:
-        from schema import read_only_sqlite, sqlite_to_sqlalchemy_schema
+        from schema import (
+            read_only_sqlite,
+            schema_to_html,
+            schema_to_sqlalchemy,
+            sqlite_to_schema,
+        )
     except ImportError:
         print_error("Schema generation requires [schema] extra dependencies")
         sys.exit(1)
@@ -222,6 +230,7 @@ def schema(sqlite_location: Path) -> None:
     validate_database_location(sqlite_location, exists=True)
     validate_database_extension(sqlite_location, SQLITE_EXTENSIONS)
     print_info(f"Source database: {sqlite_location}")
+    print_info(f"Output format: {format}")
 
     with Progress(
         SpinnerColumn(),
@@ -230,8 +239,17 @@ def schema(sqlite_location: Path) -> None:
     ) as progress:
         progress.add_task("Generating schema...", total=None)
         sqlite_database = read_only_sqlite(sqlite_location)
-        sqlalchemy_schema = sqlite_to_sqlalchemy_schema(sqlite_database)
-        stdout.write(sqlalchemy_schema)
+        schema_data = sqlite_to_schema(sqlite_database)
+
+        if fmt == "python":
+            sqlalchemy_code = schema_to_sqlalchemy(schema_data)
+            stdout.write(sqlalchemy_code)
+        elif fmt == "json":
+            json_output = dumps(schema_data)
+            stdout.write(json_output)
+        elif fmt == "html":
+            html_output = schema_to_html(schema_data)
+            stdout.write(html_output)
 
     print_success("Schema generation completed successfully")
 
