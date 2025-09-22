@@ -1,20 +1,27 @@
 """Main module for unified schema generation."""
 
 from pathlib import Path
+from typing import Any
+from warnings import catch_warnings, filterwarnings
 
-from sqlalchemy import Engine, Inspector, create_engine, inspect
-from sqlalchemy.engine.interfaces import ReflectedColumn, ReflectedForeignKeyConstraint
+from sqlalchemy import Engine, Enum, Inspector, MetaData, create_engine, event
+from sqlalchemy.engine.interfaces import ReflectedColumn
+from sqlalchemy.exc import SAWarning
+from sqlalchemy.schema import Column, Table
 
 from schema.enum_detection import detect_enum_for_column
 from schema.type_conversion import sql_to_data_type
-from schema.types import (
-    ColumnMapping,
-    ColumnSchema,
-    DatabaseSchema,
-    EnumType,
-    ForeignKeySchema,
-    TableSchema,
-)
+from schema.types import ColumnSchema, DatabaseSchema, ForeignKeySchema, TableSchema
+
+
+def detect_enum(inspector: Inspector, table: Table, column: ReflectedColumn) -> None:
+    """Event handler to detect enum types during reflection."""
+    # Check for enum constraints for this column
+    for constraint in inspector.get_check_constraints(table.name):
+        if values := detect_enum_for_column(constraint["sqltext"], column["name"]):
+            # Replace the column type with our enum type representation
+            column["type"] = Enum(*values)
+            break
 
 
 def read_only_sqlite(sqlite_location: Path) -> Engine:
@@ -23,68 +30,70 @@ def read_only_sqlite(sqlite_location: Path) -> Engine:
     return create_engine(connection_string, connect_args={"uri": True})
 
 
-def _build_column(
-    col_info: ReflectedColumn,
-    table_name: str,
-    inspector: Inspector,
+def _column_from_sqla(
+    column: Column[Any],
+    *,
+    foreign_keys: bool = True,
 ) -> ColumnSchema:
-    """Build a column schema with enum detection support."""
-    data_type = sql_to_data_type(col_info["type"])
-
-    for constraint in inspector.get_check_constraints(table_name):
-        if values := detect_enum_for_column(constraint["sqltext"], col_info["name"]):
-            data_type = EnumType(type="enum", values=values)
-            break
-
+    """Derive ColumnSchema from SQLAlchemy Column object."""
+    # Build foreign key targets without recursion to avoid circular references
     return {
-        "name": col_info["name"],
-        "type": data_type,
-        "nullable": col_info["nullable"],
+        "name": column.name,
+        "table_name": column.table.name,
+        "type": sql_to_data_type(column.type),
+        "nullable": bool(column.nullable),
+        "primary_key": column.primary_key,
+        "foreign_keys": (
+            [
+                _column_from_sqla(fk.column, foreign_keys=False)
+                for fk in column.foreign_keys
+            ]
+            if foreign_keys
+            else []
+        ),
     }
 
 
-def _build_foreign_key(fk: ReflectedForeignKeyConstraint) -> ForeignKeySchema:
-    """Build a foreign key schema from SQLAlchemy foreign key info."""
-    column_mappings: list[ColumnMapping] = [
-        {"source_column": source_col, "target_column": target_col}
-        for source_col, target_col in zip(
-            fk["constrained_columns"],
-            fk["referred_columns"],
-            strict=True,
-        )
-    ]
+def _foreign_key_from_sqla(
+    source_col: Column[Any],
+    target_col: Column[Any],
+) -> ForeignKeySchema:
+    """Derive ForeignKey from SQLAlchemy source and target columns."""
     return {
-        "target_table": fk["referred_table"],
-        "column_mappings": column_mappings,
+        "source": _column_from_sqla(source_col),
+        "target": _column_from_sqla(target_col),
     }
 
 
-def _build_table(inspector: Inspector, table_name: str) -> TableSchema:
-    """Build a table schema from database introspection."""
-    columns_info = inspector.get_columns(table_name)
-    pk_constraint = inspector.get_pk_constraint(table_name)
-    foreign_keys = inspector.get_foreign_keys(table_name)
-
+def _table_from_sqla(table: Table) -> TableSchema:
+    """Derive TableSchema from SQLAlchemy Table object."""
     return {
-        "name": table_name,
-        "columns": [
-            _build_column(col_info, table_name, inspector) for col_info in columns_info
+        "name": table.name,
+        "primary_keys": table.primary_key.columns.keys(),
+        "columns": [_column_from_sqla(col) for col in table.columns],
+        "foreign_keys": [
+            _foreign_key_from_sqla(column, fk.column)
+            for column in table.columns
+            for fk in column.foreign_keys
         ],
-        "primary_keys": pk_constraint["constrained_columns"],
-        "foreign_keys": [_build_foreign_key(fk) for fk in foreign_keys],
     }
+
+
+def reflect_tables(sqlite_database: Engine) -> list[Table]:
+    """Reflect database schema from SQLite database using metadata reflection."""
+    metadata = MetaData()
+    event.listen(metadata, "column_reflect", detect_enum)
+    metadata.reflect(bind=sqlite_database)
+    with catch_warnings():
+        filterwarnings("ignore", category=SAWarning)
+        return metadata.sorted_tables
 
 
 def sqlite_to_schema(sqlite_database: Engine) -> DatabaseSchema:
-    """Generate unified schema data from SQLite database."""
-    inspector = inspect(sqlite_database)
-    table_names = (
-        table_name
-        for table_name, _fkc in inspector.get_sorted_table_and_fkc_names()
-        if table_name
-    )
+    """Generate unified schema data from SQLite database using metadata reflection."""
+    tables = reflect_tables(sqlite_database)
 
     return {
         "name": sqlite_database.url.database or "unknown",
-        "tables": [_build_table(inspector, table_name) for table_name in table_names],
+        "tables": [_table_from_sqla(table) for table in tables],
     }
