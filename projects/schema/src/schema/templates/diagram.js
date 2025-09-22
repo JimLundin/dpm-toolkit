@@ -43,7 +43,7 @@ class SimpleDiagram {
             table.foreign_keys.forEach(fk => {
                 this.links.push({
                     source: table.name,
-                    target: fk.target_table
+                    target: fk.target.table_name
                 });
             });
         });
@@ -102,7 +102,33 @@ class SimpleDiagram {
             .attr('x', 8)
             .attr('y', (d, i) => 40 + i * 18)
             .attr('font-size', '11px')
-            .text(d => `${d.name} (${d.type})`);
+            .text(d => {
+                // Handle the new nested type structure
+                let typeStr = d.type.type;
+                if (d.type.length) {
+                  typeStr += `(${d.type.length})`;
+                }
+                if (d.type.precision && d.type.scale) {
+                  typeStr += `(${d.type.precision},${d.type.scale})`;
+                }
+                if (d.type.values) {
+                  typeStr += `[${d.type.values.join('|')}]`;
+                }
+
+                // Add indicators for constraints
+                let indicators = '';
+                if (d.primary_key) {
+                  indicators += ' 🔑';
+                }
+                if (d.foreign_keys && d.foreign_keys.length > 0) {
+                    indicators += ' 🔗';
+                }
+                if (!d.nullable) {
+                    indicators += ' ⚠️';
+                }
+
+                return `${d.name} (${typeStr})${indicators}`;
+            });
 
         this.updatePositions();
     }
