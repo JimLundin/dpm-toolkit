@@ -1,5 +1,7 @@
 """TypedDict schemas for database schema representation."""
 
+from __future__ import annotations
+
 from typing import Literal, TypedDict
 
 # Base type classes similar to SQLAlchemy's type hierarchy
@@ -81,22 +83,18 @@ class ColumnSchema(TypedDict):
     """Schema for a database column."""
 
     name: str
+    table_name: str
     type: DataType
     nullable: bool
-
-
-class ColumnMapping(TypedDict):
-    """Schema for column mapping in foreign keys."""
-
-    source_column: str  # Column in current table
-    target_column: str  # Column in referenced table
+    primary_key: bool
+    foreign_keys: list[ColumnSchema]  # Target column this FK points to
 
 
 class ForeignKeySchema(TypedDict):
-    """Schema for foreign key definition."""
+    """Foreign key constraint as source/target column pair."""
 
-    target_table: str
-    column_mappings: list[ColumnMapping]
+    source: ColumnSchema
+    target: ColumnSchema
 
 
 class TableSchema(TypedDict):
@@ -104,7 +102,7 @@ class TableSchema(TypedDict):
 
     name: str
     columns: list[ColumnSchema]
-    primary_keys: list[str]  # Flattened list of column names
+    primary_keys: list[str]  # All PK columns (supports composite keys)
     foreign_keys: list[ForeignKeySchema]
 
 
