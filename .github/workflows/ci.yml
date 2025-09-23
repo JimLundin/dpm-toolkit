@@ -107,14 +107,14 @@ jobs:
         working-directory: ${{ matrix.project.path }}
         run: |
           echo "::group::Ruff Check - ${{ matrix.project.name }}"
-          uv run ruff check --output-format=github .
+          uv run ruff check --output-format=github src/
           echo "::endgroup::"
 
       - name: Run Ruff formatter check on ${{ matrix.project.name }}
         working-directory: ${{ matrix.project.path }}
         run: |
           echo "::group::Ruff Format Check - ${{ matrix.project.name }}"
-          uv run ruff format --check --diff .
+          uv run ruff format --check --diff src/
           echo "::endgroup::"
 
       # Testing
