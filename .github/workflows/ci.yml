@@ -10,29 +10,148 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  ACCESS_ENGINE_INSTALLER: accessdatabaseengine_X64.exe
+  ACCESS_ENGINE_URL: https://download.microsoft.com/download/3/5/C/35C84C36-661A-44E6-9324-8786B8DBE231/accessdatabaseengine_X64.exe
+  ACCESS_ENGINE_SHA256: "04e96c9f1a1f7d251a88aececf1dc10ff65950392787427c00814a43308003de"
+
 jobs:
-  test:
-    uses: ./.github/workflows/run-tests.yml
+  # Per-project QA (lint, test, type-check)
+  project-qa:
+    runs-on: ${{ matrix.project.os }}
+    defaults:
+      run:
+        shell: bash
 
-  lint:
-    uses: ./.github/workflows/run-lint.yml
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+          - name: Main CLI
+            path: .
+            extras: --all-extras
+            os: windows-latest
+          - name: Archive Module
+            path: projects/archive
+            extras: ""
+            os: ubuntu-latest
+          - name: Compare Module
+            path: projects/compare
+            extras: --extra compare
+            os: ubuntu-latest
+          - name: Schema Module
+            path: projects/schema
+            extras: --extra schema
+            os: ubuntu-latest
+          - name: Scrape Module
+            path: projects/scrape
+            extras: --extra scrape
+            os: ubuntu-latest
+          - name: Migrate Module
+            path: projects/migrate
+            extras: --extra migrate
+            os: windows-latest
 
-  type-check:
-    uses: ./.github/workflows/run-type-check.yml
-
-  # Summary job that all other jobs depend on
-  ci-success:
-    if: always()
-    runs-on: ubuntu-latest
-    needs: [test, lint, type-check]
     steps:
-      - name: Check CI Status
-        if: >-
-          needs.test.result == 'failure' ||
-          needs.lint.result == 'failure' ||
-          needs.type-check.result == 'failure'
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install
+
+      # Windows-specific steps for Access Engine (conditional)
+      - name: Cache Access Database Engine
+        if: matrix.project.os == 'windows-latest'
+        id: cache-access-engine
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.ACCESS_ENGINE_INSTALLER }}
+          key: access-engine-${{ env.ACCESS_ENGINE_SHA256 }}
+
+      - name: Download Access Database Engine
+        if: matrix.project.os == 'windows-latest' && steps.cache-access-engine.outputs.cache-hit != 'true'
+        shell: bash
         run: |
-          echo "❌ CI failed - check individual job results"
-          exit 1
-      - name: CI Success
-        run: echo "✅ All CI checks passed!"
+          curl -L --fail --retry 3 --retry-delay 5 "${{ env.ACCESS_ENGINE_URL }}" -o "${{ env.ACCESS_ENGINE_INSTALLER }}"
+
+      - name: Verify file hash
+        if: matrix.project.os == 'windows-latest' && steps.cache-access-engine.outputs.cache-hit != 'true'
+        shell: powershell
+        run: |
+          $expectedHash = "${{ env.ACCESS_ENGINE_SHA256 }}"
+          $actualHash = (Get-FileHash "${{ env.ACCESS_ENGINE_INSTALLER }}" -Algorithm SHA256).Hash.ToLower()
+
+          if ($actualHash -ne $expectedHash.ToLower()) {
+            Write-Error "Hash mismatch. Expected: $expectedHash, Got: $actualHash"
+            exit 1
+          }
+
+      - name: Install Microsoft Access Database Engine
+        if: matrix.project.os == 'windows-latest'
+        shell: powershell
+        run: |
+          Start-Process -FilePath "${{ env.ACCESS_ENGINE_INSTALLER }}" -ArgumentList "/quiet" -Wait
+
+      - name: Install dependencies
+        run: |
+          uv sync --dev
+          uv sync ${{ matrix.project.extras }}
+
+      # Linting
+      - name: Run Ruff linter on ${{ matrix.project.name }}
+        working-directory: ${{ matrix.project.path }}
+        run: |
+          echo "::group::Ruff Check - ${{ matrix.project.name }}"
+          uv run ruff check --output-format=github .
+          echo "::endgroup::"
+
+      - name: Run Ruff formatter check on ${{ matrix.project.name }}
+        working-directory: ${{ matrix.project.path }}
+        run: |
+          echo "::group::Ruff Format Check - ${{ matrix.project.name }}"
+          uv run ruff format --check --diff .
+          echo "::endgroup::"
+
+      # Testing
+      - name: Run tests for ${{ matrix.project.name }}
+        working-directory: ${{ matrix.project.path }}
+        run: |
+          echo "::group::Testing - ${{ matrix.project.name }}"
+          uv run pytest -v --tb=short
+          echo "::endgroup::"
+
+      # Type checking - each as separate step
+      - name: Run MyPy on ${{ matrix.project.name }}
+        working-directory: ${{ matrix.project.path }}
+        run: |
+          echo "::group::MyPy - ${{ matrix.project.name }}"
+          uv run mypy .
+          echo "::endgroup::"
+
+      - name: Run Pyright on ${{ matrix.project.name }}
+        working-directory: ${{ matrix.project.path }}
+        run: |
+          echo "::group::Pyright - ${{ matrix.project.name }}"
+          uv run pyright .
+          echo "::endgroup::"
+
+      - name: Run Ty on ${{ matrix.project.name }}
+        continue-on-error: true
+        working-directory: ${{ matrix.project.path }}
+        run: |
+          echo "::group::Ty (beta) - ${{ matrix.project.name }}"
+          uv run ty check .
+          echo "::endgroup::"
+
+      - name: Run Pyrefly on ${{ matrix.project.name }}
+        continue-on-error: true
+        working-directory: ${{ matrix.project.path }}
+        run: |
+          echo "::group::Pyrefly (beta) - ${{ matrix.project.name }}"
+          uv run pyrefly check .
+          echo "::endgroup::"
