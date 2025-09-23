@@ -61,5 +61,6 @@ def enum_type(column: Column[Any]) -> bool:
             "source",
             "severity",
             "errorcode",
+            "operandreference",
         ),
     )
