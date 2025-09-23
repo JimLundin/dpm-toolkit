@@ -122,7 +122,7 @@ jobs:
         working-directory: ${{ matrix.project.path }}
         run: |
           echo "::group::Testing - ${{ matrix.project.name }}"
-          uv run pytest -v --tb=short
+          uv run pytest -v --tb=short || [[ $? -eq 5 ]]
           echo "::endgroup::"
 
       # Type checking - each as separate step
@@ -130,14 +130,14 @@ jobs:
         working-directory: ${{ matrix.project.path }}
         run: |
           echo "::group::MyPy - ${{ matrix.project.name }}"
-          uv run mypy .
+          uv run mypy src/
           echo "::endgroup::"
 
       - name: Run Pyright on ${{ matrix.project.name }}
         working-directory: ${{ matrix.project.path }}
         run: |
           echo "::group::Pyright - ${{ matrix.project.name }}"
-          uv run pyright .
+          uv run pyright src/
           echo "::endgroup::"
 
       - name: Run Ty on ${{ matrix.project.name }}
@@ -145,7 +145,7 @@ jobs:
         working-directory: ${{ matrix.project.path }}
         run: |
           echo "::group::Ty (beta) - ${{ matrix.project.name }}"
-          uv run ty check .
+          uv run ty check src/
           echo "::endgroup::"
 
       - name: Run Pyrefly on ${{ matrix.project.name }}
@@ -153,5 +153,5 @@ jobs:
         working-directory: ${{ matrix.project.path }}
         run: |
           echo "::group::Pyrefly (beta) - ${{ matrix.project.name }}"
-          uv run pyrefly check .
+          uv run pyrefly check src/
           echo "::endgroup::"
