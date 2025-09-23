@@ -122,7 +122,7 @@ jobs:
         working-directory: ${{ matrix.project.path }}
         run: |
           echo "::group::Testing - ${{ matrix.project.name }}"
-          uv run pytest -v --tb=short || [[ $? -eq 5 ]]
+          uv run pytest tests/ -v --tb=short
           echo "::endgroup::"
 
       # Type checking - each as separate step
