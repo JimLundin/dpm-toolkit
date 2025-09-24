@@ -103,7 +103,8 @@ def comparisons_to_table_data(comparisons: Iterable[Any]) -> list[dict[str, Any]
         {
             "name": comp.name,
             "change_type": "table_changes",
-            "details": f"Columns: {len(list(comp.body.columns.changes))}, Rows: {len(list(comp.body.rows.changes))}",
+            "columns": f"{len(list(comp.body.columns.changes))}",
+            "rows": f"{len(list(comp.body.rows.changes))}",
         }
         for comp in comparisons
     ]
