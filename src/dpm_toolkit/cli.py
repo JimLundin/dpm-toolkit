@@ -30,12 +30,14 @@ app = App(help="DPM Toolkit CLI tool")
 type Format = Literal["table", "json", "html"]
 
 
-def serializer[T](obj: date | Iterable[T]) -> str | tuple[T, ...] | None:
-    """Convert date to ISO format."""
-    if isinstance(obj, Iterable):
-        return tuple(obj)
+def serializer(obj: Any) -> str | tuple[Any, ...] | None:  # noqa: ANN401
+    """Convert date to ISO format and iterables to tuples."""
     if isinstance(obj, date):
         return obj.isoformat()
+    if isinstance(obj, Iterable):
+        return tuple(
+            obj,  # pyright: ignore[reportUnknownVariableType,reportUnknownArgumentType]
+        )
     return None
 
 
