@@ -182,7 +182,7 @@ def download(version_id: str, variant: SourceType = "original") -> None:
 def migrate(access_location: Path, sqlite_location: Path) -> None:
     """Migrate Access database to SQLite."""
     try:
-        from migrate import access, access_to_sqlite
+        from migrate import access, access_to_sqlite  # noqa: PLC0415
     except ImportError:
         print_error("Migration requires [migrate] extra dependencies")
         sys.exit(1)
@@ -217,7 +217,7 @@ def schema(
 ) -> None:
     """Generate database schema in multiple formats."""
     try:
-        from schema import (
+        from schema import (  # noqa: PLC0415
             read_only_sqlite,
             schema_to_html,
             schema_to_sqlalchemy,
@@ -258,7 +258,7 @@ def schema(
 def compare(old_location: Path, new_location: Path, fmt: Format = "table") -> None:
     """Compare two SQLite databases."""
     try:
-        from compare import compare_databases, comparisons_to_html
+        from compare import compare_databases, comparisons_to_html  # noqa: PLC0415
     except ImportError:
         print_error("Comparison requires [compare] extra dependencies")
         sys.exit(1)
