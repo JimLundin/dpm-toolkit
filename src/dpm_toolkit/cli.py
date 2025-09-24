@@ -242,7 +242,7 @@ def schema(
     validate_database_location(sqlite_location, exists=True)
     validate_database_extension(sqlite_location, SQLITE_EXTENSIONS)
     print_info(f"Source database: {sqlite_location}")
-    print_info(f"Output format: {format}")
+    print_info(f"Output format: {fmt}")
 
     with Progress(
         SpinnerColumn(),
