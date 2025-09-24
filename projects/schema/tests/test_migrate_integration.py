@@ -128,9 +128,9 @@ def test_migrate_output_has_check_constraints(migrate_output_db: str) -> None:
 
     # Check TestData table constraints
     test_data_constraints = inspector.get_check_constraints("TestData")
-    assert (
-        len(test_data_constraints) == 4
-    ), f"Expected 4 constraints, got {len(test_data_constraints)}"
+    assert len(test_data_constraints) == 4, (
+        f"Expected 4 constraints, got {len(test_data_constraints)}"
+    )
 
     # Verify specific constraint content
     constraint_texts = [c["sqltext"] for c in test_data_constraints]
@@ -142,15 +142,15 @@ def test_migrate_output_has_check_constraints(migrate_output_db: str) -> None:
     ]
 
     for expected in expected_constraints:
-        assert any(
-            expected in text for text in constraint_texts
-        ), f"Missing constraint: {expected}"
+        assert any(expected in text for text in constraint_texts), (
+            f"Missing constraint: {expected}"
+        )
 
     # Check StatusLog table constraints
     status_log_constraints = inspector.get_check_constraints("StatusLog")
-    assert (
-        len(status_log_constraints) == 2
-    ), f"Expected 2 constraints, got {len(status_log_constraints)}"
+    assert len(status_log_constraints) == 2, (
+        f"Expected 2 constraints, got {len(status_log_constraints)}"
+    )
 
 
 def test_schema_generation_from_migrate_output(migrate_output_db: str) -> None:
@@ -173,9 +173,9 @@ def test_schema_generation_from_migrate_output(migrate_output_db: str) -> None:
     ]
 
     for expected_literal in expected_literals:
-        assert (
-            expected_literal in schema_code
-        ), f"Missing literal type: {expected_literal}"
+        assert expected_literal in schema_code, (
+            f"Missing literal type: {expected_literal}"
+        )
 
     # Verify non-enum columns are regular types
     assert "description: Mapped[str | None]" in schema_code
