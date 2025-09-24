@@ -1,6 +1,7 @@
 """Main module for database conversion."""
 
 from sqlite3 import Connection
+from typing import cast
 
 from sqlalchemy import Engine, create_engine
 
@@ -17,4 +18,4 @@ def access_to_sqlite(source_database: Engine) -> Connection:
 
     load_data_to_database(sqlite_database, tables_with_rows)
 
-    return sqlite_database.raw_connection().connection
+    return cast("Connection", sqlite_database.raw_connection().dbapi_connection)
