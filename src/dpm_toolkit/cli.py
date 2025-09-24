@@ -97,6 +97,18 @@ def format_version_table(version: Version) -> None:
     console.print(table)
 
 
+def comparisons_to_table_data(comparisons: Iterable[Any]) -> list[dict[str, Any]]:
+    """Convert Comparison objects to dictionaries for table display."""
+    return [
+        {
+            "name": comp.name,
+            "change_type": "table_changes",
+            "details": f"Columns: {len(list(comp.body.columns.changes))}, Rows: {len(list(comp.body.rows.changes))}",
+        }
+        for comp in comparisons
+    ]
+
+
 def format_comparison_table(data: Iterable[dict[str, Any]], length: int = 100) -> None:
     """Format comparison results as a rich table."""
     if not data:
@@ -288,10 +300,11 @@ def compare(old_location: Path, new_location: Path, fmt: Format = "table") -> No
             stdout.write(chunk)
 
     if fmt == "json":
-        console.print_json(dumps(comparisons, default=serializer))
+        stdout.write(dumps(comparisons, default=serializer))
 
     if fmt == "table":
-        format_comparison_table(comparisons)
+        comparison_dicts = comparisons_to_table_data(comparisons)
+        format_comparison_table(comparison_dicts)
 
 
 def main() -> None:
