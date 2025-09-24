@@ -5,13 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }}</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
-    <style>{{ css_content }}</style>
+    <style>{{ css_content|safe }}</style>
 </head>
 <body>
     <svg id="diagram"></svg>
     <script>
-const data = {{ diagram_json }};
-{{ js_content }}
+const data = {{ diagram_json|safe }};
+{{ js_content|safe }}
     </script>
 </body>
 </html>

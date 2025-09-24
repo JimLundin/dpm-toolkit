@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
-from markupsafe import Markup
 
 from schema.types import DatabaseSchema
 
@@ -27,7 +26,7 @@ def schema_to_html(schema: DatabaseSchema) -> str:
     # Render template
     return template.render(
         title=title,
-        css_content=Markup(css_content),
-        js_content=Markup(js_content),
-        diagram_json=Markup(json.dumps(schema, indent=2)),
+        css_content=css_content,
+        js_content=js_content,
+        diagram_json=json.dumps(schema, indent=2),
     )
