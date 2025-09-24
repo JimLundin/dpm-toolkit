@@ -73,7 +73,7 @@ def render_foreign_key(
     elif quoted:
         ref = f'"{pascal_case(target["table_name"])}.{snake_case(target["name"])}"'
     else:
-        ref = f'{pascal_case(target["table_name"])}.{snake_case(target["name"])}'
+        ref = f"{pascal_case(target['table_name'])}.{snake_case(target['name'])}"
 
     return f"ForeignKey({ref})"
 
@@ -209,7 +209,7 @@ def generate_table_definition(
 def generate_imports(imports: Imports) -> str:
     """Generate import statements from collected imports."""
     lines = [
-        f"from {module} import {", ".join(names)}" if names else f"import {module}"
+        f"from {module} import {', '.join(names)}" if names else f"import {module}"
         for module, names in imports.items()
     ]
     return "\n".join(lines)
