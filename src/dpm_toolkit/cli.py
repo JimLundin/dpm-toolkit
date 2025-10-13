@@ -175,7 +175,12 @@ def download(version_id: str, variant: SourceType = "archive") -> None:
         print_error(f"Invalid version '{version_id}'")
         sys.exit(1)
 
-    database_source = get_source(version, variant)
+    try:
+        database_source = get_source(version, variant)
+    except ValueError:
+        print_error("Failed to download from archive, downloading from source.")
+        database_source = get_source(version, "original")
+
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
