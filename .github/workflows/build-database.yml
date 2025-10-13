@@ -20,7 +20,7 @@ jobs:
     uses: ./.github/workflows/download-database.yml
     with:
       version_id: ${{ inputs.version_id }}
-      database_type: "original"
+      database_type: "archive"
 
   migrate:
     needs: download
