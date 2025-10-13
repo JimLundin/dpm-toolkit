@@ -168,7 +168,7 @@ def versions(
 
 
 @app.command
-def download(version_id: str, variant: SourceType = "original") -> None:
+def download(version_id: str, variant: SourceType = "archive") -> None:
     """Download databases."""
     version = get_version(VERSIONS, version_id)
     if not version:
@@ -197,7 +197,7 @@ def download(version_id: str, variant: SourceType = "original") -> None:
 def migrate(access_location: Path, sqlite_location: Path) -> None:
     """Migrate Access database to SQLite."""
     try:
-        from migrate import access, access_to_sqlite  # noqa: PLC0415
+        from migrate import access, access_to_sqlite
     except ImportError:
         print_error("Migration requires [migrate] extra dependencies")
         sys.exit(1)
@@ -232,7 +232,7 @@ def schema(
 ) -> None:
     """Generate database schema in multiple formats."""
     try:
-        from schema import (  # noqa: PLC0415
+        from schema import (
             read_only_sqlite,
             schema_to_html,
             schema_to_sqlalchemy,
@@ -273,7 +273,7 @@ def schema(
 def compare(old_location: Path, new_location: Path, fmt: Format = "table") -> None:
     """Compare two SQLite databases."""
     try:
-        from compare import compare_databases, comparisons_to_html  # noqa: PLC0415
+        from compare import compare_databases, comparisons_to_html
     except ImportError:
         print_error("Comparison requires [compare] extra dependencies")
         sys.exit(1)

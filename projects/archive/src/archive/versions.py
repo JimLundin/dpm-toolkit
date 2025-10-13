@@ -87,8 +87,7 @@ def get_version_urls() -> VersionUrls:
     versions = get_versions()
     version_urls: VersionUrls = defaultdict(set)
     for version in versions:
-        original_source = version.get("original")
-        if original_source:
+        if original_source := version.get("original"):
             version_urls[version["version"]].add(original_source["url"])
 
     return version_urls
