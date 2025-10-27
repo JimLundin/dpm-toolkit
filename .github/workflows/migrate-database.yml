@@ -80,7 +80,7 @@ jobs:
           uv run dpm-toolkit migrate "$ACCDB_FILE" "$SQLITE_FILE"
 
       - name: Upload SQLite database artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ inputs.source_artifact_name }}-sqlite
           path: ${{ inputs.source_artifact_name }}.sqlite

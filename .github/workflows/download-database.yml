@@ -50,7 +50,7 @@ jobs:
           rm /tmp/temp.zip
 
       - name: Upload database artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ inputs.version_id }}-${{ inputs.database_type }}
           path: download-temp/
