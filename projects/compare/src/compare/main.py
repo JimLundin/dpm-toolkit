@@ -87,6 +87,29 @@ def comparisons_to_html(comparisons: Iterable[Comparison]) -> TemplateStream:
     return template.stream(comparisons=comparisons)
 
 
+def comparisons_to_summary(comparisons: Iterable[Comparison]) -> list[dict[str, Any]]:
+    """Convert comparisons to summary data with change counts.
+
+    Returns a list of dictionaries with table names and change counts,
+    suitable for display in terminal tables or other summary views.
+
+    Each dictionary contains:
+        - name: table name
+        - change_type: always "table_changes"
+        - columns: count of column changes
+        - rows: count of row changes
+    """
+    return [
+        {
+            "name": comp.name,
+            "change_type": "table_changes",
+            "columns": len(list(comp.body.columns.changes)),
+            "rows": len(list(comp.body.rows.changes)),
+        }
+        for comp in comparisons
+    ]
+
+
 def create_row_indexer(
     primary_keys: Iterable[str],
     columns: Iterable[str],

@@ -99,39 +99,22 @@ def format_version_table(version: Version) -> None:
     console.print(table)
 
 
-def comparisons_to_table_data(comparisons: Iterable[Any]) -> list[dict[str, Any]]:
-    """Convert Comparison objects to dictionaries for table display."""
-    return [
-        {
-            "name": comp.name,
-            "change_type": "table_changes",
-            "columns": f"{len(list(comp.body.columns.changes))}",
-            "rows": f"{len(list(comp.body.rows.changes))}",
-        }
-        for comp in comparisons
-    ]
-
-
-def format_comparison_table(data: Iterable[dict[str, Any]], length: int = 100) -> None:
-    """Format comparison results as a rich table."""
+def format_comparison_table(data: Iterable[dict[str, Any]]) -> None:
+    """Format comparison summary as a rich table."""
     if not data:
         console.print("No differences found between databases.")
         return
 
     table = Table(title="Database Comparison Results")
     table.add_column("Table", style="bold cyan")
-    table.add_column("Change Type", style="bold yellow")
-    table.add_column("Details", style="dim")
+    table.add_column("Column Changes", style="bold yellow")
+    table.add_column("Row Changes", style="bold yellow")
 
     for comparison in data:
-        details = str(comparison.get("details", ""))
-        truncated_details = (
-            f"{details[:length]}..." if len(details) > length else details
-        )
         table.add_row(
             comparison.get("name", ""),
-            comparison.get("change_type", ""),
-            truncated_details,
+            str(comparison.get("columns", 0)),
+            str(comparison.get("rows", 0)),
         )
 
     console.print(table)
@@ -278,7 +261,11 @@ def schema(
 def compare(old_location: Path, new_location: Path, fmt: Format = "table") -> None:
     """Compare two SQLite databases."""
     try:
-        from compare import compare_databases, comparisons_to_html
+        from compare import (
+            compare_databases,
+            comparisons_to_html,
+            comparisons_to_summary,
+        )
     except ImportError:
         print_error("Comparison requires [compare] extra dependencies")
         sys.exit(1)
@@ -311,8 +298,8 @@ def compare(old_location: Path, new_location: Path, fmt: Format = "table") -> No
         stdout.write(dumps(comparisons, default=serializer))
 
     if fmt == "table":
-        comparison_dicts = comparisons_to_table_data(comparisons)
-        format_comparison_table(comparison_dicts)
+        comparison_summary = comparisons_to_summary(comparisons)
+        format_comparison_table(comparison_summary)
 
 
 def main() -> None:
