@@ -39,4 +39,5 @@ jobs:
     uses: ./.github/workflows/compare-previous.yml
     with:
       version_id: ${{ inputs.version_id }}
+      current_database_artifact_name: ${{ needs.migrate.outputs.artifact_name }}
       output_format: "html"
