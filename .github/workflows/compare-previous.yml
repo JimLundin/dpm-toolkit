@@ -7,6 +7,10 @@ on:
         description: "The version ID to compare against its predecessor"
         required: true
         type: string
+      current_database_artifact_name:
+        description: "Name of artifact containing the current version's SQLite database"
+        required: true
+        type: string
       output_format:
         description: "Output format for comparison"
         required: false
@@ -85,7 +89,7 @@ jobs:
       - name: Download current database artifact
         uses: actions/download-artifact@v6
         with:
-          name: ${{ inputs.version_id }}-original-sqlite
+          name: ${{ inputs.current_database_artifact_name }}
           path: ./new-db/
 
       - name: Find database files
