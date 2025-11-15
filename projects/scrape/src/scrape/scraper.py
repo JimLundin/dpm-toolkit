@@ -1,19 +1,11 @@
 """Module for scraping and managing Access database files."""
 
-import logging
 from collections.abc import Iterable
 from http import HTTPStatus
 from typing import Final
 
 from bs4 import BeautifulSoup, Tag
 from requests import get, head
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-)
-logger = logging.getLogger(__name__)
 
 # Constants
 EBA_URL: Final[str] = "https://eba.europa.eu"
