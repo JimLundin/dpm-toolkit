@@ -109,3 +109,12 @@ type = "draft"
 semver = "4.2.0-beta.1"
 date = 2025-09-05
 original = { url = "https://www.eba.europa.eu/sites/default/files/2025-09/2e9220cc-2fb6-4af2-8ff8-5e870882380a/DPM2%20Database_Release%204.2%28draft%29.accdb_.zip", checksum = "sha256:cbeeb1ff940f8388480fb358d4bd2a8b85498901e614c4fe536129a6ca536004" }
+
+[[versions]]
+id = "4.2-release"
+previous = "4.2-draft"
+version = "4.2"
+type = "release"
+semver = "4.2.0"
+date = 2025-11-25
+original = { url = "https://www.eba.europa.eu/sites/default/files/2025-11/d67068fe-6327-4890-9163-3a9fcdabb58f/DPM2%20Database_v%204_2_20251125.zip", checksum = "sha256:4f6f62422ac2bbef7a5d8da969e61a81e653dfcec6bdccc1f5c9197a8392d5c0" }
