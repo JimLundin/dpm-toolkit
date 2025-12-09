@@ -27,12 +27,22 @@ select = ["ALL"]
 ignore = ["T201"]
 
 [tool.ruff.lint.per-file-ignores]
-"test_*.py" = [
+"**/test*.py" = [
     "S101",    # asserts allowed in tests...
     "ARG",     # Unused function args -> fixtures nevertheless are functionally relevant...
     "FBT",     # Don't care about booleans as positional arguments in tests, e.g. via @pytest.mark.parametrize()
     "PLR2004", # Magic value used in comparison, ...
     "S311",    # Standard pseudo-random generators are not suitable for cryptographic purposes
+]
+"**/tests/**" = [
+    "S101",    # asserts allowed in tests...
+    "ARG",     # Unused function args -> fixtures nevertheless are functionally relevant...
+    "FBT",     # Don't care about booleans as positional arguments in tests, e.g. via @pytest.mark.parametrize()
+    "PLR2004", # Magic value used in comparison, ...
+    "S311",    # Standard pseudo-random generators are not suitable for cryptographic purposes
+]
+"**/cli.py" = [
+    "PLC0415", # imports at function level for optional dependencies
 ]
 
 [tool.mypy]
