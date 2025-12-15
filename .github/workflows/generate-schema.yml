@@ -65,7 +65,7 @@ jobs:
           echo "✅ HTML diagram is well-formed"
 
       - name: Upload schema artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ inputs.sqlite_artifact_name }}-schema
           path: |
