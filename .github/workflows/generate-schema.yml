@@ -29,7 +29,7 @@ jobs:
         run: uv sync --extra schema --dev
 
       - name: Download SQLite database artifact
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: ${{ inputs.sqlite_artifact_name }}
 
