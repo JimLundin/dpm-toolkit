@@ -3,21 +3,21 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import StrEnum
+from enum import StrEnum, auto
 from typing import Any
 
 
 class InferredType(StrEnum):
     """Types that can be inferred from data analysis."""
 
-    ENUM = "enum"
-    BOOLEAN = "boolean"
-    DATE = "date"
-    DATETIME = "datetime"
-    UUID = "uuid"
-    INTEGER = "integer"
-    REAL = "real"
-    TEXT = "text"
+    ENUM = auto()
+    BOOLEAN = auto()
+    DATE = auto()
+    DATETIME = auto()
+    UUID = auto()
+    INTEGER = auto()
+    REAL = auto()
+    TEXT = auto()
 
 
 @dataclass
