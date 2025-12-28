@@ -19,15 +19,7 @@ class PatternMiner:
     def mine_patterns(
         self, recommendations: list[TypeRecommendation],
     ) -> list[NamePattern]:
-        """Find common naming patterns in recommended type changes.
-
-        Args:
-            recommendations: List of type recommendations
-
-        Returns:
-            List of discovered naming patterns, sorted by confidence
-
-        """
+        """Find common naming patterns in type recommendations."""
         patterns: list[NamePattern] = []
 
         # Group recommendations by inferred type
@@ -63,16 +55,7 @@ class PatternMiner:
     def _extract_suffix_patterns(
         self, column_names: list[str], inferred_type: InferredType,
     ) -> list[NamePattern]:
-        """Extract common suffix patterns from column names.
-
-        Args:
-            column_names: List of column names
-            inferred_type: The type these columns are inferred as
-
-        Returns:
-            List of suffix patterns
-
-        """
+        """Extract common suffix patterns from column names."""
         suffix_counts: dict[str, list[str]] = defaultdict(list)
 
         # Try different suffix lengths
@@ -112,16 +95,7 @@ class PatternMiner:
     def _extract_prefix_patterns(
         self, column_names: list[str], inferred_type: InferredType,
     ) -> list[NamePattern]:
-        """Extract common prefix patterns from column names.
-
-        Args:
-            column_names: List of column names
-            inferred_type: The type these columns are inferred as
-
-        Returns:
-            List of prefix patterns
-
-        """
+        """Extract common prefix patterns from column names."""
         prefix_counts: dict[str, list[str]] = defaultdict(list)
 
         # Try different prefix lengths
@@ -161,16 +135,7 @@ class PatternMiner:
     def _extract_exact_patterns(
         self, column_names: list[str], inferred_type: InferredType,
     ) -> list[NamePattern]:
-        """Extract exact match patterns for frequently occurring names.
-
-        Args:
-            column_names: List of column names
-            inferred_type: The type these columns are inferred as
-
-        Returns:
-            List of exact match patterns
-
-        """
+        """Extract exact match patterns for frequently occurring names."""
         name_counts: dict[str, int] = defaultdict(int)
 
         for name in column_names:

@@ -37,25 +37,13 @@ class AnalysisReport:
         patterns: list[NamePattern],
         database_name: str,
     ) -> None:
-        """Initialize the report generator.
-
-        Args:
-            recommendations: List of type recommendations
-            patterns: List of discovered naming patterns
-            database_name: Name/version of the analyzed database
-
-        """
+        """Initialize with analysis results."""
         self.recommendations = recommendations
         self.patterns = patterns
         self.database_name = database_name
 
     def generate_json(self, output_path: Path) -> None:
-        """Generate JSON report.
-
-        Args:
-            output_path: Path to write the JSON report
-
-        """
+        """Generate JSON report."""
         report = {
             "database": self.database_name,
             "generated_at": datetime.now(UTC).isoformat(),
@@ -67,12 +55,7 @@ class AnalysisReport:
         output_path.write_text(json.dumps(report, indent=2))
 
     def generate_markdown(self, output_path: Path) -> None:
-        """Generate Markdown report.
-
-        Args:
-            output_path: Path to write the Markdown report
-
-        """
+        """Generate Markdown report."""
         lines = [
             "# Type Refinement Analysis Report",
             "",
