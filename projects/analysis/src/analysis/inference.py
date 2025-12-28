@@ -24,18 +24,7 @@ class TypeInferenceEngine:
         current_type: str,
         stats: ColumnStatistics,
     ) -> TypeRecommendation | None:
-        """Infer type from statistics.
-
-        Args:
-            table_name: Name of the table
-            column_name: Name of the column
-            current_type: Current SQLAlchemy type
-            stats: Collected statistics
-
-        Returns:
-            TypeRecommendation if a better type is inferred, None otherwise
-
-        """
+        """Infer better type from column statistics."""
         # Skip if no data
         if stats.non_null_count == 0:
             return None
