@@ -5,12 +5,21 @@ from __future__ import annotations
 import json
 from collections import defaultdict
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, TypedDict
 
 from .types import InferredType, NamePattern, TypeRecommendation
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+class SummaryData(TypedDict):
+    """Structure for summary statistics."""
+
+    total_recommendations: int
+    by_type: dict[str, int]
+    by_confidence: dict[str, int]
+    patterns_discovered: int
 
 
 class AnalysisReport:
@@ -77,13 +86,13 @@ class AnalysisReport:
 
         output_path.write_text("\n".join(lines))
 
-    def _generate_summary(self) -> dict[str, int | dict[str, int]]:
+    def _generate_summary(self) -> SummaryData:
         """Generate summary statistics."""
         by_type: dict[str, int] = defaultdict(int)
         by_confidence: dict[str, int] = {"high": 0, "medium": 0, "low": 0}
 
         for rec in self.recommendations:
-            by_type[rec.inferred_type.value] += 1
+            by_type[rec.inferred_type] += 1
 
             if rec.confidence >= self.HIGH_CONFIDENCE_THRESHOLD:
                 by_confidence["high"] += 1
@@ -92,33 +101,30 @@ class AnalysisReport:
             else:
                 by_confidence["low"] += 1
 
-        result: dict[str, int | dict[str, int]] = {
-            "total_recommendations": len(self.recommendations),
-            "by_type": dict(by_type),
-            "by_confidence": by_confidence,
-            "patterns_discovered": len(self.patterns),
-        }
-        return result
+        return SummaryData(
+            total_recommendations=len(self.recommendations),
+            by_type=dict(by_type),
+            by_confidence=by_confidence,
+            patterns_discovered=len(self.patterns),
+        )
 
     def _generate_summary_section(self) -> str:
         """Generate summary section for Markdown."""
         summary = self._generate_summary()
-        by_confidence = cast(dict[str, int], summary["by_confidence"])
-        by_type = cast(dict[str, int], summary["by_type"])
 
         lines = [
             "## Summary",
             "",
             f"- **Total Recommendations:** {summary['total_recommendations']}",
-            f"- **High Confidence (≥0.9):** {by_confidence['high']}",
-            f"- **Medium Confidence (0.7-0.9):** {by_confidence['medium']}",
-            f"- **Low Confidence (<0.7):** {by_confidence['low']}",
+            f"- **High Confidence (≥0.9):** {summary['by_confidence']['high']}",
+            f"- **Medium Confidence (0.7-0.9):** {summary['by_confidence']['medium']}",
+            f"- **Low Confidence (<0.7):** {summary['by_confidence']['low']}",
             "",
             "### By Type",
             "",
         ]
 
-        for type_name, count in sorted(by_type.items()):
+        for type_name, count in sorted(summary["by_type"].items()):
             lines.append(f"- **{type_name}:** {count}")
 
         lines.append("")
@@ -169,15 +175,15 @@ class AnalysisReport:
 
                 if pattern.pattern_type == "suffix":
                     lines.append(f'if col_name.lower().endswith("{pattern.pattern}"):')
-                    lines.append(f"    return {self._type_to_constant(inferred_type)}")
+                    lines.append(f"    return {inferred_type.upper()}")
                 elif pattern.pattern_type == "prefix":
                     lines.append(
                         f'if col_name.lower().startswith("{pattern.pattern}"):',
                     )
-                    lines.append(f"    return {self._type_to_constant(inferred_type)}")
+                    lines.append(f"    return {inferred_type.upper()}")
                 elif pattern.pattern_type == "exact":
                     lines.append(f'if col_name.lower() == "{pattern.pattern}":')
-                    lines.append(f"    return {self._type_to_constant(inferred_type)}")
+                    lines.append(f"    return {inferred_type.upper()}")
 
                 lines.append("```")
                 lines.append("")
@@ -241,18 +247,3 @@ class AnalysisReport:
                 lines.append("")
 
         return "\n".join(lines)
-
-    @staticmethod
-    def _type_to_constant(inferred_type: InferredType) -> str:
-        """Convert InferredType to type_registry constant name."""
-        mapping = {
-            InferredType.ENUM: "ENUM",
-            InferredType.BOOLEAN: "BOOLEAN",
-            InferredType.DATE: "DATE",
-            InferredType.DATETIME: "DATETIME",
-            InferredType.UUID: "UUID",
-            InferredType.INTEGER: "INTEGER",
-            InferredType.REAL: "REAL",
-            InferredType.TEXT: "TEXT",
-        }
-        return mapping.get(inferred_type, "TEXT")

@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from sqlalchemy import create_engine  # type: ignore[import-not-found]
+from sqlalchemy import create_engine
 
 from .inference import TypeInferenceEngine
 from .pattern_mining import PatternMiner
@@ -105,23 +105,25 @@ def analyze_database(
 
 
 def compare_databases(
-    old_database: Path,  # noqa: ARG001
-    new_database: Path,  # noqa: ARG001
+    _old_database: Path,
+    _new_database: Path,
     *,
-    output_path: Path | None = None,  # noqa: ARG001
+    _output_path: Path | None = None,
 ) -> None:
     """Compare type recommendations between two database versions.
 
     Args:
-        old_database: Path to the older database
-        new_database: Path to the newer database
-        output_path: Path to write the comparison report
+        _old_database: Path to the older database
+        _new_database: Path to the newer database
+        _output_path: Path to write the comparison report
+
+    Note:
+        Not yet implemented. Future work would include:
+        - Analyze both databases
+        - Compare new/removed columns
+        - Track type inference changes
+        - Monitor pattern evolution
 
     """
-    # Not yet implemented - Future work would include:
-    # - Analyze both databases
-    # - Compare new/removed columns
-    # - Track type inference changes
-    # - Monitor pattern evolution
     print("Version comparison not yet implemented", file=sys.stderr)
     sys.exit(1)
