@@ -302,6 +302,46 @@ def compare(old_location: Path, new_location: Path, fmt: Format = "table") -> No
         format_comparison_table(comparison_summary)
 
 
+@app.command
+def analyze(
+    sqlite_location: Path,
+    fmt: Literal["json", "markdown"] = "json",
+    *,
+    output: Path | None = None,
+    confidence: float = 0.7,
+) -> None:
+    """Analyze database for type refinement opportunities."""
+    try:
+        from analysis import analyze_database
+    except ImportError:
+        print_error("Analysis requires [analysis] extra dependencies")
+        sys.exit(1)
+
+    validate_database_location(sqlite_location, exists=True)
+    validate_database_extension(sqlite_location, SQLITE_EXTENSIONS)
+    print_info(f"Database: {sqlite_location}")
+    print_info(f"Output format: {fmt}")
+    print_info(f"Confidence threshold: {confidence}")
+
+    if output:
+        print_info(f"Output file: {output}")
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=err_console,
+    ) as progress:
+        progress.add_task("Analyzing database...", total=None)
+        analyze_database(
+            sqlite_location,
+            confidence_threshold=confidence,
+            output_format=fmt,
+            output_path=output,
+        )
+
+    print_success("Analysis completed successfully")
+
+
 def main() -> None:
     """Entry point for the CLI."""
     app()
