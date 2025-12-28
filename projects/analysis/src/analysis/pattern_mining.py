@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from itertools import chain
 
 from .types import InferredType, NamePattern, TypeRecommendation
 
@@ -20,36 +21,32 @@ class PatternMiner:
         self, recommendations: list[TypeRecommendation],
     ) -> list[NamePattern]:
         """Find common naming patterns in type recommendations."""
-        patterns: list[NamePattern] = []
-
         # Group recommendations by inferred type
         by_type: dict[InferredType, list[TypeRecommendation]] = defaultdict(list)
         for rec in recommendations:
             by_type[rec.inferred_type].append(rec)
 
-        # Mine patterns for each type
-        for inferred_type, recs in by_type.items():
-            column_names = [rec.column_name for rec in recs]
+        # Extract all pattern types for each inferred type
+        patterns = list(
+            chain.from_iterable(
+                chain(
+                    self._extract_suffix_patterns(
+                        [r.column_name for r in recs],
+                        inferred_type,
+                    ),
+                    self._extract_prefix_patterns(
+                        [r.column_name for r in recs],
+                        inferred_type,
+                    ),
+                    self._extract_exact_patterns(
+                        [r.column_name for r in recs],
+                        inferred_type,
+                    ),
+                )
+                for inferred_type, recs in by_type.items()
+            ),
+        )
 
-            # Extract suffix patterns
-            suffix_patterns = self._extract_suffix_patterns(
-                column_names, inferred_type,
-            )
-            patterns.extend(suffix_patterns)
-
-            # Extract prefix patterns
-            prefix_patterns = self._extract_prefix_patterns(
-                column_names, inferred_type,
-            )
-            patterns.extend(prefix_patterns)
-
-            # Extract exact match patterns (for very common names)
-            exact_patterns = self._extract_exact_patterns(
-                column_names, inferred_type,
-            )
-            patterns.extend(exact_patterns)
-
-        # Sort by confidence (descending)
         return sorted(patterns, key=lambda p: p.confidence, reverse=True)
 
     def _extract_suffix_patterns(
@@ -61,36 +58,28 @@ class PatternMiner:
         # Try different suffix lengths
         for name in column_names:
             name_lower = name.lower()
-            for length in range(
-                self.MIN_SUFFIX_LENGTH,
-                min(len(name_lower), self.MAX_SUFFIX_LENGTH) + 1,
-            ):
+            max_length = min(len(name_lower), self.MAX_SUFFIX_LENGTH) + 1
+            for length in range(self.MIN_SUFFIX_LENGTH, max_length):
                 suffix = name_lower[-length:]
                 suffix_counts[suffix].append(name)
 
-        # Filter and create patterns
-        patterns: list[NamePattern] = []
-        for suffix, examples in suffix_counts.items():
-            if len(examples) >= self.MIN_OCCURRENCES:
-                # Calculate confidence based on frequency
-                confidence = min(len(examples) / len(column_names), 1.0)
-
-                # Prefer longer, more specific suffixes
-                specificity_boost = min(len(suffix) / self.MAX_SUFFIX_LENGTH, 1.0) * 0.1
-                confidence = min(confidence + specificity_boost, 1.0)
-
-                patterns.append(
-                    NamePattern(
-                        pattern_type="suffix",
-                        pattern=suffix,
-                        inferred_type=inferred_type,
-                        occurrences=len(examples),
-                        confidence=confidence,
-                        examples=examples[:5],  # Store first 5 examples
-                    ),
-                )
-
-        return patterns
+        # Filter and create patterns using comprehension
+        return [
+            NamePattern(
+                pattern_type="suffix",
+                pattern=suffix,
+                inferred_type=inferred_type,
+                occurrences=len(examples),
+                confidence=min(
+                    len(examples) / len(column_names)
+                    + min(len(suffix) / self.MAX_SUFFIX_LENGTH, 1.0) * 0.1,
+                    1.0,
+                ),
+                examples=examples[:5],
+            )
+            for suffix, examples in suffix_counts.items()
+            if len(examples) >= self.MIN_OCCURRENCES
+        ]
 
     def _extract_prefix_patterns(
         self, column_names: list[str], inferred_type: InferredType,
@@ -101,36 +90,28 @@ class PatternMiner:
         # Try different prefix lengths
         for name in column_names:
             name_lower = name.lower()
-            for length in range(
-                self.MIN_PREFIX_LENGTH,
-                min(len(name_lower), self.MAX_PREFIX_LENGTH) + 1,
-            ):
+            max_length = min(len(name_lower), self.MAX_PREFIX_LENGTH) + 1
+            for length in range(self.MIN_PREFIX_LENGTH, max_length):
                 prefix = name_lower[:length]
                 prefix_counts[prefix].append(name)
 
-        # Filter and create patterns
-        patterns: list[NamePattern] = []
-        for prefix, examples in prefix_counts.items():
-            if len(examples) >= self.MIN_OCCURRENCES:
-                # Calculate confidence
-                confidence = min(len(examples) / len(column_names), 1.0)
-
-                # Prefer longer, more specific prefixes
-                specificity_boost = min(len(prefix) / self.MAX_PREFIX_LENGTH, 1.0) * 0.1
-                confidence = min(confidence + specificity_boost, 1.0)
-
-                patterns.append(
-                    NamePattern(
-                        pattern_type="prefix",
-                        pattern=prefix,
-                        inferred_type=inferred_type,
-                        occurrences=len(examples),
-                        confidence=confidence,
-                        examples=examples[:5],
-                    ),
-                )
-
-        return patterns
+        # Filter and create patterns using comprehension
+        return [
+            NamePattern(
+                pattern_type="prefix",
+                pattern=prefix,
+                inferred_type=inferred_type,
+                occurrences=len(examples),
+                confidence=min(
+                    len(examples) / len(column_names)
+                    + min(len(prefix) / self.MAX_PREFIX_LENGTH, 1.0) * 0.1,
+                    1.0,
+                ),
+                examples=examples[:5],
+            )
+            for prefix, examples in prefix_counts.items()
+            if len(examples) >= self.MIN_OCCURRENCES
+        ]
 
     def _extract_exact_patterns(
         self, column_names: list[str], inferred_type: InferredType,
@@ -142,22 +123,16 @@ class PatternMiner:
             name_lower = name.lower()
             name_counts[name_lower] += 1
 
-        # Create patterns for names that appear multiple times
-        patterns: list[NamePattern] = []
-        for name, count in name_counts.items():
-            if count >= self.MIN_OCCURRENCES:
-                # High confidence for exact matches
-                confidence = min(count / len(column_names) + 0.5, 1.0)
-
-                patterns.append(
-                    NamePattern(
-                        pattern_type="exact",
-                        pattern=name,
-                        inferred_type=inferred_type,
-                        occurrences=count,
-                        confidence=confidence,
-                        examples=[name],
-                    ),
-                )
-
-        return patterns
+        # Create patterns using comprehension
+        return [
+            NamePattern(
+                pattern_type="exact",
+                pattern=name,
+                inferred_type=inferred_type,
+                occurrences=count,
+                confidence=min(count / len(column_names) + 0.5, 1.0),
+                examples=[name],
+            )
+            for name, count in name_counts.items()
+            if count >= self.MIN_OCCURRENCES
+        ]
