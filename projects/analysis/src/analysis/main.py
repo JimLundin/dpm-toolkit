@@ -14,6 +14,8 @@ from .reporting import AnalysisReport
 from .statistics import StatisticsCollector
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from .types import TypeRecommendation
 
 
@@ -38,30 +40,29 @@ def analyze_database(
     collector = StatisticsCollector(engine)
     inference_engine = TypeInferenceEngine()
 
-    all_recommendations: list[TypeRecommendation] = []
+    # Analyze all tables and columns
+    def analyze_tables() -> Generator[TypeRecommendation]:
+        for table_name in collector.metadata.tables:
+            print(f"  Analyzing table: {table_name}...", file=sys.stderr)
+            table_stats = collector.collect_table_statistics(table_name)
+            table = collector.metadata.tables[table_name]
 
-    # Analyze each table
-    for table_name in collector.metadata.tables:
-        print(f"  Analyzing table: {table_name}...", file=sys.stderr)
+            for column in table.columns:
+                if column.name in table_stats:
+                    recommendation = inference_engine.infer_type(
+                        table_name=table_name,
+                        column_name=column.name,
+                        current_type=str(column.type),
+                        stats=table_stats[column.name],
+                    )
+                    meets_threshold = (
+                        recommendation
+                        and recommendation.confidence >= confidence_threshold
+                    )
+                    if meets_threshold:
+                        yield recommendation
 
-        table_stats = collector.collect_table_statistics(table_name)
-        table = collector.metadata.tables[table_name]
-
-        # Infer types for each column
-        for column in table.columns:
-            if column.name not in table_stats:
-                continue
-
-            stats = table_stats[column.name]
-            recommendation = inference_engine.infer_type(
-                table_name=table_name,
-                column_name=column.name,
-                current_type=str(column.type),
-                stats=stats,
-            )
-
-            if recommendation and recommendation.confidence >= confidence_threshold:
-                all_recommendations.append(recommendation)
+    all_recommendations = list(analyze_tables())
 
     print(
         f"Found {len(all_recommendations)} recommendations", file=sys.stderr,
