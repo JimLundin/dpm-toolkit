@@ -102,28 +102,3 @@ def analyze_database(
         sys.exit(1)
 
     print(f"Analysis complete! Report written to {output_path}", file=sys.stderr)
-
-
-def compare_databases(
-    _old_database: Path,
-    _new_database: Path,
-    *,
-    _output_path: Path | None = None,
-) -> None:
-    """Compare type recommendations between two database versions.
-
-    Args:
-        _old_database: Path to the older database
-        _new_database: Path to the newer database
-        _output_path: Path to write the comparison report
-
-    Note:
-        Not yet implemented. Future work would include:
-        - Analyze both databases
-        - Compare new/removed columns
-        - Track type inference changes
-        - Monitor pattern evolution
-
-    """
-    print("Version comparison not yet implemented", file=sys.stderr)
-    sys.exit(1)
