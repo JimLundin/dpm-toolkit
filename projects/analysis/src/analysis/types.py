@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class InferredType(Enum):
+class InferredType(StrEnum):
     """Types that can be inferred from data analysis."""
 
     ENUM = "enum"

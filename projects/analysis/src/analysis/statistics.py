@@ -8,7 +8,7 @@ from collections import Counter
 from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import Engine, MetaData  # type: ignore[import-not-found]
+from sqlalchemy import Engine, MetaData
 
 from .types import ColumnStatistics
 
