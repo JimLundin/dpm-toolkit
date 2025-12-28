@@ -24,15 +24,7 @@ def analyze_database(
     output_format: str = "json",
     output_path: Path | None = None,
 ) -> None:
-    """Analyze a SQLite database for type refinement opportunities.
-
-    Args:
-        database_path: Path to the SQLite database
-        confidence_threshold: Minimum confidence for recommendations (0.0-1.0)
-        output_format: Output format ('json' or 'markdown')
-        output_path: Path to write the report (defaults to stdout for markdown)
-
-    """
+    """Analyze SQLite database for type refinement opportunities."""
     if not database_path.exists():
         print(f"Error: Database not found: {database_path}", file=sys.stderr)
         sys.exit(1)
