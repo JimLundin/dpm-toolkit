@@ -23,12 +23,7 @@ class StatisticsCollector:
     MAX_SAMPLES = 50
 
     def __init__(self, engine: Engine) -> None:
-        """Initialize the statistics collector.
-
-        Args:
-            engine: SQLAlchemy engine connected to the database
-
-        """
+        """Initialize with database engine."""
         self.engine = engine
         self.metadata = MetaData()
         self.metadata.reflect(bind=engine)
@@ -36,15 +31,7 @@ class StatisticsCollector:
     def collect_table_statistics(
         self, table_name: str,
     ) -> dict[str, ColumnStatistics]:
-        """Collect statistics for all columns in a table.
-
-        Args:
-            table_name: Name of the table to analyze
-
-        Returns:
-            Dictionary mapping column names to their statistics
-
-        """
+        """Collect statistics for all columns in a table."""
         table = self.metadata.tables[table_name]
         column_stats: dict[str, ColumnStatistics] = {}
 
@@ -110,13 +97,7 @@ class StatisticsCollector:
     def _analyze_value_patterns(
         self, stats: ColumnStatistics, value: Any,  # noqa: ANN401
     ) -> None:
-        """Analyze a value for pattern matching.
-
-        Args:
-            stats: Column statistics to update
-            value: Value to analyze
-
-        """
+        """Analyze value for type pattern matching."""
         # Skip None values
         if value is None:
             return
@@ -144,13 +125,7 @@ class StatisticsCollector:
     def _analyze_string_patterns(
         self, stats: ColumnStatistics, value: str,
     ) -> None:
-        """Analyze string value for patterns.
-
-        Args:
-            stats: Column statistics to update
-            value: String value to analyze
-
-        """
+        """Analyze string for UUID, boolean, and date patterns."""
         # UUID pattern detection
         if self._is_uuid_format(value):
             stats.uuid_pattern_matches += 1
