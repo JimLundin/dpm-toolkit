@@ -312,7 +312,12 @@ def analyze(
 ) -> None:
     """Analyze database for type refinement opportunities."""
     try:
-        from analysis import analyze_database
+        from analysis import (
+            analyze_database,
+            create_engine_for_database,
+            report_to_json,
+            report_to_markdown,
+        )
     except ImportError:
         print_error("Analysis requires [analysis] extra dependencies")
         sys.exit(1)
@@ -323,23 +328,39 @@ def analyze(
     print_info(f"Output format: {fmt}")
     print_info(f"Confidence threshold: {confidence}")
 
-    if output:
-        print_info(f"Output file: {output}")
-
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
         console=err_console,
     ) as progress:
-        progress.add_task("Analyzing database...", total=None)
-        analyze_database(
-            database,
+        task = progress.add_task("Analyzing database...", total=None)
+
+        # Create engine and analyze database
+        engine = create_engine_for_database(database)
+        report = analyze_database(
+            engine,
+            database_name=database.stem,
             confidence_threshold=confidence,
-            output_format=fmt,
-            output_path=output,
         )
 
-    print_success("Analysis completed successfully")
+        progress.update(task, description="Generating report...")
+
+        # Convert to requested format
+        if fmt == "json":
+            output_text = report_to_json(report)
+        elif fmt == "markdown":
+            output_text = report_to_markdown(report)
+        else:
+            print_error(f"Unknown format: {fmt}")
+            sys.exit(1)
+
+    # Write to stdout or file
+    if output:
+        output.write_text(output_text)
+        print_success(f"Analysis complete! Report written to {output}")
+    else:
+        stdout.write(output_text)
+        print_success("Analysis complete!")
 
 
 def main() -> None:
