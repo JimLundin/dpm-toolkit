@@ -8,7 +8,6 @@ from .main import (
     report_to_markdown,
 )
 from .pattern_mining import PatternMiner
-from .reporting import ReportGenerator
 from .statistics import StatisticsCollector
 from .types import (
     AnalysisReport,
@@ -25,7 +24,6 @@ __all__ = [
     "InferredType",
     "NamePattern",
     "PatternMiner",
-    "ReportGenerator",
     "ReportSummary",
     "StatisticsCollector",
     "TypeInferenceEngine",
