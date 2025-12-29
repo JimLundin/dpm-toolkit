@@ -1,12 +1,16 @@
 """Tests for type definitions."""
 
+import json
 from dataclasses import asdict
 from typing import Any
 
+from analysis.reporting import SetEncoder
 from analysis.types import (
+    AnalysisReport,
     ColumnStatistics,
     InferredType,
     NamePattern,
+    ReportSummary,
     TypeRecommendation,
 )
 
@@ -74,3 +78,59 @@ def test_name_pattern_dataclass_conversion() -> None:
     assert len(result["examples"]) == 10
     # StrEnum remains as StrEnum (it's already a string subclass)
     assert result["inferred_type"] == InferredType.ENUM
+
+
+def test_analysis_report_json_serialization() -> None:
+    """Test that AnalysisReport can be serialized to JSON with SetEncoder."""
+    # Create a complete report
+    recommendation = TypeRecommendation(
+        table_name="users",
+        column_name="status",
+        current_type="VARCHAR",
+        inferred_type=InferredType.ENUM,
+        confidence=0.95,
+        evidence={"cardinality": 3},
+        enum_values={"pending", "active", "inactive"},  # Set (unsorted)
+    )
+
+    pattern = NamePattern(
+        pattern_type="suffix",
+        pattern="flag",
+        inferred_type=InferredType.BOOLEAN,
+        occurrences=5,
+        confidence=0.88,
+        examples=["is_active", "is_deleted"],
+    )
+
+    summary = ReportSummary(
+        total_recommendations=1,
+        by_type={"enum": 1},
+        total_patterns=1,
+        by_pattern_type={"suffix": 1},
+    )
+
+    report = AnalysisReport(
+        database="test.sqlite",
+        generated_at="2024-01-01T00:00:00+00:00",
+        summary=summary,
+        recommendations=[recommendation],
+        patterns=[pattern],
+    )
+
+    # Convert to dict using asdict()
+    report_dict = asdict(report)
+
+    # Serialize to JSON string using SetEncoder
+    json_str = json.dumps(report_dict, indent=2, cls=SetEncoder)
+
+    # Parse back to verify structure
+    parsed = json.loads(json_str)
+
+    assert parsed["database"] == "test.sqlite"
+    assert parsed["summary"]["total_recommendations"] == 1
+    assert parsed["recommendations"][0]["table_name"] == "users"
+    # Set should be converted to sorted list
+    assert parsed["recommendations"][0]["enum_values"] == ["active", "inactive", "pending"]
+    # StrEnum should be preserved as string
+    assert parsed["recommendations"][0]["inferred_type"] == "enum"
+    assert parsed["patterns"][0]["pattern"] == "flag"
