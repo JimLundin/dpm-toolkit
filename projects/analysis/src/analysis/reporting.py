@@ -53,19 +53,26 @@ class ReportGenerator:
         report = AnalysisReport(
             database=self.database_name,
             generated_at=datetime.now(UTC).isoformat(),
-            summary=self._generate_summary(),
             recommendations=self.recommendations,
             patterns=self.patterns,
         )
 
-        # Convert to dict using asdict()
-        report_dict = asdict(report)
+        # Convert to dict using to_dict() (includes computed summary)
+        report_dict = report.to_dict()
 
         # Serialize to JSON with custom default handler for sets
         output_path.write_text(json.dumps(report_dict, indent=2, default=_json_default))
 
     def generate_markdown(self, output_path: Path) -> None:
         """Generate Markdown report using Jinja2 template."""
+        # Create report dataclass
+        report = AnalysisReport(
+            database=self.database_name,
+            generated_at=datetime.now(UTC).isoformat(),
+            recommendations=self.recommendations,
+            patterns=self.patterns,
+        )
+
         env = Environment(
             loader=FileSystemLoader(TEMPLATE_DIR),
             autoescape=select_autoescape(),
@@ -74,9 +81,6 @@ class ReportGenerator:
         )
 
         template = env.get_template("report.md")
-
-        # Prepare data for template
-        summary = self._generate_summary()
 
         # Group recommendations and patterns by type
         recommendations_by_type: dict[str, list[TypeRecommendation]] = defaultdict(list)
@@ -96,9 +100,9 @@ class ReportGenerator:
             type_pats.sort(key=lambda p: p.confidence, reverse=True)
 
         rendered = template.render(
-            database_name=self.database_name,
-            generated_at=datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC"),
-            summary=summary,
+            database_name=report.database,
+            generated_at=report.generated_at,
+            summary=report.summary,  # Use computed property
             recommendations_by_type=recommendations_by_type,
             patterns_by_type=patterns_by_type,
             max_recommendations=self.MAX_RECOMMENDATIONS_DISPLAY,
@@ -108,21 +112,3 @@ class ReportGenerator:
         )
 
         output_path.write_text(rendered)
-
-    def _generate_summary(self) -> ReportSummary:
-        """Generate summary statistics."""
-        by_type: dict[str, int] = defaultdict(int)
-        by_pattern_type: dict[str, int] = defaultdict(int)
-
-        for rec in self.recommendations:
-            by_type[rec.inferred_type] += 1
-
-        for pat in self.patterns:
-            by_pattern_type[pat.pattern_type] += 1
-
-        return ReportSummary(
-            total_recommendations=len(self.recommendations),
-            by_type=dict(by_type),
-            total_patterns=len(self.patterns),
-            by_pattern_type=dict(by_pattern_type),
-        )

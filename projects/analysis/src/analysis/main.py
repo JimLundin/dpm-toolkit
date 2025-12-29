@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
-from dataclasses import asdict
-from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -15,13 +13,12 @@ from .inference import TypeInferenceEngine
 from .pattern_mining import PatternMiner
 from .reporting import TEMPLATE_DIR, _json_default
 from .statistics import StatisticsCollector
-from .types import AnalysisReport, ReportSummary
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
     from pathlib import Path
 
-    from .types import NamePattern, TypeRecommendation
+    from .types import AnalysisReport, NamePattern, TypeRecommendation
 
 
 def create_engine_for_database(database: Path) -> Engine:
@@ -43,19 +40,17 @@ def create_engine_for_database(database: Path) -> Engine:
 
 def analyze_database(
     engine: Engine,
-    database_name: str,
     *,
     confidence_threshold: float = 0.7,
-) -> AnalysisReport:
+) -> tuple[list[TypeRecommendation], list[NamePattern]]:
     """Analyze database for type refinement opportunities.
 
     Args:
         engine: SQLAlchemy engine connected to the database
-        database_name: Name of the database (for reporting)
         confidence_threshold: Minimum confidence threshold for recommendations
 
     Returns:
-        AnalysisReport dataclass with recommendations and patterns
+        Tuple of (recommendations, patterns)
 
     """
     # Collect statistics and analyze
@@ -88,30 +83,7 @@ def analyze_database(
     pattern_miner = PatternMiner()
     patterns = pattern_miner.mine_patterns(recommendations)
 
-    # Generate summary
-    by_type: dict[str, int] = defaultdict(int)
-    by_pattern_type: dict[str, int] = defaultdict(int)
-
-    for rec in recommendations:
-        by_type[rec.inferred_type] += 1
-
-    for pat in patterns:
-        by_pattern_type[pat.pattern_type] += 1
-
-    summary = ReportSummary(
-        total_recommendations=len(recommendations),
-        by_type=dict(by_type),
-        total_patterns=len(patterns),
-        by_pattern_type=dict(by_pattern_type),
-    )
-
-    return AnalysisReport(
-        database=database_name,
-        generated_at=datetime.now(UTC).isoformat(),
-        summary=summary,
-        recommendations=recommendations,
-        patterns=patterns,
-    )
+    return recommendations, patterns
 
 
 def report_to_json(report: AnalysisReport) -> str:
@@ -124,7 +96,7 @@ def report_to_json(report: AnalysisReport) -> str:
         JSON string representation
 
     """
-    report_dict = asdict(report)
+    report_dict = report.to_dict()
     return json.dumps(report_dict, indent=2, default=_json_default)
 
 
