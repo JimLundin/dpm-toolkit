@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
+from dataclasses import asdict
 from typing import TYPE_CHECKING
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -96,7 +97,7 @@ def report_to_json(report: AnalysisReport) -> str:
         JSON string representation
 
     """
-    report_dict = report.to_dict()
+    report_dict = asdict(report)
     return json.dumps(report_dict, indent=2, default=_json_default)
 
 

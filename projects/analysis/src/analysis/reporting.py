@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from .types import AnalysisReport, ReportSummary
+from .types import AnalysisReport
 
 if TYPE_CHECKING:
     from .types import NamePattern, TypeRecommendation
@@ -57,8 +57,8 @@ class ReportGenerator:
             patterns=self.patterns,
         )
 
-        # Convert to dict using to_dict() (includes computed summary)
-        report_dict = report.to_dict()
+        # Convert to dict using asdict()
+        report_dict = asdict(report)
 
         # Serialize to JSON with custom default handler for sets
         output_path.write_text(json.dumps(report_dict, indent=2, default=_json_default))
