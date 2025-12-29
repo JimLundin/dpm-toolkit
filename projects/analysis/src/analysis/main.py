@@ -95,7 +95,8 @@ def analyze_database(
     all_recommendations = list(analyze_tables())
 
     print(
-        f"Found {len(all_recommendations)} recommendations", file=sys.stderr,
+        f"Found {len(all_recommendations)} recommendations",
+        file=sys.stderr,
     )
 
     # Mine patterns

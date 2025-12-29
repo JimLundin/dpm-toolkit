@@ -38,14 +38,20 @@ class TypeInferenceEngine:
 
         # 2. Boolean detection
         bool_rec = self._infer_boolean(
-            table_name, column_name, current_type, stats,
+            table_name,
+            column_name,
+            current_type,
+            stats,
         )
         if bool_rec and bool_rec.confidence >= self.MEDIUM_CONFIDENCE:
             return bool_rec
 
         # 3. Date/DateTime detection
         datetime_rec = self._infer_datetime(
-            table_name, column_name, current_type, stats,
+            table_name,
+            column_name,
+            current_type,
+            stats,
         )
         if datetime_rec and datetime_rec.confidence >= self.HIGH_CONFIDENCE:
             return datetime_rec
@@ -195,20 +201,14 @@ class TypeInferenceEngine:
         if stats.datetime_pattern_matches == 0:
             return None
 
-        pattern_match_ratio = (
-            stats.datetime_pattern_matches / stats.non_null_count
-        )
+        pattern_match_ratio = stats.datetime_pattern_matches / stats.non_null_count
 
         if pattern_match_ratio < self.PATTERN_MATCH_THRESHOLD:
             return None
 
         # Find most common format
         detected_format = max(
-            (
-                (k, v)
-                for k, v in stats.detected_formats.items()
-                if "datetime" in k
-            ),
+            ((k, v) for k, v in stats.detected_formats.items() if "datetime" in k),
             key=lambda x: x[1],
             default=(None, 0),
         )[0]
@@ -265,9 +265,7 @@ class TypeInferenceEngine:
         Lower cardinality and more data = higher confidence.
         """
         # Base confidence from cardinality
-        cardinality_score = 1.0 - (
-            stats.cardinality / self.ENUM_CARDINALITY_THRESHOLD
-        )
+        cardinality_score = 1.0 - (stats.cardinality / self.ENUM_CARDINALITY_THRESHOLD)
 
         # Boost confidence if we have lots of data
         data_score = min(stats.total_rows / 1000, 1.0) * 0.2

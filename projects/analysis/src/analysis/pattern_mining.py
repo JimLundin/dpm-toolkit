@@ -18,7 +18,8 @@ class PatternMiner:
     MAX_PREFIX_LENGTH = 10  # Maximum prefix length
 
     def mine_patterns(
-        self, recommendations: list[TypeRecommendation],
+        self,
+        recommendations: list[TypeRecommendation],
     ) -> list[NamePattern]:
         """Find common naming patterns in type recommendations."""
         # Group recommendations by inferred type
@@ -50,7 +51,9 @@ class PatternMiner:
         return sorted(patterns, key=lambda p: p.confidence, reverse=True)
 
     def _extract_suffix_patterns(
-        self, column_names: list[str], inferred_type: InferredType,
+        self,
+        column_names: list[str],
+        inferred_type: InferredType,
     ) -> list[NamePattern]:
         """Extract common suffix patterns from column names."""
         suffix_counts: dict[str, list[str]] = defaultdict(list)
@@ -82,7 +85,9 @@ class PatternMiner:
         ]
 
     def _extract_prefix_patterns(
-        self, column_names: list[str], inferred_type: InferredType,
+        self,
+        column_names: list[str],
+        inferred_type: InferredType,
     ) -> list[NamePattern]:
         """Extract common prefix patterns from column names."""
         prefix_counts: dict[str, list[str]] = defaultdict(list)
@@ -114,7 +119,9 @@ class PatternMiner:
         ]
 
     def _extract_exact_patterns(
-        self, column_names: list[str], inferred_type: InferredType,
+        self,
+        column_names: list[str],
+        inferred_type: InferredType,
     ) -> list[NamePattern]:
         """Extract exact match patterns for frequently occurring names."""
         name_counts: dict[str, int] = defaultdict(int)
