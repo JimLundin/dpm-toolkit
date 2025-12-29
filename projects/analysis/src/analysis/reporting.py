@@ -4,13 +4,37 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
+from dataclasses import asdict
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, TypedDict
+from enum import StrEnum
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, TypedDict
+
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from .types import InferredType, NamePattern, TypeRecommendation
 
 if TYPE_CHECKING:
-    from pathlib import Path
+    pass
+
+TEMPLATE_DIR = Path(__file__).parent / "templates"
+
+
+def _convert_for_json(obj: object) -> object:
+    """Convert special types for JSON serialization."""
+    if isinstance(obj, StrEnum):
+        return obj.value
+    if isinstance(obj, set):
+        return sorted(obj) if obj else None
+    if isinstance(obj, float):
+        return round(obj, 3)
+    return obj
+
+
+def _dataclass_to_dict(dc: TypeRecommendation | NamePattern) -> dict[str, Any]:
+    """Convert dataclass to dict with custom JSON conversions."""
+    result = asdict(dc)
+    return {k: _convert_for_json(v) for k, v in result.items()}
 
 
 class SummaryData(TypedDict):
@@ -48,26 +72,58 @@ class AnalysisReport:
             "database": self.database_name,
             "generated_at": datetime.now(UTC).isoformat(),
             "summary": self._generate_summary(),
-            "recommendations": [rec.to_dict() for rec in self.recommendations],
-            "patterns": [pat.to_dict() for pat in self.patterns],
+            "recommendations": [
+                _dataclass_to_dict(rec) for rec in self.recommendations
+            ],
+            "patterns": [_dataclass_to_dict(pat) for pat in self.patterns],
         }
 
         output_path.write_text(json.dumps(report, indent=2))
 
     def generate_markdown(self, output_path: Path) -> None:
-        """Generate Markdown report."""
-        lines = [
-            "# Type Refinement Analysis Report",
-            "",
-            f"**Database:** {self.database_name}",
-            f"**Generated:** {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}",
-            "",
-            self._generate_summary_section(),
-            self._generate_patterns_section(),
-            self._generate_recommendations_section(),
-        ]
+        """Generate Markdown report using Jinja2 template."""
+        env = Environment(
+            loader=FileSystemLoader(TEMPLATE_DIR),
+            autoescape=select_autoescape(),
+            trim_blocks=True,
+            lstrip_blocks=True,
+        )
 
-        output_path.write_text("\n".join(lines))
+        template = env.get_template("report.md")
+
+        # Prepare data for template
+        summary = self._generate_summary()
+
+        # Group recommendations and patterns by type
+        recommendations_by_type: dict[str, list[TypeRecommendation]] = defaultdict(list)
+        for rec in self.recommendations:
+            recommendations_by_type[rec.inferred_type.value].append(rec)
+
+        # Sort each group by confidence
+        for type_recs in recommendations_by_type.values():
+            type_recs.sort(key=lambda r: r.confidence, reverse=True)
+
+        patterns_by_type: dict[str, list[NamePattern]] = defaultdict(list)
+        for pat in self.patterns:
+            patterns_by_type[pat.inferred_type.value].append(pat)
+
+        # Sort patterns by confidence
+        for type_pats in patterns_by_type.values():
+            type_pats.sort(key=lambda p: p.confidence, reverse=True)
+
+        rendered = template.render(
+            database_name=self.database_name,
+            generated_at=datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC"),
+            summary=summary,
+            recommendations_by_type=recommendations_by_type,
+            patterns_by_type=patterns_by_type,
+            max_recommendations=self.MAX_RECOMMENDATIONS_DISPLAY,
+            max_enum_values=self.MAX_ENUM_VALUES_DISPLAY,
+            recommendations=self.recommendations,
+            patterns=self.patterns,
+        )
+
+        output_path.write_text(rendered)
 
     def _generate_summary(self) -> SummaryData:
         """Generate summary statistics."""
@@ -90,143 +146,3 @@ class AnalysisReport:
             by_confidence=by_confidence,
             patterns_discovered=len(self.patterns),
         )
-
-    def _generate_summary_section(self) -> str:
-        """Generate summary section for Markdown."""
-        summary = self._generate_summary()
-
-        lines = [
-            "## Summary",
-            "",
-            f"- **Total Recommendations:** {summary['total_recommendations']}",
-            f"- **High Confidence (≥0.9):** {summary['by_confidence']['high']}",
-            f"- **Medium Confidence (0.7-0.9):** {summary['by_confidence']['medium']}",
-            f"- **Low Confidence (<0.7):** {summary['by_confidence']['low']}",
-            "",
-            "### By Type",
-            "",
-        ]
-
-        for type_name, count in sorted(summary["by_type"].items()):
-            lines.append(f"- **{type_name}:** {count}")
-
-        lines.append("")
-        return "\n".join(lines)
-
-    def _generate_patterns_section(self) -> str:
-        """Generate patterns section for Markdown."""
-        if not self.patterns:
-            return "## Discovered Naming Patterns\n\nNo patterns discovered.\n"
-
-        lines = [
-            "## Discovered Naming Patterns",
-            "",
-            (
-                "These patterns can be added to `type_registry.py` to improve "
-                "future migrations:"
-            ),
-            "",
-        ]
-
-        # Group patterns by type
-        by_type: dict[InferredType, list[NamePattern]] = defaultdict(list)
-        for pattern in self.patterns:
-            by_type[pattern.inferred_type].append(pattern)
-
-        for inferred_type, patterns in sorted(by_type.items()):
-            lines.append(f"### {inferred_type.value.upper()} Patterns")
-            lines.append("")
-
-            # Show top 5 patterns per type
-            for pattern in sorted(patterns, key=lambda p: p.confidence, reverse=True)[
-                :5
-            ]:
-                lines.append(
-                    f"#### {pattern.pattern_type.capitalize()}: `{pattern.pattern}`",
-                )
-                lines.append("")
-                lines.append(
-                    f"- **Occurrences:** {pattern.occurrences} "
-                    f"({pattern.confidence * 100:.1f}% confidence)",
-                )
-                lines.append(f"- **Examples:** {', '.join(pattern.examples)}")
-                lines.append("")
-
-                # Suggest code change
-                lines.append("**Suggested addition to `type_registry.py`:**")
-                lines.append("```python")
-
-                if pattern.pattern_type == "suffix":
-                    lines.append(f'if col_name.lower().endswith("{pattern.pattern}"):')
-                    lines.append(f"    return {inferred_type.upper()}")
-                elif pattern.pattern_type == "prefix":
-                    lines.append(
-                        f'if col_name.lower().startswith("{pattern.pattern}"):',
-                    )
-                    lines.append(f"    return {inferred_type.upper()}")
-                elif pattern.pattern_type == "exact":
-                    lines.append(f'if col_name.lower() == "{pattern.pattern}":')
-                    lines.append(f"    return {inferred_type.upper()}")
-
-                lines.append("```")
-                lines.append("")
-
-        return "\n".join(lines)
-
-    def _generate_recommendations_section(self) -> str:  # noqa: C901
-        """Generate recommendations section for Markdown."""
-        if not self.recommendations:
-            return "## Recommendations\n\nNo recommendations found.\n"
-
-        lines = [
-            "## Detailed Recommendations",
-            "",
-        ]
-
-        # Group by inferred type
-        by_type: dict[InferredType, list[TypeRecommendation]] = defaultdict(list)
-        for rec in self.recommendations:
-            by_type[rec.inferred_type].append(rec)
-
-        for inferred_type, recs in sorted(by_type.items()):
-            lines.append(f"### {inferred_type.value.upper()} Candidates")
-            lines.append("")
-
-            # Sort by confidence, show top recommendations
-            sorted_recs = sorted(recs, key=lambda r: r.confidence, reverse=True)[
-                : self.MAX_RECOMMENDATIONS_DISPLAY
-            ]
-
-            for rec in sorted_recs:
-                lines.append(f"#### {rec.table_name}.{rec.column_name}")
-                lines.append("")
-                lines.append(f"- **Current Type:** {rec.current_type}")
-                lines.append(f"- **Confidence:** {rec.confidence * 100:.1f}%")
-
-                if rec.inferred_type == InferredType.ENUM and rec.enum_values:
-                    values_str = ", ".join(
-                        sorted(rec.enum_values)[: self.MAX_ENUM_VALUES_DISPLAY],
-                    )
-                    if len(rec.enum_values) > self.MAX_ENUM_VALUES_DISPLAY:
-                        values_str += f" ... ({len(rec.enum_values)} total)"
-                    lines.append(f"- **Values:** {values_str}")
-
-                if rec.detected_format:
-                    lines.append(f"- **Format:** {rec.detected_format}")
-
-                # Show evidence
-                if rec.evidence:
-                    lines.append("- **Evidence:**")
-                    for key, value in rec.evidence.items():
-                        lines.append(f"  - {key}: {value}")
-
-                lines.append("")
-
-            if len(recs) > self.MAX_RECOMMENDATIONS_DISPLAY:
-                lines.append(
-                    f"*Showing top {self.MAX_RECOMMENDATIONS_DISPLAY} of "
-                    f"{len(recs)} {inferred_type.value} candidates*",
-                )
-                lines.append("")
-
-        return "\n".join(lines)

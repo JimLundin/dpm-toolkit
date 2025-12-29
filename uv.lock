@@ -19,11 +19,15 @@ name = "analysis"
 version = "0.1.0"
 source = { editable = "projects/analysis" }
 dependencies = [
+    { name = "jinja2" },
     { name = "sqlalchemy" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "sqlalchemy", specifier = ">=2.0" }]
+requires-dist = [
+    { name = "jinja2", specifier = ">=3.0" },
+    { name = "sqlalchemy", specifier = ">=2.0" },
+]
 
 [[package]]
 name = "archive"
