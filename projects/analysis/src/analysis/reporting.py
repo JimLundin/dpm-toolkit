@@ -6,35 +6,15 @@ import json
 from collections import defaultdict
 from dataclasses import asdict
 from datetime import UTC, datetime
-from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypedDict
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from .types import InferredType, NamePattern, TypeRecommendation
-
 if TYPE_CHECKING:
-    pass
+    from .types import NamePattern, TypeRecommendation
 
 TEMPLATE_DIR = Path(__file__).parent / "templates"
-
-
-def _convert_for_json(obj: object) -> object:
-    """Convert special types for JSON serialization."""
-    if isinstance(obj, StrEnum):
-        return obj.value
-    if isinstance(obj, set):
-        return sorted(obj) if obj else None
-    if isinstance(obj, float):
-        return round(obj, 3)
-    return obj
-
-
-def _dataclass_to_dict(dc: TypeRecommendation | NamePattern) -> dict[str, Any]:
-    """Convert dataclass to dict with custom JSON conversions."""
-    result = asdict(dc)
-    return {k: _convert_for_json(v) for k, v in result.items()}
 
 
 class SummaryData(TypedDict):
@@ -68,14 +48,21 @@ class AnalysisReport:
 
     def generate_json(self, output_path: Path) -> None:
         """Generate JSON report."""
+
+        # Custom dict factory to handle sets (convert to sorted lists)
+        def dict_factory(fields: list[tuple[str, Any]]) -> dict[str, Any]:
+            return {k: sorted(v) if isinstance(v, set) and v else v for k, v in fields}
+
         report = {
             "database": self.database_name,
             "generated_at": datetime.now(UTC).isoformat(),
             "summary": self._generate_summary(),
             "recommendations": [
-                _dataclass_to_dict(rec) for rec in self.recommendations
+                asdict(rec, dict_factory=dict_factory) for rec in self.recommendations
             ],
-            "patterns": [_dataclass_to_dict(pat) for pat in self.patterns],
+            "patterns": [
+                asdict(pat, dict_factory=dict_factory) for pat in self.patterns
+            ],
         }
 
         output_path.write_text(json.dumps(report, indent=2))

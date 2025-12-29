@@ -85,11 +85,10 @@ def analyze_database(
                         current_type=str(column.type),
                         stats=table_stats[column.name],
                     )
-                    meets_threshold = (
-                        recommendation
+                    if (
+                        recommendation is not None
                         and recommendation.confidence >= confidence_threshold
-                    )
-                    if meets_threshold:
+                    ):
                         yield recommendation
 
     all_recommendations = list(analyze_tables())
