@@ -29,7 +29,8 @@ class StatisticsCollector:
         self.metadata.reflect(bind=engine)
 
     def collect_table_statistics(
-        self, table_name: str,
+        self,
+        table_name: str,
     ) -> dict[str, ColumnStatistics]:
         """Collect statistics for all columns in a table."""
         table = self.metadata.tables[table_name]
@@ -95,7 +96,9 @@ class StatisticsCollector:
         return column_stats
 
     def _analyze_value_patterns(
-        self, stats: ColumnStatistics, value: Any,  # noqa: ANN401
+        self,
+        stats: ColumnStatistics,
+        value: Any,  # noqa: ANN401
     ) -> None:
         """Analyze value for type pattern matching."""
         # Skip None values
@@ -110,9 +113,7 @@ class StatisticsCollector:
             )
         elif isinstance(value, date):
             stats.date_pattern_matches += 1
-            stats.detected_formats["date"] = (
-                stats.detected_formats.get("date", 0) + 1
-            )
+            stats.detected_formats["date"] = stats.detected_formats.get("date", 0) + 1
 
         # String-based pattern matching
         if isinstance(value, str):
@@ -123,15 +124,15 @@ class StatisticsCollector:
             stats.boolean_pattern_matches += 1
 
     def _analyze_string_patterns(
-        self, stats: ColumnStatistics, value: str,
+        self,
+        stats: ColumnStatistics,
+        value: str,
     ) -> None:
         """Analyze string for UUID, boolean, and date patterns."""
         # UUID pattern detection
         if self._is_uuid_format(value):
             stats.uuid_pattern_matches += 1
-            stats.detected_formats["uuid"] = (
-                stats.detected_formats.get("uuid", 0) + 1
-            )
+            stats.detected_formats["uuid"] = stats.detected_formats.get("uuid", 0) + 1
 
         # Boolean string detection
         if value.lower() in ("true", "false", "yes", "no", "y", "n", "1", "0"):

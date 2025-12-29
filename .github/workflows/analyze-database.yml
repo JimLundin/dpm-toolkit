@@ -1,0 +1,69 @@
+name: Analyze Database
+
+on:
+  workflow_call:
+    inputs:
+      sqlite_artifact_name:
+        description: "The name of the artifact containing the SQLite database."
+        required: true
+        type: string
+      confidence_threshold:
+        description: "Confidence threshold for recommendations (0.0-1.0)"
+        required: false
+        type: string
+        default: "0.8"
+    outputs:
+      artifact_name:
+        description: "The name of the uploaded artifact containing the analysis reports"
+        value: ${{ inputs.sqlite_artifact_name }}-analysis
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install python
+        run: uv python install
+
+      - name: Install project
+        run: uv sync --extra analysis --dev
+
+      - name: Download SQLite database artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: ${{ inputs.sqlite_artifact_name }}
+
+      - name: Run type refinement analysis (JSON)
+        run: |
+          SQLITE_FILE=$(find . -name "*.sqlite" -type f | head -1)
+          uv run dpm-toolkit analyze "$SQLITE_FILE" \
+            --fmt json \
+            --confidence ${{ inputs.confidence_threshold }} \
+            --output ${{ inputs.sqlite_artifact_name }}-analysis.json
+
+      - name: Run type refinement analysis (Markdown)
+        run: |
+          SQLITE_FILE=$(find . -name "*.sqlite" -type f | head -1)
+          uv run dpm-toolkit analyze "$SQLITE_FILE" \
+            --fmt markdown \
+            --confidence ${{ inputs.confidence_threshold }} \
+            --output ${{ inputs.sqlite_artifact_name }}-analysis.md
+
+      - name: Display analysis summary
+        run: |
+          echo "## Analysis Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat ${{ inputs.sqlite_artifact_name }}-analysis.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload analysis artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: ${{ inputs.sqlite_artifact_name }}-analysis
+          path: |
+            *-analysis.json
+            *-analysis.md

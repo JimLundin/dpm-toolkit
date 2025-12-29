@@ -11,6 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `uv sync --extra compare` - Install with database comparison tools
 - `uv sync --extra diagram` - Install with ER diagram generation tools
 - `uv sync --extra scrape` - Install with web scraping tools
+- `uv sync --extra analysis` - Install with type analysis tools
 
 ### Code Quality
 - `ruff check --fix` - Run linting and auto-fix issues
@@ -43,6 +44,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `dpm-toolkit compare old.db new.db --fmt html > report.html` - HTML report
 - `dpm-toolkit compare old.db new.db | jq '.[] | select(.name=="users")` - Filter specific table changes
 
+#### Type Analysis
+- `dpm-toolkit analyze database.sqlite` - Analyze for type refinement opportunities (default JSON output)
+- `dpm-toolkit analyze database.accdb --fmt markdown` - Analyze Access database with Markdown report (Windows only)
+- `dpm-toolkit analyze database.sqlite --confidence 0.9` - Use higher confidence threshold
+- `dpm-toolkit analyze database.sqlite --output analysis.json` - Save to specific file
+
 ## Architecture Overview
 
 DPM Toolkit is a UV workspace with multiple specialized subprojects built around EBA DPM database processing:
@@ -58,6 +65,7 @@ DPM Toolkit is a UV workspace with multiple specialized subprojects built around
 - **`scrape/`**: Automated discovery of new EBA releases via web scraping
 - **`schema/`**: Unified database schema extraction with multiple output formats (SQLAlchemy, JSON, HTML)
 - **`compare/`**: Database comparison functionality for schema and data change detection
+- **`analysis/`**: Type refinement analysis tool that discovers enum, boolean, and UUID candidates for improving migration heuristics
 - **`dpm2/`**: Generated Python packages with type-safe SQLAlchemy models
 
 ### Schema Module Architecture

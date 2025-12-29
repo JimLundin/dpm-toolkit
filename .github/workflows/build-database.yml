@@ -14,6 +14,9 @@ on:
       schema_artifact_name:
         description: "The name of the uploaded artifact containing the generated schema"
         value: ${{ jobs.schema.outputs.artifact_name }}
+      analysis_artifact_name:
+        description: "The name of the uploaded artifact containing the type analysis reports"
+        value: ${{ jobs.analyze.outputs.artifact_name }}
 
 jobs:
   download:
@@ -33,6 +36,13 @@ jobs:
     uses: ./.github/workflows/generate-schema.yml
     with:
       sqlite_artifact_name: ${{ needs.migrate.outputs.artifact_name }}
+
+  analyze:
+    needs: migrate
+    uses: ./.github/workflows/analyze-database.yml
+    with:
+      sqlite_artifact_name: ${{ needs.migrate.outputs.artifact_name }}
+      confidence_threshold: "0.8"
 
   compare:
     needs: migrate
