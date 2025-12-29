@@ -108,14 +108,14 @@ def test_analysis_report_json_serialization() -> None:
         patterns=[pattern],
     )
 
-    # Summary should be computed property
+    # Summary should be computed in __post_init__
     assert report.summary.total_recommendations == 1
     assert report.summary.by_type["enum"] == 1
     assert report.summary.total_patterns == 1
     assert report.summary.by_pattern_type["suffix"] == 1
 
-    # Convert to dict using to_dict() (includes computed summary)
-    report_dict = report.to_dict()
+    # Convert to dict using asdict() (includes summary field)
+    report_dict = asdict(report)
 
     # Serialize to JSON string with custom default handler
     json_str = json.dumps(report_dict, indent=2, default=_json_default)
