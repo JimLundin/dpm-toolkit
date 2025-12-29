@@ -2,78 +2,69 @@
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
+import json
+from collections import defaultdict
+from dataclasses import asdict
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import create_engine
+from jinja2 import Environment, FileSystemLoader, select_autoescape
+from sqlalchemy import Engine, create_engine
 
 from .inference import TypeInferenceEngine
 from .pattern_mining import PatternMiner
-from .reporting import ReportGenerator
+from .reporting import TEMPLATE_DIR, _json_default
 from .statistics import StatisticsCollector
+from .types import AnalysisReport, ReportSummary
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Iterator
+    from pathlib import Path
 
-    from .types import TypeRecommendation
+    from .types import NamePattern, TypeRecommendation
 
 
-def _create_engine_url(database: Path | str) -> str:
-    """Create SQLAlchemy URL for database connection."""
-    # If it's already a URL string, use it directly
-    if isinstance(database, str) and "://" in database:
-        return database
-
-    # Convert to Path for file-based databases
-    db_path = Path(database) if isinstance(database, str) else database
-
-    if not db_path.exists():
-        print(f"Error: Database not found: {db_path}", file=sys.stderr)
-        sys.exit(1)
-
-    # Detect database type from extension
-    suffix = db_path.suffix.lower()
+def create_engine_for_database(database: Path) -> Engine:
+    """Create SQLAlchemy engine for a database file."""
+    suffix = database.suffix.lower()
 
     if suffix in {".sqlite", ".db", ".sqlite3"}:
-        return f"sqlite:///{db_path}"
+        return create_engine(f"sqlite:///{database}")
+
     if suffix in {".mdb", ".accdb"}:
-        # Access database connection string for Windows
-        abs_path = db_path.resolve()
+        abs_path = database.resolve()
         driver = "Microsoft Access Driver (*.mdb, *.accdb)"
-        return f"access+pyodbc:///?odbc_connect=DRIVER={{{driver}}};DBQ={abs_path}"
-    print(
-        f"Error: Unsupported database extension: {suffix}. "
-        f"Supported: .sqlite, .db, .sqlite3, .mdb, .accdb",
-        file=sys.stderr,
-    )
-    sys.exit(1)
+        connection_string = f"DRIVER={{{driver}}};DBQ={abs_path}"
+        return create_engine(f"access+pyodbc:///?odbc_connect={connection_string}")
+
+    msg = f"Unsupported database extension: {suffix}"
+    raise ValueError(msg)
 
 
 def analyze_database(
-    database: Path | str,
+    engine: Engine,
+    database_name: str,
     *,
     confidence_threshold: float = 0.7,
-    output_format: str = "json",
-    output_path: Path | None = None,
-) -> None:
-    """Analyze database for type refinement opportunities."""
-    # Create engine
-    engine_url = _create_engine_url(database)
-    engine = create_engine(engine_url)
+) -> AnalysisReport:
+    """Analyze database for type refinement opportunities.
 
-    # Get database name for display and output file naming
-    db_name = Path(database).stem if isinstance(database, (str, Path)) else "database"
-    print(f"Analyzing database: {db_name}", file=sys.stderr)
+    Args:
+        engine: SQLAlchemy engine connected to the database
+        database_name: Name of the database (for reporting)
+        confidence_threshold: Minimum confidence threshold for recommendations
 
-    # Collect statistics
+    Returns:
+        AnalysisReport dataclass with recommendations and patterns
+
+    """
+    # Collect statistics and analyze
     collector = StatisticsCollector(engine)
     inference_engine = TypeInferenceEngine()
 
     # Analyze all tables and columns
-    def analyze_tables() -> Generator[TypeRecommendation]:
+    def analyze_tables() -> Iterator[TypeRecommendation]:
         for table_name in collector.metadata.tables:
-            print(f"  Analyzing table: {table_name}...", file=sys.stderr)
             table_stats = collector.collect_table_statistics(table_name)
             table = collector.metadata.tables[table_name]
 
@@ -91,37 +82,94 @@ def analyze_database(
                     ):
                         yield recommendation
 
-    all_recommendations = list(analyze_tables())
-
-    print(
-        f"Found {len(all_recommendations)} recommendations",
-        file=sys.stderr,
-    )
+    recommendations = list(analyze_tables())
 
     # Mine patterns
-    print("Mining naming patterns...", file=sys.stderr)
     pattern_miner = PatternMiner()
-    patterns = pattern_miner.mine_patterns(all_recommendations)
-    print(f"Discovered {len(patterns)} patterns", file=sys.stderr)
+    patterns = pattern_miner.mine_patterns(recommendations)
 
-    # Generate report
-    report = ReportGenerator(
-        recommendations=all_recommendations,
-        patterns=patterns,
-        database_name=db_name,
+    # Generate summary
+    by_type: dict[str, int] = defaultdict(int)
+    by_pattern_type: dict[str, int] = defaultdict(int)
+
+    for rec in recommendations:
+        by_type[rec.inferred_type] += 1
+
+    for pat in patterns:
+        by_pattern_type[pat.pattern_type] += 1
+
+    summary = ReportSummary(
+        total_recommendations=len(recommendations),
+        by_type=dict(by_type),
+        total_patterns=len(patterns),
+        by_pattern_type=dict(by_pattern_type),
     )
 
-    if output_path is None:
-        output_path = Path(f"analysis-{db_name}.{output_format}")
+    return AnalysisReport(
+        database=database_name,
+        generated_at=datetime.now(UTC).isoformat(),
+        summary=summary,
+        recommendations=recommendations,
+        patterns=patterns,
+    )
 
-    print(f"Generating report: {output_path}", file=sys.stderr)
 
-    if output_format == "json":
-        report.generate_json(output_path)
-    elif output_format == "markdown":
-        report.generate_markdown(output_path)
-    else:
-        print(f"Error: Unknown format: {output_format}", file=sys.stderr)
-        sys.exit(1)
+def report_to_json(report: AnalysisReport) -> str:
+    """Convert AnalysisReport to JSON string.
 
-    print(f"Analysis complete! Report written to {output_path}", file=sys.stderr)
+    Args:
+        report: AnalysisReport dataclass
+
+    Returns:
+        JSON string representation
+
+    """
+    report_dict = asdict(report)
+    return json.dumps(report_dict, indent=2, default=_json_default)
+
+
+def report_to_markdown(report: AnalysisReport) -> str:
+    """Convert AnalysisReport to Markdown string.
+
+    Args:
+        report: AnalysisReport dataclass
+
+    Returns:
+        Markdown string representation
+
+    """
+    env = Environment(
+        loader=FileSystemLoader(TEMPLATE_DIR),
+        autoescape=select_autoescape(),
+        trim_blocks=True,
+        lstrip_blocks=True,
+    )
+
+    template = env.get_template("report.md")
+
+    # Group recommendations and patterns by type for template
+    recommendations_by_type: dict[str, list[TypeRecommendation]] = defaultdict(list)
+    for rec in report.recommendations:
+        recommendations_by_type[rec.inferred_type.value].append(rec)
+
+    for type_recs in recommendations_by_type.values():
+        type_recs.sort(key=lambda r: r.confidence, reverse=True)
+
+    patterns_by_type: dict[str, list[NamePattern]] = defaultdict(list)
+    for pat in report.patterns:
+        patterns_by_type[pat.inferred_type.value].append(pat)
+
+    for type_pats in patterns_by_type.values():
+        type_pats.sort(key=lambda p: p.confidence, reverse=True)
+
+    return template.render(
+        database_name=report.database,
+        generated_at=report.generated_at,
+        summary=report.summary,
+        recommendations_by_type=recommendations_by_type,
+        patterns_by_type=patterns_by_type,
+        max_recommendations=20,
+        max_enum_values=20,
+        recommendations=report.recommendations,
+        patterns=report.patterns,
+    )
