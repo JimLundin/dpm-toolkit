@@ -304,7 +304,7 @@ def compare(old_location: Path, new_location: Path, fmt: Format = "table") -> No
 
 @app.command
 def analyze(
-    sqlite_location: Path,
+    database: Path,
     fmt: Literal["json", "markdown"] = "json",
     *,
     output: Path | None = None,
@@ -317,9 +317,9 @@ def analyze(
         print_error("Analysis requires [analysis] extra dependencies")
         sys.exit(1)
 
-    validate_database_location(sqlite_location, exists=True)
-    validate_database_extension(sqlite_location, SQLITE_EXTENSIONS)
-    print_info(f"Database: {sqlite_location}")
+    validate_database_location(database, exists=True)
+    validate_database_extension(database, SQLITE_EXTENSIONS | ACCESS_EXTENSIONS)
+    print_info(f"Database: {database}")
     print_info(f"Output format: {fmt}")
     print_info(f"Confidence threshold: {confidence}")
 
@@ -333,7 +333,7 @@ def analyze(
     ) as progress:
         progress.add_task("Analyzing database...", total=None)
         analyze_database(
-            sqlite_location,
+            database,
             confidence_threshold=confidence,
             output_format=fmt,
             output_path=output,
