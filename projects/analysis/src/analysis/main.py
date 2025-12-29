@@ -21,6 +21,10 @@ if TYPE_CHECKING:
 
     from .types import AnalysisReport, NamePattern, TypeRecommendation
 
+# Display limits for markdown reports
+MAX_RECOMMENDATIONS_DISPLAY = 20
+MAX_ENUM_VALUES_DISPLAY = 20
+
 
 def create_engine_for_database(database: Path) -> Engine:
     """Create SQLAlchemy engine for a database file."""
@@ -141,8 +145,8 @@ def report_to_markdown(report: AnalysisReport) -> str:
         summary=report.summary,
         recommendations_by_type=recommendations_by_type,
         patterns_by_type=patterns_by_type,
-        max_recommendations=20,
-        max_enum_values=20,
+        max_recommendations=MAX_RECOMMENDATIONS_DISPLAY,
+        max_enum_values=MAX_ENUM_VALUES_DISPLAY,
         recommendations=report.recommendations,
         patterns=report.patterns,
     )
