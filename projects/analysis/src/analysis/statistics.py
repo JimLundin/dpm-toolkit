@@ -22,6 +22,9 @@ class StatisticsCollector:
     # Maximum number of sample values to store
     MAX_SAMPLES = 50
 
+    # Maximum unique values to track per column (prevents unbounded memory growth)
+    MAX_UNIQUE_TRACKING = 1000
+
     def __init__(self, engine: Engine) -> None:
         """Initialize with database engine."""
         self.engine = engine
@@ -67,8 +70,9 @@ class StatisticsCollector:
                     if value is None:
                         stats.null_count += 1
                     else:
-                        # Track unique values
-                        value_trackers[col_name].add(value)
+                        # Track unique values (with limit to prevent unbounded growth)
+                        if len(value_trackers[col_name]) < self.MAX_UNIQUE_TRACKING:
+                            value_trackers[col_name].add(value)
 
                         # Count occurrences for low-cardinality columns
                         if len(value_counters[col_name]) < self.MAX_VALUE_COUNTS:
@@ -86,6 +90,9 @@ class StatisticsCollector:
 
         # Finalize statistics
         for col_name, stats in column_stats.items():
+            # Note: unique_count may be capped at MAX_UNIQUE_TRACKING
+            # If capped, actual count is >= MAX_UNIQUE_TRACKING (acceptable for
+            # enum detection since high-cardinality columns aren't candidates)
             stats.unique_count = len(value_trackers[col_name])
             stats.value_counts = dict(value_counters[col_name])
 
