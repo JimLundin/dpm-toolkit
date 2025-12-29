@@ -10,7 +10,7 @@ from sqlalchemy import create_engine
 
 from .inference import TypeInferenceEngine
 from .pattern_mining import PatternMiner
-from .reporting import AnalysisReport
+from .reporting import ReportGenerator
 from .statistics import StatisticsCollector
 
 if TYPE_CHECKING:
@@ -105,7 +105,7 @@ def analyze_database(
     print(f"Discovered {len(patterns)} patterns", file=sys.stderr)
 
     # Generate report
-    report = AnalysisReport(
+    report = ReportGenerator(
         recommendations=all_recommendations,
         patterns=patterns,
         database_name=db_name,
