@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import json
-from collections import defaultdict
 from dataclasses import asdict
+from itertools import groupby
+from operator import attrgetter
 from typing import TYPE_CHECKING
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -125,19 +126,17 @@ def report_to_markdown(report: AnalysisReport) -> str:
     template = env.get_template("report.md")
 
     # Group recommendations and patterns by type for template
-    recommendations_by_type: dict[str, list[TypeRecommendation]] = defaultdict(list)
-    for rec in report.recommendations:
-        recommendations_by_type[rec.inferred_type.value].append(rec)
+    sorted_recs = sorted(report.recommendations, key=attrgetter("inferred_type"))
+    recommendations_by_type = {
+        key.value: sorted(group, key=attrgetter("confidence"), reverse=True)
+        for key, group in groupby(sorted_recs, key=attrgetter("inferred_type"))
+    }
 
-    for type_recs in recommendations_by_type.values():
-        type_recs.sort(key=lambda r: r.confidence, reverse=True)
-
-    patterns_by_type: dict[str, list[NamePattern]] = defaultdict(list)
-    for pat in report.patterns:
-        patterns_by_type[pat.inferred_type.value].append(pat)
-
-    for type_pats in patterns_by_type.values():
-        type_pats.sort(key=lambda p: p.confidence, reverse=True)
+    sorted_pats = sorted(report.patterns, key=attrgetter("inferred_type"))
+    patterns_by_type = {
+        key.value: sorted(group, key=attrgetter("confidence"), reverse=True)
+        for key, group in groupby(sorted_pats, key=attrgetter("inferred_type"))
+    }
 
     return template.render(
         database_name=report.database,
