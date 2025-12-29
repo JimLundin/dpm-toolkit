@@ -19,22 +19,52 @@ if TYPE_CHECKING:
     from .types import TypeRecommendation
 
 
+def _create_engine_url(database: Path | str) -> str:
+    """Create SQLAlchemy URL for database connection."""
+    # If it's already a URL string, use it directly
+    if isinstance(database, str) and "://" in database:
+        return database
+
+    # Convert to Path for file-based databases
+    db_path = Path(database) if isinstance(database, str) else database
+
+    if not db_path.exists():
+        print(f"Error: Database not found: {db_path}", file=sys.stderr)
+        sys.exit(1)
+
+    # Detect database type from extension
+    suffix = db_path.suffix.lower()
+
+    if suffix in {".sqlite", ".db", ".sqlite3"}:
+        return f"sqlite:///{db_path}"
+    if suffix in {".mdb", ".accdb"}:
+        # Access database connection string for Windows
+        abs_path = db_path.resolve()
+        driver = "Microsoft Access Driver (*.mdb, *.accdb)"
+        return f"access+pyodbc:///?odbc_connect=DRIVER={{{driver}}};DBQ={abs_path}"
+    print(
+        f"Error: Unsupported database extension: {suffix}. "
+        f"Supported: .sqlite, .db, .sqlite3, .mdb, .accdb",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+
 def analyze_database(
-    database_path: Path,
+    database: Path | str,
     *,
     confidence_threshold: float = 0.7,
     output_format: str = "json",
     output_path: Path | None = None,
 ) -> None:
-    """Analyze SQLite database for type refinement opportunities."""
-    if not database_path.exists():
-        print(f"Error: Database not found: {database_path}", file=sys.stderr)
-        sys.exit(1)
-
+    """Analyze database for type refinement opportunities."""
     # Create engine
-    engine = create_engine(f"sqlite:///{database_path}")
+    engine_url = _create_engine_url(database)
+    engine = create_engine(engine_url)
 
-    print(f"Analyzing database: {database_path.name}", file=sys.stderr)
+    # Get database name for display and output file naming
+    db_name = Path(database).stem if isinstance(database, (str, Path)) else "database"
+    print(f"Analyzing database: {db_name}", file=sys.stderr)
 
     # Collect statistics
     collector = StatisticsCollector(engine)
@@ -78,11 +108,11 @@ def analyze_database(
     report = AnalysisReport(
         recommendations=all_recommendations,
         patterns=patterns,
-        database_name=database_path.stem,
+        database_name=db_name,
     )
 
     if output_path is None:
-        output_path = Path(f"analysis-{database_path.stem}.{output_format}")
+        output_path = Path(f"analysis-{db_name}.{output_format}")
 
     print(f"Generating report: {output_path}", file=sys.stderr)
 
