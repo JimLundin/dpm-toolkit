@@ -1,17 +1,20 @@
 # Analysis Module
 
-Meta-analysis tool for discovering type refinement opportunities in migrated DPM databases.
+Meta-analysis tool for discovering type refinement opportunities in DPM databases.
 
 ## Purpose
 
-This module analyzes **SQLite databases** (after migration from Access) to identify columns that could benefit from more specific type casting. It's a development tool that informs manual improvements to `projects/migrate/src/migrate/type_registry.py`.
+This module analyzes **any database** supported by SQLAlchemy (Access, SQLite, PostgreSQL, etc.) to identify columns that could benefit from more specific type casting. It's a development tool that informs manual improvements to `projects/migrate/src/migrate/type_registry.py`.
 
-**Key Point:** This analyzes the OUTPUT of the migration pipeline, not the input. It helps you improve the migration heuristics over time.
+**Flexible Analysis:** You can analyze Access databases before migration, SQLite databases after migration, or any other database to discover type refinement opportunities.
 
 ## Usage
 
 ```bash
-# Analyze a migrated SQLite database
+# Analyze an Access database directly (Windows only)
+dpm-toolkit analyze database.accdb
+
+# Analyze a SQLite database (cross-platform)
 dpm-toolkit analyze database.sqlite
 
 # Generate markdown report
@@ -25,7 +28,13 @@ dpm-toolkit analyze database.sqlite --confidence 0.9
 
 See [WORKFLOW.md](./WORKFLOW.md) for detailed integration with your existing pipeline.
 
-**Quick workflow:**
+**Quick workflow (analyze before migration):**
+1. Analyze: `dpm-toolkit analyze db.accdb --format markdown > analysis.md`
+2. Review `analysis.md` for patterns in source data
+3. Update `type_registry.py` with discovered patterns
+4. Migrate with improved heuristics: `dpm-toolkit migrate db.accdb --target db.sqlite`
+
+**Alternative workflow (analyze after migration):**
 1. Migrate: `dpm-toolkit migrate db.accdb --target db.sqlite`
 2. Analyze: `dpm-toolkit analyze db.sqlite --format markdown > analysis.md`
 3. Review `analysis.md` for high-confidence recommendations
@@ -88,12 +97,12 @@ Human-readable format with:
 
 ## Integration with Workflow
 
-1. **Analyze** a migrated database to discover refinement opportunities
+1. **Analyze** any database (Access, SQLite, etc.) to discover refinement opportunities
 2. **Review** the generated report
 3. **Manually update** `type_registry.py` with discovered patterns
-4. **Re-migrate** databases with improved heuristics
+4. **Re-migrate** databases with improved heuristics (if analyzing post-migration)
 5. **Repeat** for new EBA releases
 
 ## Development
 
-This is a standalone analysis tool, orthogonal to the migration pipeline. It reads databases post-migration to inform future improvements.
+This is a standalone analysis tool, orthogonal to the migration pipeline. It works with any SQLAlchemy-supported database to inform type casting improvements.
