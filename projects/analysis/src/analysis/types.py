@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections import defaultdict
+from collections import Counter
 from dataclasses import dataclass, field
 from enum import StrEnum, auto
 from typing import Any
@@ -120,18 +120,12 @@ class AnalysisReport:
 
     def __post_init__(self) -> None:
         """Compute summary from recommendations and patterns."""
-        by_type: dict[str, int] = defaultdict(int)
-        by_pattern_type: dict[str, int] = defaultdict(int)
-
-        for rec in self.recommendations:
-            by_type[rec.inferred_type] += 1
-
-        for pat in self.patterns:
-            by_pattern_type[pat.pattern_type] += 1
+        by_type = Counter(rec.inferred_type for rec in self.recommendations)
+        by_pattern_type = Counter(pat.pattern_type for pat in self.patterns)
 
         self.summary = ReportSummary(
             total_recommendations=len(self.recommendations),
-            by_type=dict(by_type),
+            by_type={str(k): v for k, v in by_type.items()},
             total_patterns=len(self.patterns),
-            by_pattern_type=dict(by_pattern_type),
+            by_pattern_type={str(k): v for k, v in by_pattern_type.items()},
         )
