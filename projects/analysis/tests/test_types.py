@@ -4,7 +4,7 @@ import json
 from dataclasses import asdict
 from typing import Any
 
-from analysis.reporting import SetEncoder
+from analysis.reporting import _json_default
 from analysis.types import (
     AnalysisReport,
     ColumnStatistics,
@@ -81,7 +81,7 @@ def test_name_pattern_dataclass_conversion() -> None:
 
 
 def test_analysis_report_json_serialization() -> None:
-    """Test that AnalysisReport can be serialized to JSON with SetEncoder."""
+    """Test AnalysisReport serialization to JSON with custom default handler."""
     # Create a complete report
     recommendation = TypeRecommendation(
         table_name="users",
@@ -120,8 +120,8 @@ def test_analysis_report_json_serialization() -> None:
     # Convert to dict using asdict()
     report_dict = asdict(report)
 
-    # Serialize to JSON string using SetEncoder
-    json_str = json.dumps(report_dict, indent=2, cls=SetEncoder)
+    # Serialize to JSON string with custom default handler
+    json_str = json.dumps(report_dict, indent=2, default=_json_default)
 
     # Parse back to verify structure
     parsed = json.loads(json_str)
@@ -130,7 +130,8 @@ def test_analysis_report_json_serialization() -> None:
     assert parsed["summary"]["total_recommendations"] == 1
     assert parsed["recommendations"][0]["table_name"] == "users"
     # Set should be converted to sorted list
-    assert parsed["recommendations"][0]["enum_values"] == ["active", "inactive", "pending"]
+    expected_enum_values = ["active", "inactive", "pending"]
+    assert parsed["recommendations"][0]["enum_values"] == expected_enum_values
     # StrEnum should be preserved as string
     assert parsed["recommendations"][0]["inferred_type"] == "enum"
     assert parsed["patterns"][0]["pattern"] == "flag"
