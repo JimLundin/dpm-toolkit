@@ -19,14 +19,12 @@ if TYPE_CHECKING:
 TEMPLATE_DIR = Path(__file__).parent / "templates"
 
 
-class SetEncoder(json.JSONEncoder):
-    """JSON encoder that converts sets to sorted lists."""
-
-    def default(self, obj: object) -> object:
-        """Convert sets to sorted lists for JSON serialization."""
-        if isinstance(obj, set):
-            return sorted(obj) if obj else []
-        return super().default(obj)
+def _json_default(obj: object) -> object:
+    """Convert non-serializable objects for JSON encoding."""
+    if isinstance(obj, set):
+        return sorted(obj) if obj else []
+    msg = f"Object of type {type(obj)} is not JSON serializable"
+    raise TypeError(msg)
 
 
 class ReportGenerator:
@@ -63,8 +61,8 @@ class ReportGenerator:
         # Convert to dict using asdict()
         report_dict = asdict(report)
 
-        # Serialize to JSON using custom encoder for sets
-        output_path.write_text(json.dumps(report_dict, indent=2, cls=SetEncoder))
+        # Serialize to JSON with custom default handler for sets
+        output_path.write_text(json.dumps(report_dict, indent=2, default=_json_default))
 
     def generate_markdown(self, output_path: Path) -> None:
         """Generate Markdown report using Jinja2 template."""
