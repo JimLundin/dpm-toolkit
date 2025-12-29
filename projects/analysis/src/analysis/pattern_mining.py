@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict
-from itertools import chain, groupby
-from operator import attrgetter
+from itertools import chain
 
 from .types import InferredType, NamePattern, TypeRecommendation
 
@@ -24,11 +23,11 @@ class PatternMiner:
     ) -> list[NamePattern]:
         """Find common naming patterns in type recommendations."""
         # Group recommendations by inferred type
-        sorted_recs = sorted(recommendations, key=attrgetter("inferred_type"))
-        by_type = {
-            key: list(group)
-            for key, group in groupby(sorted_recs, key=attrgetter("inferred_type"))
-        }
+        by_type: dict[InferredType, list[TypeRecommendation]] = {}
+        for rec in recommendations:
+            if rec.inferred_type not in by_type:
+                by_type[rec.inferred_type] = []
+            by_type[rec.inferred_type].append(rec)
 
         # Extract all pattern types for each inferred type
         patterns = list(
