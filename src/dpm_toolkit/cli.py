@@ -312,7 +312,10 @@ def analyze(
 ) -> None:
     """Analyze database for type refinement opportunities."""
     try:
+        from datetime import UTC, datetime
+
         from analysis import (
+            AnalysisReport,
             analyze_database,
             create_engine_for_database,
             report_to_json,
@@ -337,13 +340,20 @@ def analyze(
 
         # Create engine and analyze database
         engine = create_engine_for_database(database)
-        report = analyze_database(
+        recommendations, patterns = analyze_database(
             engine,
-            database_name=database.stem,
             confidence_threshold=confidence,
         )
 
         progress.update(task, description="Generating report...")
+
+        # Create report with metadata
+        report = AnalysisReport(
+            database=database.stem,
+            generated_at=datetime.now(UTC).isoformat(),
+            recommendations=recommendations,
+            patterns=patterns,
+        )
 
         # Convert to requested format
         if fmt == "json":

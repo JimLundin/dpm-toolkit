@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from collections import defaultdict
+from dataclasses import asdict, dataclass, field
 from enum import StrEnum, auto
 from typing import Any
 
@@ -113,6 +114,36 @@ class AnalysisReport:
 
     database: str
     generated_at: str
-    summary: ReportSummary
     recommendations: list[TypeRecommendation]
     patterns: list[NamePattern]
+
+    @property
+    def summary(self) -> ReportSummary:
+        """Generate summary statistics from recommendations and patterns."""
+        by_type: dict[str, int] = defaultdict(int)
+        by_pattern_type: dict[str, int] = defaultdict(int)
+
+        for rec in self.recommendations:
+            by_type[rec.inferred_type] += 1
+
+        for pat in self.patterns:
+            by_pattern_type[pat.pattern_type] += 1
+
+        return ReportSummary(
+            total_recommendations=len(self.recommendations),
+            by_type=dict(by_type),
+            total_patterns=len(self.patterns),
+            by_pattern_type=dict(by_pattern_type),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert report to dictionary including computed summary.
+
+        Returns:
+            Dictionary representation with summary included
+
+        """
+        result = asdict(self)
+        # Add computed summary property
+        result["summary"] = asdict(self.summary)
+        return result
