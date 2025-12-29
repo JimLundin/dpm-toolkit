@@ -5,6 +5,7 @@ description = "Meta-analysis tool for discovering type refinement opportunities 
 requires-python = ">=3.13"
 dependencies = [
     "sqlalchemy>=2.0",
+    "jinja2>=3.0",
 ]
 
 [build-system]

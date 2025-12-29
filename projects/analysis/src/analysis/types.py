@@ -84,19 +84,6 @@ class TypeRecommendation:
     enum_values: set[str] | None = None
     detected_format: str | None = None
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization."""
-        return {
-            "table": self.table_name,
-            "column": self.column_name,
-            "current_type": self.current_type,
-            "inferred_type": self.inferred_type.value,
-            "confidence": round(self.confidence, 3),
-            "evidence": self.evidence,
-            "enum_values": sorted(self.enum_values) if self.enum_values else None,
-            "detected_format": self.detected_format,
-        }
-
 
 @dataclass
 class NamePattern:
@@ -108,14 +95,3 @@ class NamePattern:
     occurrences: int
     confidence: float  # 0.0 to 1.0
     examples: list[str] = field(default_factory=list)
-
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization."""
-        return {
-            "pattern_type": self.pattern_type,
-            "pattern": self.pattern,
-            "inferred_type": self.inferred_type.value,
-            "occurrences": self.occurrences,
-            "confidence": round(self.confidence, 3),
-            "examples": self.examples[:5],  # Limit to 5 examples
-        }
