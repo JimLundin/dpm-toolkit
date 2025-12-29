@@ -2,12 +2,18 @@
 
 ## What to Analyze
 
-Analyze **migrated SQLite databases** (output of `dpm-toolkit migrate`), not the original Access files.
+Analyze **any database** supported by SQLAlchemy:
+- **Access databases** (.accdb, .mdb) - analyze source data before migration (Windows only)
+- **SQLite databases** (.sqlite, .db) - analyze migrated output
+- **Any database URL** - PostgreSQL, MySQL, etc.
 
 ## Basic Usage
 
 ```bash
-# Migrate then analyze
+# Analyze Access database directly (Windows)
+dpm-toolkit analyze db.accdb --format markdown > analysis.md
+
+# Analyze migrated SQLite database
 dpm-toolkit migrate db.accdb --target db.sqlite
 dpm-toolkit analyze db.sqlite --format markdown > analysis.md
 
