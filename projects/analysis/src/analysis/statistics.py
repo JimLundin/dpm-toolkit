@@ -37,15 +37,16 @@ class StatisticsCollector:
     ) -> dict[str, ColumnStatistics]:
         """Collect statistics for all columns in a table."""
         table = self.metadata.tables[table_name]
-        column_stats: dict[str, ColumnStatistics] = {}
 
         # Initialize statistics for each column
-        for column in table.columns:
-            column_stats[column.name] = ColumnStatistics(
+        column_stats = {
+            column.name: ColumnStatistics(
                 total_rows=0,
                 null_count=0,
                 unique_count=0,
             )
+            for column in table.columns
+        }
 
         # Collect statistics by reading all rows
         with self.engine.connect() as conn:
