@@ -10,7 +10,6 @@ from analysis.types import (
     ColumnStatistics,
     InferredType,
     NamePattern,
-    ReportSummary,
     TypeRecommendation,
 )
 
@@ -102,23 +101,21 @@ def test_analysis_report_json_serialization() -> None:
         examples=["is_active", "is_deleted"],
     )
 
-    summary = ReportSummary(
-        total_recommendations=1,
-        by_type={"enum": 1},
-        total_patterns=1,
-        by_pattern_type={"suffix": 1},
-    )
-
     report = AnalysisReport(
         database="test.sqlite",
         generated_at="2024-01-01T00:00:00+00:00",
-        summary=summary,
         recommendations=[recommendation],
         patterns=[pattern],
     )
 
-    # Convert to dict using asdict()
-    report_dict = asdict(report)
+    # Summary should be computed property
+    assert report.summary.total_recommendations == 1
+    assert report.summary.by_type["enum"] == 1
+    assert report.summary.total_patterns == 1
+    assert report.summary.by_pattern_type["suffix"] == 1
+
+    # Convert to dict using to_dict() (includes computed summary)
+    report_dict = report.to_dict()
 
     # Serialize to JSON string with custom default handler
     json_str = json.dumps(report_dict, indent=2, default=_json_default)
