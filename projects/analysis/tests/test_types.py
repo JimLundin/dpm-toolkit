@@ -1,5 +1,6 @@
 """Tests for type definitions."""
 
+from analysis.reporting import _dataclass_to_dict
 from analysis.types import (
     ColumnStatistics,
     InferredType,
@@ -40,14 +41,18 @@ def test_type_recommendation_serializes_enum_values() -> None:
         enum_values={"pending", "active", "inactive"},  # Unsorted input
     )
 
-    result = rec.to_dict()
+    result = _dataclass_to_dict(rec)
 
     # Enum values should be sorted in output
     assert result["enum_values"] == ["active", "inactive", "pending"]
+    # StrEnum should be converted to value
+    assert result["inferred_type"] == "enum"
+    # Confidence should be rounded to 3 decimals
+    assert result["confidence"] == 0.95
 
 
-def test_name_pattern_limits_examples() -> None:
-    """Test that NamePattern limits examples to 5 in serialization."""
+def test_name_pattern_dataclass_conversion() -> None:
+    """Test that NamePattern dataclass can be converted to dict."""
     pattern = NamePattern(
         pattern_type="suffix",
         pattern="code",
@@ -57,7 +62,9 @@ def test_name_pattern_limits_examples() -> None:
         examples=[f"col_{i}_code" for i in range(10)],  # 10 examples
     )
 
-    result = pattern.to_dict()
+    result = _dataclass_to_dict(pattern)
 
-    # Should limit to 5 examples for readability
-    assert len(result["examples"]) == 5
+    # All examples should be included (template handles limiting)
+    assert len(result["examples"]) == 10
+    # StrEnum should be converted to value
+    assert result["inferred_type"] == "enum"

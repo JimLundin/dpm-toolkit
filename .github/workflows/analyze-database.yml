@@ -38,7 +38,7 @@ jobs:
         with:
           name: ${{ inputs.sqlite_artifact_name }}
 
-      - name: Run type refinement analysis (JSON)
+      - name: Run type refinement analysis
         run: |
           SQLITE_FILE=$(find . -name "*.sqlite" -type f | head -1)
           uv run dpm-toolkit analyze "$SQLITE_FILE" \
@@ -46,19 +46,13 @@ jobs:
             --confidence ${{ inputs.confidence_threshold }} \
             --output ${{ inputs.sqlite_artifact_name }}-analysis.json
 
-      - name: Run type refinement analysis (Markdown)
-        run: |
-          SQLITE_FILE=$(find . -name "*.sqlite" -type f | head -1)
-          uv run dpm-toolkit analyze "$SQLITE_FILE" \
-            --fmt markdown \
-            --confidence ${{ inputs.confidence_threshold }} \
-            --output ${{ inputs.sqlite_artifact_name }}-analysis.md
-
       - name: Display analysis summary
         run: |
-          echo "## Analysis Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Type Analysis Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          cat ${{ inputs.sqlite_artifact_name }}-analysis.md >> $GITHUB_STEP_SUMMARY
+          echo "Analysis report generated: \`${{ inputs.sqlite_artifact_name }}-analysis.json\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          jq -r '.summary | "**Total Recommendations:** \(.total_recommendations)\n**High Confidence:** \(.by_confidence.high)\n**Medium Confidence:** \(.by_confidence.medium)\n\n### By Type\n" + (.by_type | to_entries | map("- **\(.key):** \(.value)") | join("\n"))' ${{ inputs.sqlite_artifact_name }}-analysis.json >> $GITHUB_STEP_SUMMARY
 
       - name: Upload analysis artifact
         uses: actions/upload-artifact@v5
@@ -66,4 +60,3 @@ jobs:
           name: ${{ inputs.sqlite_artifact_name }}-analysis
           path: |
             *-analysis.json
-            *-analysis.md
