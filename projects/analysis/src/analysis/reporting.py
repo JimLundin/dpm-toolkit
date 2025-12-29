@@ -7,9 +7,11 @@ from collections import defaultdict
 from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import TYPE_CHECKING
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+
+from .types import AnalysisReport, ReportSummary
 
 if TYPE_CHECKING:
     from .types import NamePattern, TypeRecommendation
@@ -17,16 +19,17 @@ if TYPE_CHECKING:
 TEMPLATE_DIR = Path(__file__).parent / "templates"
 
 
-class SummaryData(TypedDict):
-    """Structure for summary statistics."""
+class SetEncoder(json.JSONEncoder):
+    """JSON encoder that converts sets to sorted lists."""
 
-    total_recommendations: int
-    by_type: dict[str, int]
-    by_confidence: dict[str, int]
-    patterns_discovered: int
+    def default(self, obj: object) -> object:
+        """Convert sets to sorted lists for JSON serialization."""
+        if isinstance(obj, set):
+            return sorted(obj) if obj else []
+        return super().default(obj)
 
 
-class AnalysisReport:
+class ReportGenerator:
     """Generates reports from analysis results."""
 
     # Report generation constants
@@ -48,24 +51,20 @@ class AnalysisReport:
 
     def generate_json(self, output_path: Path) -> None:
         """Generate JSON report."""
+        # Create report dataclass
+        report = AnalysisReport(
+            database=self.database_name,
+            generated_at=datetime.now(UTC).isoformat(),
+            summary=self._generate_summary(),
+            recommendations=self.recommendations,
+            patterns=self.patterns,
+        )
 
-        # Custom dict factory to handle sets (convert to sorted lists)
-        def dict_factory(fields: list[tuple[str, Any]]) -> dict[str, Any]:
-            return {k: sorted(v) if isinstance(v, set) and v else v for k, v in fields}
+        # Convert to dict using asdict()
+        report_dict = asdict(report)
 
-        report = {
-            "database": self.database_name,
-            "generated_at": datetime.now(UTC).isoformat(),
-            "summary": self._generate_summary(),
-            "recommendations": [
-                asdict(rec, dict_factory=dict_factory) for rec in self.recommendations
-            ],
-            "patterns": [
-                asdict(pat, dict_factory=dict_factory) for pat in self.patterns
-            ],
-        }
-
-        output_path.write_text(json.dumps(report, indent=2))
+        # Serialize to JSON using custom encoder for sets
+        output_path.write_text(json.dumps(report_dict, indent=2, cls=SetEncoder))
 
     def generate_markdown(self, output_path: Path) -> None:
         """Generate Markdown report using Jinja2 template."""
@@ -112,24 +111,20 @@ class AnalysisReport:
 
         output_path.write_text(rendered)
 
-    def _generate_summary(self) -> SummaryData:
+    def _generate_summary(self) -> ReportSummary:
         """Generate summary statistics."""
         by_type: dict[str, int] = defaultdict(int)
-        by_confidence: dict[str, int] = {"high": 0, "medium": 0, "low": 0}
+        by_pattern_type: dict[str, int] = defaultdict(int)
 
         for rec in self.recommendations:
             by_type[rec.inferred_type] += 1
 
-            if rec.confidence >= self.HIGH_CONFIDENCE_THRESHOLD:
-                by_confidence["high"] += 1
-            elif rec.confidence >= self.MEDIUM_CONFIDENCE_THRESHOLD:
-                by_confidence["medium"] += 1
-            else:
-                by_confidence["low"] += 1
+        for pat in self.patterns:
+            by_pattern_type[pat.pattern_type] += 1
 
-        return SummaryData(
+        return ReportSummary(
             total_recommendations=len(self.recommendations),
             by_type=dict(by_type),
-            by_confidence=by_confidence,
-            patterns_discovered=len(self.patterns),
+            total_patterns=len(self.patterns),
+            by_pattern_type=dict(by_pattern_type),
         )

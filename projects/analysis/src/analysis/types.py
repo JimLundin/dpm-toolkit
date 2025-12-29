@@ -95,3 +95,24 @@ class NamePattern:
     occurrences: int
     confidence: float  # 0.0 to 1.0
     examples: list[str] = field(default_factory=list)
+
+
+@dataclass
+class ReportSummary:
+    """Summary statistics for an analysis report."""
+
+    total_recommendations: int
+    by_type: dict[str, int]
+    total_patterns: int
+    by_pattern_type: dict[str, int]
+
+
+@dataclass
+class AnalysisReport:
+    """Complete analysis report with recommendations and patterns."""
+
+    database: str
+    generated_at: str
+    summary: ReportSummary
+    recommendations: list[TypeRecommendation]
+    patterns: list[NamePattern]

@@ -3,12 +3,14 @@
 from .inference import TypeInferenceEngine
 from .main import analyze_database
 from .pattern_mining import PatternMiner
-from .reporting import AnalysisReport
+from .reporting import ReportGenerator
 from .statistics import StatisticsCollector
 from .types import (
+    AnalysisReport,
     ColumnStatistics,
     InferredType,
     NamePattern,
+    ReportSummary,
     TypeRecommendation,
 )
 
@@ -18,6 +20,8 @@ __all__ = [
     "InferredType",
     "NamePattern",
     "PatternMiner",
+    "ReportGenerator",
+    "ReportSummary",
     "StatisticsCollector",
     "TypeInferenceEngine",
     "TypeRecommendation",
