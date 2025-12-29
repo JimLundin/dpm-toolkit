@@ -1,6 +1,8 @@
 """Tests for type definitions."""
 
-from analysis.reporting import _dataclass_to_dict
+from dataclasses import asdict
+from typing import Any
+
 from analysis.types import (
     ColumnStatistics,
     InferredType,
@@ -41,13 +43,17 @@ def test_type_recommendation_serializes_enum_values() -> None:
         enum_values={"pending", "active", "inactive"},  # Unsorted input
     )
 
-    result = _dataclass_to_dict(rec)
+    # Use dict_factory to convert sets to sorted lists
+    def dict_factory(fields: list[tuple[str, Any]]) -> dict[str, Any]:
+        return {k: sorted(v) if isinstance(v, set) and v else v for k, v in fields}
+
+    result = asdict(rec, dict_factory=dict_factory)
 
     # Enum values should be sorted in output
     assert result["enum_values"] == ["active", "inactive", "pending"]
-    # StrEnum should be converted to value
-    assert result["inferred_type"] == "enum"
-    # Confidence should be rounded to 3 decimals
+    # StrEnum remains as StrEnum (it's already a string subclass)
+    assert result["inferred_type"] == InferredType.ENUM
+    # Confidence is not rounded (formatting is for rendering)
     assert result["confidence"] == 0.95
 
 
@@ -62,9 +68,9 @@ def test_name_pattern_dataclass_conversion() -> None:
         examples=[f"col_{i}_code" for i in range(10)],  # 10 examples
     )
 
-    result = _dataclass_to_dict(pattern)
+    result = asdict(pattern)
 
     # All examples should be included (template handles limiting)
     assert len(result["examples"]) == 10
-    # StrEnum should be converted to value
-    assert result["inferred_type"] == "enum"
+    # StrEnum remains as StrEnum (it's already a string subclass)
+    assert result["inferred_type"] == InferredType.ENUM
