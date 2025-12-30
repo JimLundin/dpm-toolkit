@@ -89,7 +89,7 @@ class StatisticsCollector:
             for row in result:
                 for column in table.columns:
                     col_name = column.name
-                    value = row[col_name]
+                    value = row[column]  # Use column object, not string name
                     stats = column_stats[col_name]
 
                     stats.total_rows += 1
