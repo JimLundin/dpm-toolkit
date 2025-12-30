@@ -87,23 +87,44 @@ class StatisticsCollector:
         conn: Any,  # noqa: ANN401
         table: Any,  # noqa: ANN401
     ) -> dict[str, ColumnStatistics]:
-        """Collect basic statistics using SQL aggregation."""
-        # Get total row count once for the table
-        total_rows = conn.execute(select(func.count()).select_from(table)).scalar()
+        """Collect basic statistics using a single SQL query with multiple aggregations.
 
+        This optimization reduces database round-trips from 2N+1 to 1 query.
+        For a 50-column table: 101 queries → 1 query.
+
+        """
+        # Build single query with all aggregations
+        # Total row count + per-column null counts + per-column unique counts
+        aggregations = [func.count().label("total_rows")]
+
+        # Add null count for each column: COUNT(*) - COUNT(column)
+        # COUNT(*) counts all rows, COUNT(column) counts non-null rows
+        # So null_count = COUNT(*) - COUNT(column)
+        aggregations.extend(
+            (func.count() - func.count(column)).label(f"{column.name}__null")
+            for column in table.columns
+        )
+
+        # Add unique count for each column
+        aggregations.extend(
+            func.count(func.distinct(column)).label(f"{column.name}__unique")
+            for column in table.columns
+        )
+
+        # Execute single query with all aggregations
+        query = select(*aggregations).select_from(table)
+        result = conn.execute(query).one()
+
+        # Parse result into per-column statistics
+        total_rows = result[0]  # First column is total_rows
         column_stats = {}
-        for column in table.columns:
-            # Get null count using SQL
-            null_count = conn.execute(
-                select(func.count()).where(column.is_(None)).select_from(table),
-            ).scalar()
 
-            # Get unique count using SQL (capped at MAX_UNIQUE_TRACKING for memory)
-            # For high-cardinality columns, this gives us an exact count without
-            # loading all values into memory
-            unique_count = conn.execute(
-                select(func.count(func.distinct(column))).select_from(table),
-            ).scalar()
+        for idx, column in enumerate(table.columns):
+            # Null counts start at index 1
+            null_count = result[1 + idx]
+
+            # Unique counts start at index 1 + num_columns
+            unique_count = result[1 + len(table.columns) + idx]
 
             column_stats[column.name] = ColumnStatistics(
                 total_rows=total_rows or 0,
@@ -163,9 +184,7 @@ class StatisticsCollector:
         result = conn.execute(query)
 
         # Use sets for O(1) lookup during sample collection
-        sample_sets: dict[str, set[Any]] = {
-            col.name: set() for col in table.columns
-        }
+        sample_sets: dict[str, set[Any]] = {col.name: set() for col in table.columns}
 
         for row in result:
             # Convert row to dictionary using named tuple method
