@@ -7,36 +7,37 @@ from dataclasses import dataclass, field
 from enum import StrEnum, auto
 from typing import Any
 
-# Boolean value patterns for detection and validation
+# Boolean value patterns - single source of truth
+# Each tuple represents a pair of boolean values (order doesn't matter for our purposes)
 # These represent common boolean representations across different database systems
-BOOLEAN_VALUE_SETS = [
-    {0, 1},  # Standard numeric boolean
-    {-1, 0},  # Access DB: -1 = True, 0 = False
-    {-1, 1},  # Alternative: -1 = True, 1 = False
-    {"0", "1"},  # String numeric
-    {"-1", "0"},  # String Access pattern
-    {"-1", "1"},  # String alternative pattern
-    {"true", "false"},  # String boolean
-    {"yes", "no"},  # String yes/no
-    {"y", "n"},  # String abbreviation
+BOOLEAN_VALUE_PAIRS = [
+    (0, 1),  # Standard numeric: 0=False, 1=True
+    (0, -1),  # Access DB: 0=False, -1=True
+    (1, -1),  # Alternative: 1=False, -1=True
+    ("true", "false"),  # String boolean
+    ("yes", "no"),  # String yes/no
+    ("y", "n"),  # String abbreviation
 ]
 
-# Flattened set of all boolean string values for pattern matching
-BOOLEAN_STRING_VALUES = {
-    "true",
-    "false",
-    "yes",
-    "no",
-    "y",
-    "n",
-    "1",
-    "0",
-    "-1",
-}
+# Derive all value sets for comparison (includes both original and string versions)
+BOOLEAN_VALUE_SETS = [
+    set(pair) for pair in BOOLEAN_VALUE_PAIRS
+] + [
+    {str(v) for v in pair}
+    for pair in BOOLEAN_VALUE_PAIRS
+    if not all(isinstance(v, str) for v in pair)  # Add string versions of numeric pairs
+]
 
-# Numeric values that indicate boolean-like data
-# Note: True==1 and False==0 in Python, so we only need numeric values
-BOOLEAN_NUMERIC_VALUES = {0, 1, -1}
+# Derive flattened string values for efficient pattern matching
+BOOLEAN_STRING_VALUES = {str(v).lower() for pair in BOOLEAN_VALUE_PAIRS for v in pair}
+
+# Derive numeric values for detection
+BOOLEAN_NUMERIC_VALUES = {
+    v
+    for pair in BOOLEAN_VALUE_PAIRS
+    if all(isinstance(x, int) for x in pair)
+    for v in pair
+}
 
 
 class InferredType(StrEnum):
