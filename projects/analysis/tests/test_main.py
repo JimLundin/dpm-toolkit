@@ -3,6 +3,8 @@
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
+import pytest
+
 from analysis.main import create_engine_for_database
 
 
@@ -55,8 +57,6 @@ def test_engine_for_different_database_types() -> None:
 
 def test_unsupported_database_extension() -> None:
     """Test that unsupported extensions raise ValueError."""
-    import pytest  # noqa: PLC0415
-
     with NamedTemporaryFile(suffix=".txt", delete=False) as tmp:
         tmp_path = Path(tmp.name)
 
