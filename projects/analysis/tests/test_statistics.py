@@ -1,8 +1,9 @@
 """Tests for statistics collection."""
 
-from analysis.statistics import StatisticsCollector
 from sqlalchemy import Column, Integer, String, create_engine, text
 from sqlalchemy.orm import declarative_base
+
+from analysis.statistics import StatisticsCollector
 
 Base = declarative_base()
 
