@@ -4,11 +4,10 @@ from __future__ import annotations
 
 import re
 import uuid
-from collections import Counter
 from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import Engine, MetaData
+from sqlalchemy import Engine, MetaData, func, select
 
 from .types import (
     BOOLEAN_NUMERIC_VALUES,
@@ -52,6 +51,9 @@ class StatisticsCollector:
     # Maximum unique values to track per column (prevents unbounded memory growth)
     MAX_UNIQUE_TRACKING = 1000
 
+    # Maximum rows to sample for pattern matching (memory optimization)
+    MAX_SAMPLE_ROWS = 10000
+
     def __init__(self, engine: Engine) -> None:
         """Initialize with database engine."""
         self.engine = engine
@@ -62,71 +64,108 @@ class StatisticsCollector:
         self,
         table_name: str,
     ) -> dict[str, ColumnStatistics]:
-        """Collect statistics for all columns in a table."""
+        """Collect statistics for all columns in a table using SQL aggregation."""
         table = self.metadata.tables[table_name]
 
-        # Initialize statistics for each column
-        column_stats = {
-            column.name: ColumnStatistics(
-                total_rows=0,
-                null_count=0,
-                unique_count=0,
-            )
-            for column in table.columns
-        }
-
-        # Collect statistics by reading all rows
         with self.engine.connect() as conn:
-            result = conn.execute(table.select())
+            # Step 1: Use SQL aggregation for basic statistics
+            column_stats = self._collect_basic_statistics(conn, table)
 
-            value_trackers: dict[str, set[Any]] = {
-                col.name: set() for col in table.columns
-            }
-            value_counters: dict[str, Counter[Any]] = {
-                col.name: Counter() for col in table.columns
-            }
+            # Step 2: Use SQL aggregation for value counts (low cardinality columns)
+            self._collect_value_counts(conn, table, column_stats)
 
-            row_count = 0
-            for row in result:
-                row_count += 1  # Count rows once, outside column loop
-                for column in table.columns:
-                    col_name = column.name
-                    value = row[column]
-                    stats = column_stats[col_name]
-
-                    if value is None:
-                        stats.null_count += 1
-                    else:
-                        # Track unique values (with limit to prevent unbounded growth)
-                        if len(value_trackers[col_name]) < self.MAX_UNIQUE_TRACKING:
-                            value_trackers[col_name].add(value)
-
-                        # Count occurrences for low-cardinality columns
-                        if len(value_counters[col_name]) < self.MAX_VALUE_COUNTS:
-                            value_counters[col_name][value] += 1
-
-                        # Collect samples
-                        if (
-                            len(stats.value_samples) < self.MAX_SAMPLES
-                            and value not in stats.value_samples
-                        ):
-                            stats.value_samples.append(value)
-
-                        # Pattern matching
-                        self._analyze_value_patterns(stats, value)
-
-        # Finalize statistics
-        for col_name, stats in column_stats.items():
-            # Set row count for all columns (table-level statistic)
-            stats.total_rows = row_count
-
-            # Note: unique_count may be capped at MAX_UNIQUE_TRACKING
-            # If capped, actual count is >= MAX_UNIQUE_TRACKING (acceptable for
-            # enum detection since high-cardinality columns aren't candidates)
-            stats.unique_count = len(value_trackers[col_name])
-            stats.value_counts = dict(value_counters[col_name])
+            # Step 3: Sample rows for pattern matching and samples
+            self._collect_patterns_and_samples(conn, table, column_stats)
 
         return column_stats
+
+    def _collect_basic_statistics(
+        self,
+        conn: Any,  # noqa: ANN401
+        table: Any,  # noqa: ANN401
+    ) -> dict[str, ColumnStatistics]:
+        """Collect basic statistics using SQL aggregation."""
+        # Get total row count once for the table
+        total_rows = conn.execute(select(func.count()).select_from(table)).scalar()
+
+        column_stats = {}
+        for column in table.columns:
+            # Get null count using SQL
+            null_count = conn.execute(
+                select(func.count()).where(column.is_(None)).select_from(table),
+            ).scalar()
+
+            # Get unique count using SQL (capped at MAX_UNIQUE_TRACKING for memory)
+            # For high-cardinality columns, this gives us an exact count without
+            # loading all values into memory
+            unique_count = conn.execute(
+                select(func.count(func.distinct(column))).select_from(table),
+            ).scalar()
+
+            column_stats[column.name] = ColumnStatistics(
+                total_rows=total_rows or 0,
+                null_count=null_count or 0,
+                unique_count=min(unique_count or 0, self.MAX_UNIQUE_TRACKING),
+            )
+
+        return column_stats
+
+    def _collect_value_counts(
+        self,
+        conn: Any,  # noqa: ANN401
+        table: Any,  # noqa: ANN401
+        column_stats: dict[str, ColumnStatistics],
+    ) -> None:
+        """Collect value counts for low-cardinality columns using SQL."""
+        for column in table.columns:
+            stats = column_stats[column.name]
+
+            # Only collect value counts for low-cardinality columns
+            if stats.unique_count > self.MAX_VALUE_COUNTS:
+                continue
+
+            # Use SQL aggregation to get value counts
+            query = (
+                select(column, func.count().label("count"))
+                .select_from(table)
+                .where(column.isnot(None))
+                .group_by(column)
+                .order_by(func.count().desc())
+                .limit(self.MAX_VALUE_COUNTS)
+            )
+
+            result = conn.execute(query)
+            stats.value_counts = {row[0]: row[1] for row in result}
+
+    def _collect_patterns_and_samples(
+        self,
+        conn: Any,  # noqa: ANN401
+        table: Any,  # noqa: ANN401
+        column_stats: dict[str, ColumnStatistics],
+    ) -> None:
+        """Collect pattern matches and samples by iterating over sampled rows."""
+        # Sample rows for pattern matching (memory optimization)
+        # For large tables, only analyze a sample instead of all rows
+        query = table.select().limit(self.MAX_SAMPLE_ROWS)
+        result = conn.execute(query)
+
+        for row in result:
+            for column in table.columns:
+                value = row[column]
+                stats = column_stats[column.name]
+
+                if value is None:
+                    continue
+
+                # Collect samples
+                if (
+                    len(stats.value_samples) < self.MAX_SAMPLES
+                    and value not in stats.value_samples
+                ):
+                    stats.value_samples.append(value)
+
+                # Pattern matching
+                self._analyze_value_patterns(stats, value)
 
     def _analyze_value_patterns(
         self,
