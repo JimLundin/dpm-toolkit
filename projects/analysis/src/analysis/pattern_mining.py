@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 from itertools import chain
+from typing import ClassVar
 
 from .types import InferredType, NamePattern, TypeRecommendation
 
@@ -18,9 +19,9 @@ class PatternMiner:
     MAX_PREFIX_LENGTH = 10  # Maximum prefix length
 
     # Preferred affix lengths to check (most patterns found at these lengths)
-    # Reduces complexity from O(n×m) to O(n×k) where k is constant
-    PREFERRED_SUFFIX_LENGTHS = [3, 4, 5]  # Common suffix lengths
-    PREFERRED_PREFIX_LENGTHS = [2, 3, 4]  # Common prefix lengths
+    # Reduces complexity from O(n*m) to O(n*k) where k is constant
+    PREFERRED_SUFFIX_LENGTHS: ClassVar[list[int]] = [3, 4, 5]  # Common suffix lengths
+    PREFERRED_PREFIX_LENGTHS: ClassVar[list[int]] = [2, 3, 4]  # Common prefix lengths
 
     def mine_patterns(
         self,
@@ -60,8 +61,6 @@ class PatternMiner:
         column_names: list[str],
         inferred_type: InferredType,
         pattern_type: str,
-        min_length: int,
-        max_length: int,
     ) -> list[NamePattern]:
         """Extract common affix (prefix or suffix) patterns from column names.
 
@@ -69,8 +68,6 @@ class PatternMiner:
             column_names: List of column names to analyze
             inferred_type: The inferred type for these columns
             pattern_type: Either "prefix" or "suffix"
-            min_length: Minimum length of affix to consider
-            max_length: Maximum length of affix to consider
 
         Returns:
             List of discovered name patterns
@@ -82,7 +79,7 @@ class PatternMiner:
         affix_counts: dict[str, list[str]] = defaultdict(list)
         is_suffix = pattern_type == "suffix"
 
-        # Use preferred lengths for better performance (O(n×k) instead of O(n×m))
+        # Use preferred lengths for better performance (O(n*k) instead of O(n*m))
         # Most meaningful patterns are captured at common lengths
         preferred_lengths = (
             self.PREFERRED_SUFFIX_LENGTHS
@@ -109,7 +106,7 @@ class PatternMiner:
                 occurrences=len(examples),
                 confidence=min(
                     len(examples) / len(column_names)
-                    + min(len(affix) / max_length, 1.0) * 0.1,
+                    + min(len(affix) / 10, 1.0) * 0.1,  # Normalize to typical max length
                     1.0,
                 ),
                 examples=examples[:5],
@@ -124,13 +121,7 @@ class PatternMiner:
         inferred_type: InferredType,
     ) -> list[NamePattern]:
         """Extract common suffix patterns from column names."""
-        return self._extract_affix_patterns(
-            column_names,
-            inferred_type,
-            "suffix",
-            self.MIN_SUFFIX_LENGTH,
-            self.MAX_SUFFIX_LENGTH,
-        )
+        return self._extract_affix_patterns(column_names, inferred_type, "suffix")
 
     def _extract_prefix_patterns(
         self,
@@ -138,13 +129,7 @@ class PatternMiner:
         inferred_type: InferredType,
     ) -> list[NamePattern]:
         """Extract common prefix patterns from column names."""
-        return self._extract_affix_patterns(
-            column_names,
-            inferred_type,
-            "prefix",
-            self.MIN_PREFIX_LENGTH,
-            self.MAX_PREFIX_LENGTH,
-        )
+        return self._extract_affix_patterns(column_names, inferred_type, "prefix")
 
     def _extract_exact_patterns(
         self,
