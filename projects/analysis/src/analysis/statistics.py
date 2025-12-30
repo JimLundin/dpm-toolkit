@@ -152,6 +152,11 @@ class StatisticsCollector:
         query = table.select().limit(self.MAX_SAMPLE_ROWS)
         result = conn.execute(query)
 
+        # Use sets for O(1) lookup during sample collection
+        sample_sets: dict[str, set[Any]] = {
+            col.name: set() for col in table.columns
+        }
+
         for row in result:
             # Convert row to dictionary using named tuple method
             row_dict = row._asdict()
@@ -164,15 +169,16 @@ class StatisticsCollector:
                 if value is None:
                     continue
 
-                # Collect samples
-                if (
-                    len(stats.value_samples) < self.MAX_SAMPLES
-                    and value not in stats.value_samples
-                ):
-                    stats.value_samples.append(value)
+                # Collect samples using set for O(1) lookup
+                if len(sample_sets[col_name]) < self.MAX_SAMPLES:
+                    sample_sets[col_name].add(value)
 
                 # Pattern matching
                 self._analyze_value_patterns(stats, value)
+
+        # Convert sets to lists for final storage
+        for col_name, sample_set in sample_sets.items():
+            column_stats[col_name].value_samples = list(sample_set)
 
     def _analyze_value_patterns(
         self,
