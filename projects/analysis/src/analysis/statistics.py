@@ -86,13 +86,13 @@ class StatisticsCollector:
                 col.name: Counter() for col in table.columns
             }
 
+            row_count = 0
             for row in result:
+                row_count += 1  # Count rows once, outside column loop
                 for column in table.columns:
                     col_name = column.name
-                    value = row[column]  # Use column object, not string name
+                    value = row[column]
                     stats = column_stats[col_name]
-
-                    stats.total_rows += 1
 
                     if value is None:
                         stats.null_count += 1
@@ -117,6 +117,9 @@ class StatisticsCollector:
 
         # Finalize statistics
         for col_name, stats in column_stats.items():
+            # Set row count for all columns (table-level statistic)
+            stats.total_rows = row_count
+
             # Note: unique_count may be capped at MAX_UNIQUE_TRACKING
             # If capped, actual count is >= MAX_UNIQUE_TRACKING (acceptable for
             # enum detection since high-cardinality columns aren't candidates)
