@@ -1,0 +1,62 @@
+name: Analyze Database
+
+on:
+  workflow_call:
+    inputs:
+      sqlite_artifact_name:
+        description: "The name of the artifact containing the SQLite database."
+        required: true
+        type: string
+      confidence_threshold:
+        description: "Confidence threshold for recommendations (0.0-1.0)"
+        required: false
+        type: string
+        default: "0.8"
+    outputs:
+      artifact_name:
+        description: "The name of the uploaded artifact containing the analysis reports"
+        value: ${{ inputs.sqlite_artifact_name }}-analysis
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install python
+        run: uv python install
+
+      - name: Install project
+        run: uv sync --extra analysis --dev
+
+      - name: Download SQLite database artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: ${{ inputs.sqlite_artifact_name }}
+
+      - name: Run type refinement analysis
+        run: |
+          SQLITE_FILE=$(find . -name "*.sqlite" -type f | head -1)
+          uv run dpm-toolkit analyze "$SQLITE_FILE" \
+            --fmt json \
+            --confidence ${{ inputs.confidence_threshold }} \
+            --output ${{ inputs.sqlite_artifact_name }}-analysis.json
+
+      - name: Display analysis summary
+        run: |
+          echo "## Type Analysis Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Analysis report generated: \`${{ inputs.sqlite_artifact_name }}-analysis.json\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          jq -r '.summary | "**Total Recommendations:** \(.total_recommendations)\n**High Confidence:** \(.by_confidence.high)\n**Medium Confidence:** \(.by_confidence.medium)\n\n### By Type\n" + (.by_type | to_entries | map("- **\(.key):** \(.value)") | join("\n"))' ${{ inputs.sqlite_artifact_name }}-analysis.json >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload analysis artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: ${{ inputs.sqlite_artifact_name }}-analysis
+          path: |
+            *-analysis.json
