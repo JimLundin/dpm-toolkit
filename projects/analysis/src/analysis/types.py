@@ -20,9 +20,7 @@ BOOLEAN_VALUE_PAIRS = [
 ]
 
 # Derive all value sets for comparison (includes both original and string versions)
-BOOLEAN_VALUE_SETS = [
-    set(pair) for pair in BOOLEAN_VALUE_PAIRS
-] + [
+BOOLEAN_VALUE_SETS = [set(pair) for pair in BOOLEAN_VALUE_PAIRS] + [
     {str(v) for v in pair}
     for pair in BOOLEAN_VALUE_PAIRS
     if not all(isinstance(v, str) for v in pair)  # Add string versions of numeric pairs

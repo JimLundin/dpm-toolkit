@@ -5,9 +5,12 @@ from __future__ import annotations
 import re
 import uuid
 from datetime import date, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import Engine, MetaData, func, select
+from sqlalchemy import MetaData, func, select
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine import Engine
 
 from .types import (
     BOOLEAN_NUMERIC_VALUES,

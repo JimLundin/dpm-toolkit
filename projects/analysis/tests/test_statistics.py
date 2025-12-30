@@ -86,8 +86,10 @@ def test_large_cardinality_value_counts() -> None:
     with engine.connect() as conn:
         conn.execute(
             SampleTable.__table__.insert(),
-            [{"id": i, "status": f"status_{i}", "category": "A", "score": i}
-             for i in range(1, 150)],  # 149 rows, each with unique status
+            [
+                {"id": i, "status": f"status_{i}", "category": "A", "score": i}
+                for i in range(1, 150)
+            ],  # 149 rows, each with unique status
         )
         conn.commit()
 
