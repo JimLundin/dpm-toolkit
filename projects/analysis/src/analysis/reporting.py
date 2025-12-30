@@ -7,7 +7,7 @@ from pathlib import Path
 TEMPLATE_DIR = Path(__file__).parent / "templates"
 
 
-def _json_default(obj: object) -> object:
+def json_default(obj: object) -> object:
     """Convert non-serializable objects for JSON encoding."""
     if isinstance(obj, set):
         return sorted(obj) if obj else []
