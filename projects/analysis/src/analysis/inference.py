@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
-from .types import ColumnStatistics, InferredType, TypeRecommendation
+from .types import (
+    BOOLEAN_VALUE_SETS,
+    ColumnStatistics,
+    InferredType,
+    TypeRecommendation,
+)
 
 
 class TypeInferenceEngine:
@@ -145,18 +150,13 @@ class TypeInferenceEngine:
         # Check if values look like booleans
         values = set(stats.value_counts.keys())
 
-        # Convert to strings for comparison
+        # Convert to strings for comparison (handles both numeric and string values)
         str_values = {str(v).lower() for v in values}
 
-        # Check against known boolean patterns
-        boolean_pattern_sets = [
-            {"0", "1"},
-            {"true", "false"},
-            {"yes", "no"},
-            {"y", "n"},
-        ]
-
-        is_boolean_like = str_values in boolean_pattern_sets
+        # Also check numeric values directly for patterns like {-1, 0}
+        is_boolean_like = (
+            values in BOOLEAN_VALUE_SETS or str_values in BOOLEAN_VALUE_SETS
+        )
 
         if not is_boolean_like:
             return None
