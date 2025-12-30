@@ -1,0 +1,849 @@
+{
+  "database": "3.2-sample-original",
+  "generated_at": "2025-12-30T23:09:30.712115+00:00",
+  "recommendations": [
+    {
+      "table_name": "Category",
+      "column_name": "IsEnumerated",
+      "current_type": "BOOLEAN",
+      "inferred_type": "boolean",
+      "confidence": 1.0,
+      "evidence": {
+        "values": [
+          "False",
+          "True"
+        ],
+        "pattern_matches": 54,
+        "pattern_match_ratio": 1.0
+      },
+      "enum_values": null,
+      "detected_format": null
+    },
+    {
+      "table_name": "Category",
+      "column_name": "RowGUID",
+      "current_type": "CHAR(32)",
+      "inferred_type": "uuid",
+      "confidence": 1.0,
+      "evidence": {
+        "pattern_matches": 3,
+        "pattern_match_ratio": 1.0
+      },
+      "enum_values": null,
+      "detected_format": null
+    },
+    {
+      "table_name": "Concept",
+      "column_name": "ClassID",
+      "current_type": "INTEGER",
+      "inferred_type": "enum",
+      "confidence": 1.0,
+      "evidence": {
+        "cardinality": 4,
+        "total_rows": 15350,
+        "cardinality_ratio": 0.0003
+      },
+      "enum_values": [
+        "1",
+        "2",
+        "20",
+        "21"
+      ],
+      "detected_format": null
+    },
+    {
+      "table_name": "Concept",
+      "column_name": "OwnerID",
+      "current_type": "INTEGER",
+      "inferred_type": "enum",
+      "confidence": 1.0,
+      "evidence": {
+        "cardinality": 3,
+        "total_rows": 15350,
+        "cardinality_ratio": 0.0002
+      },
+      "enum_values": [
+        "1001",
+        "1012",
+        "1023"
+      ],
+      "detected_format": null
+    },
+    {
+      "table_name": "DPMClass",
+      "column_name": "HasReferences",
+      "current_type": "BOOLEAN",
+      "inferred_type": "boolean",
+      "confidence": 1.0,
+      "evidence": {
+        "values": [
+          "False",
+          "True"
+        ],
+        "pattern_matches": 28,
+        "pattern_match_ratio": 1.0
+      },
+      "enum_values": null,
+      "detected_format": null
+    },
+    {
+      "table_name": "Table",
+      "column_name": "IsAbstract",
+      "current_type": "BOOLEAN",
+      "inferred_type": "boolean",
+      "confidence": 1.0,
+      "evidence": {
+        "values": [
+          "False",
+          "True"
+        ],
+        "pattern_matches": 704,
+        "pattern_match_ratio": 1.0
+      },
+      "enum_values": null,
+      "detected_format": null
+    },
+    {
+      "table_name": "Table",
+      "column_name": "HasOpenRows",
+      "current_type": "BOOLEAN",
+      "inferred_type": "boolean",
+      "confidence": 1.0,
+      "evidence": {
+        "values": [
+          "False",
+          "True"
+        ],
+        "pattern_matches": 704,
+        "pattern_match_ratio": 1.0
+      },
+      "enum_values": null,
+      "detected_format": null
+    },
+    {
+      "table_name": "Table",
+      "column_name": "HasOpenSheets",
+      "current_type": "BOOLEAN",
+      "inferred_type": "boolean",
+      "confidence": 1.0,
+      "evidence": {
+        "values": [
+          "False",
+          "True"
+        ],
+        "pattern_matches": 704,
+        "pattern_match_ratio": 1.0
+      },
+      "enum_values": null,
+      "detected_format": null
+    },
+    {
+      "table_name": "Header",
+      "column_name": "Direction",
+      "current_type": "VARCHAR(1)",
+      "inferred_type": "enum",
+      "confidence": 1.0,
+      "evidence": {
+        "cardinality": 3,
+        "total_rows": 16611,
+        "cardinality_ratio": 0.0002
+      },
+      "enum_values": [
+        "X",
+        "Y",
+        "Z"
+      ],
+      "detected_format": null
+    },
+    {
+      "table_name": "Header",
+      "column_name": "IsKey",
+      "current_type": "BOOLEAN",
+      "inferred_type": "boolean",
+      "confidence": 1.0,
+      "evidence": {
+        "values": [
+          "False",
+          "True"
+        ],
+        "pattern_matches": 10000,
+        "pattern_match_ratio": 0.602
+      },
+      "enum_values": null,
+      "detected_format": null
+    },
+    {
+      "table_name": "Release",
+      "column_name": "Date",
+      "current_type": "DATE",
+      "inferred_type": "date",
+      "confidence": 1.0,
+      "evidence": {
+        "pattern_matches": 1,
+        "pattern_match_ratio": 1.0,
+        "formats": {
+          "date": 1
+        }
+      },
+      "enum_values": null,
+      "detected_format": "date"
+    },
+    {
+      "table_name": "Item",
+      "column_name": "IsProperty",
+      "current_type": "BOOLEAN",
+      "inferred_type": "boolean",
+      "confidence": 1.0,
+      "evidence": {
+        "values": [
+          "False",
+          "True"
+        ],
+        "pattern_matches": 7800,
+        "pattern_match_ratio": 1.0
+      },
+      "enum_values": null,
+      "detected_format": null
+    },
+    {
+      "table_name": "Property",
+      "column_name": "IsMetric",
+      "current_type": "BOOLEAN",
+      "inferred_type": "boolean",
+      "confidence": 1.0,
+      "evidence": {
+        "values": [
+          "False",
+          "True"
+        ],
+        "pattern_matches": 1434,
+        "pattern_match_ratio": 1.0
+      },
+      "enum_values": null,
+      "detected_format": null
+    },
+    {
+      "table_name": "Property",
+      "column_name": "DataTypeID",
+      "current_type": "INTEGER",
+      "inferred_type": "enum",
+      "confidence": 1.0,
+      "evidence": {
+        "cardinality": 9,
+        "total_rows": 1434,
+        "cardinality_ratio": 0.0081
+      },
+      "enum_values": [
+        "1",
+        "10",
+        "2",
+        "3",
+        "4",
+        "5",
+        "7",
+        "8",
+        "9"
+      ],
+      "detected_format": null
+    },
+    {
+      "table_name": "Property",
+      "column_name": "PeriodType",
+      "current_type": "VARCHAR(20)",
+      "inferred_type": "enum",
+      "confidence": 1.0,
+      "evidence": {
+        "cardinality": 2,
+        "total_rows": 1434,
+        "cardinality_ratio": 0.002
+      },
+      "enum_values": [
+        "flow                ",
+        "stock               "
+      ],
+      "detected_format": null
+    },
+    {
+      "table_name": "Variable",
+      "column_name": "Type",
+      "current_type": "VARCHAR(15)",
+      "inferred_type": "enum",
+      "confidence": 1.0,
+      "evidence": {
+        "cardinality": 3,
+        "total_rows": 123002,
+        "cardinality_ratio": 0.0
+      },
+      "enum_values": [
+        "fact",
+        "filingIndicator",
+        "key"
+      ],
+      "detected_format": null
+    },
+    {
+      "table_name": "ItemCategory",
+      "column_name": "IsDefaultItem",
+      "current_type": "BOOLEAN",
+      "inferred_type": "boolean",
+      "confidence": 1.0,
+      "evidence": {
+        "values": [
+          "False",
+          "True"
+        ],
+        "pattern_matches": 7800,
+        "pattern_match_ratio": 1.0
+      },
+      "enum_values": null,
+      "detected_format": null
+    },
+    {
+      "table_name": "ModuleVersion",
+      "column_name": "FromReferenceDate",
+      "current_type": "DATE",
+      "inferred_type": "date",
+      "confidence": 1.0,
+      "evidence": {
+        "pattern_matches": 37,
+        "pattern_match_ratio": 1.0,
+        "formats": {
+          "date": 37
+        }
+      },
+      "enum_values": null,
+      "detected_format": "date"
+    },
+    {
+      "table_name": "OperandReference",
+      "column_name": "OperandReference",
+      "current_type": "VARCHAR(255)",
+      "inferred_type": "enum",
+      "confidence": 1.0,
+      "evidence": {
+        "cardinality": 8,
+        "total_rows": 269027,
+        "cardinality_ratio": 0.0
+      },
+      "enum_values": [
+        "PreconditionItem",
+        "c",
+        "item",
+        "property",
+        "r",
+        "refPeriod",
+        "s",
+        "variable"
+      ],
+      "detected_format": null
+    },
+    {
+      "table_name": "OperandReference",
+      "column_name": "PropertyID",
+      "current_type": "INTEGER",
+      "inferred_type": "enum",
+      "confidence": 1.0,
+      "evidence": {
+        "cardinality": 8,
+        "total_rows": 269027,
+        "cardinality_ratio": 0.0054
+      },
+      "enum_values": [
+        "1012400280",
+        "1012400473",
+        "1012400486",
+        "1012400535",
+        "1012400775",
+        "1012400795",
+        "1012400800",
+        "1012400875"
+      ],
+      "detected_format": null
+    },
+    {
+      "table_name": "OperationNode",
+      "column_name": "FallbackValue",
+      "current_type": "VARCHAR(50)",
+      "inferred_type": "enum",
+      "confidence": 1.0,
+      "evidence": {
+        "cardinality": 2,
+        "total_rows": 55213,
+        "cardinality_ratio": 0.0001
+      },
+      "enum_values": [
+        "\"\"",
+        "0"
+      ],
+      "detected_format": null
+    },
+    {
+      "table_name": "OperationNode",
+      "column_name": "UseIntervalArithmetics",
+      "current_type": "BOOLEAN",
+      "inferred_type": "enum",
+      "confidence": 1.0,
+      "evidence": {
+        "cardinality": 2,
+        "total_rows": 55213,
+        "cardinality_ratio": 0.0
+      },
+      "enum_values": [
+        "False",
+        "True"
+      ],
+      "detected_format": null
+    },
+    {
+      "table_name": "OperationNode",
+      "column_name": "IsLeaf",
+      "current_type": "BOOLEAN",
+      "inferred_type": "enum",
+      "confidence": 1.0,
+      "evidence": {
+        "cardinality": 2,
+        "total_rows": 55213,
+        "cardinality_ratio": 0.0
+      },
+      "enum_values": [
+        "False",
+        "True"
+      ],
+      "detected_format": null
+    },
+    {
+      "table_name": "OperationVersion",
+      "column_name": "RowGUID",
+      "current_type": "CHAR(32)",
+      "inferred_type": "uuid",
+      "confidence": 1.0,
+      "evidence": {
+        "pattern_matches": 7672,
+        "pattern_match_ratio": 1.0
+      },
+      "enum_values": null,
+      "detected_format": null
+    },
+    {
+      "table_name": "Operation",
+      "column_name": "Type",
+      "current_type": "VARCHAR(12)",
+      "inferred_type": "enum",
+      "confidence": 1.0,
+      "evidence": {
+        "cardinality": 2,
+        "total_rows": 7672,
+        "cardinality_ratio": 0.0003
+      },
+      "enum_values": [
+        "precondition",
+        "validation"
+      ],
+      "detected_format": null
+    },
+    {
+      "table_name": "Operation",
+      "column_name": "Source",
+      "current_type": "VARCHAR(12)",
+      "inferred_type": "enum",
+      "confidence": 1.0,
+      "evidence": {
+        "cardinality": 4,
+        "total_rows": 7672,
+        "cardinality_ratio": 0.0005
+      },
+      "enum_values": [
+        "existence",
+        "hierarchy",
+        "sign",
+        "user_defined"
+      ],
+      "detected_format": null
+    },
+    {
+      "table_name": "Operation",
+      "column_name": "RowGUID",
+      "current_type": "CHAR(32)",
+      "inferred_type": "uuid",
+      "confidence": 1.0,
+      "evidence": {
+        "pattern_matches": 7672,
+        "pattern_match_ratio": 1.0
+      },
+      "enum_values": null,
+      "detected_format": null
+    },
+    {
+      "table_name": "OperationScope",
+      "column_name": "Severity",
+      "current_type": "VARCHAR(7)",
+      "inferred_type": "enum",
+      "confidence": 1.0,
+      "evidence": {
+        "cardinality": 3,
+        "total_rows": 7945,
+        "cardinality_ratio": 0.0004
+      },
+      "enum_values": [
+        "Error",
+        "Warning",
+        "warning"
+      ],
+      "detected_format": null
+    },
+    {
+      "table_name": "OperationScope",
+      "column_name": "FromSubmissionDate",
+      "current_type": "DATE",
+      "inferred_type": "date",
+      "confidence": 1.0,
+      "evidence": {
+        "pattern_matches": 7945,
+        "pattern_match_ratio": 1.0,
+        "formats": {
+          "date": 7945
+        }
+      },
+      "enum_values": null,
+      "detected_format": "date"
+    },
+    {
+      "table_name": "OperationScope",
+      "column_name": "RowGUID",
+      "current_type": "CHAR(32)",
+      "inferred_type": "uuid",
+      "confidence": 1.0,
+      "evidence": {
+        "pattern_matches": 7945,
+        "pattern_match_ratio": 1.0
+      },
+      "enum_values": null,
+      "detected_format": null
+    },
+    {
+      "table_name": "OperationScopeComposition",
+      "column_name": "RowGUID",
+      "current_type": "CHAR(32)",
+      "inferred_type": "uuid",
+      "confidence": 1.0,
+      "evidence": {
+        "pattern_matches": 8548,
+        "pattern_match_ratio": 1.0
+      },
+      "enum_values": null,
+      "detected_format": null
+    },
+    {
+      "table_name": "SubCategoryItem",
+      "column_name": "ComparisonOperatorID",
+      "current_type": "INTEGER",
+      "inferred_type": "enum",
+      "confidence": 1.0,
+      "evidence": {
+        "cardinality": 3,
+        "total_rows": 9257,
+        "cardinality_ratio": 0.0073
+      },
+      "enum_values": [
+        "13",
+        "14",
+        "15"
+      ],
+      "detected_format": null
+    },
+    {
+      "table_name": "SubCategoryItem",
+      "column_name": "ArithmeticOperatorID",
+      "current_type": "INTEGER",
+      "inferred_type": "enum",
+      "confidence": 1.0,
+      "evidence": {
+        "cardinality": 2,
+        "total_rows": 9257,
+        "cardinality_ratio": 0.0006
+      },
+      "enum_values": [
+        "2",
+        "5"
+      ],
+      "detected_format": null
+    },
+    {
+      "table_name": "TableVersionCell",
+      "column_name": "IsExcluded",
+      "current_type": "BOOLEAN",
+      "inferred_type": "enum",
+      "confidence": 1.0,
+      "evidence": {
+        "cardinality": 2,
+        "total_rows": 138265,
+        "cardinality_ratio": 0.0
+      },
+      "enum_values": [
+        "False",
+        "True"
+      ],
+      "detected_format": null
+    },
+    {
+      "table_name": "TableVersionCell",
+      "column_name": "Sign",
+      "current_type": "VARCHAR(8)",
+      "inferred_type": "enum",
+      "confidence": 1.0,
+      "evidence": {
+        "cardinality": 2,
+        "total_rows": 138265,
+        "cardinality_ratio": 0.0014
+      },
+      "enum_values": [
+        "negative",
+        "positive"
+      ],
+      "detected_format": null
+    },
+    {
+      "table_name": "TableVersionHeader",
+      "column_name": "ParentFirst",
+      "current_type": "BOOLEAN",
+      "inferred_type": "boolean",
+      "confidence": 1.0,
+      "evidence": {
+        "values": [
+          "False",
+          "True"
+        ],
+        "pattern_matches": 10000,
+        "pattern_match_ratio": 0.602
+      },
+      "enum_values": null,
+      "detected_format": null
+    },
+    {
+      "table_name": "TableVersionHeader",
+      "column_name": "IsAbstract",
+      "current_type": "BOOLEAN",
+      "inferred_type": "boolean",
+      "confidence": 1.0,
+      "evidence": {
+        "values": [
+          "False",
+          "True"
+        ],
+        "pattern_matches": 10000,
+        "pattern_match_ratio": 0.602
+      },
+      "enum_values": null,
+      "detected_format": null
+    }
+  ],
+  "patterns": [
+    {
+      "pattern_type": "suffix",
+      "pattern": "uid",
+      "inferred_type": "uuid",
+      "occurrences": 5,
+      "confidence": 1.0,
+      "examples": [
+        "RowGUID",
+        "RowGUID",
+        "RowGUID",
+        "RowGUID",
+        "RowGUID"
+      ]
+    },
+    {
+      "pattern_type": "suffix",
+      "pattern": "guid",
+      "inferred_type": "uuid",
+      "occurrences": 5,
+      "confidence": 1.0,
+      "examples": [
+        "RowGUID",
+        "RowGUID",
+        "RowGUID",
+        "RowGUID",
+        "RowGUID"
+      ]
+    },
+    {
+      "pattern_type": "suffix",
+      "pattern": "wguid",
+      "inferred_type": "uuid",
+      "occurrences": 5,
+      "confidence": 1.0,
+      "examples": [
+        "RowGUID",
+        "RowGUID",
+        "RowGUID",
+        "RowGUID",
+        "RowGUID"
+      ]
+    },
+    {
+      "pattern_type": "prefix",
+      "pattern": "ro",
+      "inferred_type": "uuid",
+      "occurrences": 5,
+      "confidence": 1.0,
+      "examples": [
+        "RowGUID",
+        "RowGUID",
+        "RowGUID",
+        "RowGUID",
+        "RowGUID"
+      ]
+    },
+    {
+      "pattern_type": "prefix",
+      "pattern": "row",
+      "inferred_type": "uuid",
+      "occurrences": 5,
+      "confidence": 1.0,
+      "examples": [
+        "RowGUID",
+        "RowGUID",
+        "RowGUID",
+        "RowGUID",
+        "RowGUID"
+      ]
+    },
+    {
+      "pattern_type": "prefix",
+      "pattern": "rowg",
+      "inferred_type": "uuid",
+      "occurrences": 5,
+      "confidence": 1.0,
+      "examples": [
+        "RowGUID",
+        "RowGUID",
+        "RowGUID",
+        "RowGUID",
+        "RowGUID"
+      ]
+    },
+    {
+      "pattern_type": "exact",
+      "pattern": "rowguid",
+      "inferred_type": "uuid",
+      "occurrences": 5,
+      "confidence": 1.0,
+      "examples": [
+        "rowguid"
+      ]
+    },
+    {
+      "pattern_type": "suffix",
+      "pattern": "ate",
+      "inferred_type": "date",
+      "occurrences": 3,
+      "confidence": 1.0,
+      "examples": [
+        "Date",
+        "FromReferenceDate",
+        "FromSubmissionDate"
+      ]
+    },
+    {
+      "pattern_type": "suffix",
+      "pattern": "date",
+      "inferred_type": "date",
+      "occurrences": 3,
+      "confidence": 1.0,
+      "examples": [
+        "Date",
+        "FromReferenceDate",
+        "FromSubmissionDate"
+      ]
+    },
+    {
+      "pattern_type": "prefix",
+      "pattern": "is",
+      "inferred_type": "boolean",
+      "occurrences": 7,
+      "confidence": 0.6563636363636364,
+      "examples": [
+        "IsEnumerated",
+        "IsAbstract",
+        "IsKey",
+        "IsProperty",
+        "IsMetric"
+      ]
+    },
+    {
+      "pattern_type": "prefix",
+      "pattern": "has",
+      "inferred_type": "boolean",
+      "occurrences": 3,
+      "confidence": 0.30272727272727273,
+      "examples": [
+        "HasReferences",
+        "HasOpenRows",
+        "HasOpenSheets"
+      ]
+    },
+    {
+      "pattern_type": "prefix",
+      "pattern": "ha",
+      "inferred_type": "boolean",
+      "occurrences": 3,
+      "confidence": 0.2927272727272727,
+      "examples": [
+        "HasReferences",
+        "HasOpenRows",
+        "HasOpenSheets"
+      ]
+    },
+    {
+      "pattern_type": "suffix",
+      "pattern": "type",
+      "inferred_type": "enum",
+      "occurrences": 3,
+      "confidence": 0.20666666666666667,
+      "examples": [
+        "PeriodType",
+        "Type",
+        "Type"
+      ]
+    },
+    {
+      "pattern_type": "suffix",
+      "pattern": "rid",
+      "inferred_type": "enum",
+      "occurrences": 3,
+      "confidence": 0.19666666666666666,
+      "examples": [
+        "OwnerID",
+        "ComparisonOperatorID",
+        "ArithmeticOperatorID"
+      ]
+    },
+    {
+      "pattern_type": "suffix",
+      "pattern": "ype",
+      "inferred_type": "enum",
+      "occurrences": 3,
+      "confidence": 0.19666666666666666,
+      "examples": [
+        "PeriodType",
+        "Type",
+        "Type"
+      ]
+    }
+  ],
+  "summary": {
+    "total_recommendations": 37,
+    "by_type": {
+      "boolean": 11,
+      "uuid": 5,
+      "enum": 18,
+      "date": 3
+    },
+    "total_patterns": 15,
+    "by_pattern_type": {
+      "suffix": 8,
+      "prefix": 6,
+      "exact": 1
+    }
+  }
+}
