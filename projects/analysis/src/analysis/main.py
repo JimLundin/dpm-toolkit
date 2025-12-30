@@ -5,15 +5,17 @@ from __future__ import annotations
 import json
 from collections import defaultdict
 from dataclasses import asdict
-from typing import TYPE_CHECKING
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Literal
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect
 
 from .inference import TypeInferenceEngine
 from .pattern_mining import PatternMiner
 from .reporting import TEMPLATE_DIR, json_default
 from .statistics import StatisticsCollector
+from .types import AnalysisReport
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -21,7 +23,7 @@ if TYPE_CHECKING:
 
     from sqlalchemy.engine import Engine
 
-    from .types import AnalysisReport, NamePattern, TypeRecommendation
+    from .types import NamePattern, TypeRecommendation
 
 # Display limits for markdown reports
 MAX_RECOMMENDATIONS_DISPLAY = 20
@@ -34,6 +36,23 @@ _JINJA_ENV = Environment(
     trim_blocks=True,
     lstrip_blocks=True,
 )
+
+
+def validate_engine(engine: Engine) -> None:
+    """Validate that the database has tables to analyze.
+
+    Args:
+        engine: SQLAlchemy engine connected to the database
+
+    Raises:
+        ValueError: If the database has no tables
+
+    """
+    inspector = inspect(engine)
+    table_names = inspector.get_table_names()
+    if not table_names:
+        msg = "Database has no tables to analyze"
+        raise ValueError(msg)
 
 
 def create_engine_for_database(database: Path) -> Engine:
@@ -135,6 +154,36 @@ def report_to_json(report: AnalysisReport) -> str:
     """
     report_dict = asdict(report)
     return json.dumps(report_dict, indent=2, default=json_default)
+
+
+def generate_report(
+    database_name: str,
+    recommendations: list[TypeRecommendation],
+    patterns: list[NamePattern],
+    fmt: Literal["json", "markdown"],
+) -> str:
+    """Generate analysis report in requested format.
+
+    Args:
+        database_name: Name of the database
+        recommendations: List of type recommendations
+        patterns: List of name patterns
+        fmt: Output format (json or markdown)
+
+    Returns:
+        Formatted report string
+
+    """
+    report = AnalysisReport(
+        database=database_name,
+        generated_at=datetime.now(UTC).isoformat(),
+        recommendations=recommendations,
+        patterns=patterns,
+    )
+
+    if fmt == "json":
+        return report_to_json(report)
+    return report_to_markdown(report)
 
 
 def report_to_markdown(report: AnalysisReport) -> str:

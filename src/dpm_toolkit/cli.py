@@ -330,20 +330,16 @@ def analyze(
 ) -> None:
     """Analyze database for type refinement opportunities."""
     try:
-        from datetime import UTC, datetime
-
         from analysis import (
-            AnalysisReport,
             analyze_database,
             create_engine_for_database,
-            report_to_json,
-            report_to_markdown,
+            generate_report,
+            validate_engine,
         )
     except ImportError:
         print_error("Analysis requires [analysis] extra dependencies")
         sys.exit(1)
 
-    from sqlalchemy import inspect
     from sqlalchemy.exc import SQLAlchemyError
 
     validate_database_location(database, exists=True)
@@ -373,12 +369,8 @@ def analyze(
             # Create engine and validate schema
             try:
                 engine = create_engine_for_database(database)
-                inspector = inspect(engine)
-                table_names = inspector.get_table_names()
-                if not table_names:
-                    print_error("Database has no tables to analyze")
-                    sys.exit(1)
-            except SQLAlchemyError as e:
+                validate_engine(engine)
+            except (SQLAlchemyError, ValueError) as e:
                 print_error(f"Failed to connect to database: {e}")
                 sys.exit(1)
 
@@ -395,17 +387,7 @@ def analyze(
             progress.update(task, description="Generating report...")
 
             # Generate report in requested format
-            report = AnalysisReport(
-                database=database.stem,
-                generated_at=datetime.now(UTC).isoformat(),
-                recommendations=recommendations,
-                patterns=patterns,
-            )
-
-            if fmt == "json":
-                output_text = report_to_json(report)
-            else:
-                output_text = report_to_markdown(report)
+            output_text = generate_report(database.stem, recommendations, patterns, fmt)
 
         # Write to stdout or file
         if output:
