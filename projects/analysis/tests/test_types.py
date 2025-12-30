@@ -4,7 +4,7 @@ import json
 from dataclasses import asdict
 from typing import Any
 
-from analysis.reporting import _json_default
+from analysis.reporting import json_default
 from analysis.types import (
     AnalysisReport,
     ColumnStatistics,
@@ -118,7 +118,7 @@ def test_analysis_report_json_serialization() -> None:
     report_dict = asdict(report)
 
     # Serialize to JSON string with custom default handler
-    json_str = json.dumps(report_dict, indent=2, default=_json_default)
+    json_str = json.dumps(report_dict, indent=2, default=json_default)
 
     # Parse back to verify structure
     parsed = json.loads(json_str)
