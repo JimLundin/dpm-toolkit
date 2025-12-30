@@ -106,7 +106,7 @@ class PatternMiner:
                 occurrences=len(examples),
                 confidence=min(
                     len(examples) / len(column_names)
-                    + min(len(affix) / 10, 1.0) * 0.1,  # Normalize to typical max length
+                    + min(len(affix) / 10, 1.0) * 0.1,  # Normalize length
                     1.0,
                 ),
                 examples=examples[:5],
