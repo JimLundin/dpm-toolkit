@@ -149,7 +149,17 @@ class StatisticsCollector:
         """Collect pattern matches and samples by iterating over sampled rows."""
         # Sample rows for pattern matching (memory optimization)
         # For large tables, only analyze a sample instead of all rows
+        # Order by primary key for deterministic, reproducible sampling
         query = table.select().limit(self.MAX_SAMPLE_ROWS)
+
+        # Add ORDER BY for deterministic sampling
+        if table.primary_key.columns:
+            # Order by primary key columns for consistency
+            query = query.order_by(*table.primary_key.columns)
+        else:
+            # Fallback: order by first column if no primary key
+            query = query.order_by(table.columns[0])
+
         result = conn.execute(query)
 
         # Use sets for O(1) lookup during sample collection
