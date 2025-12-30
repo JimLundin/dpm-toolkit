@@ -134,3 +134,82 @@ def test_pattern_matching() -> None:
     # Check that UUID patterns were detected
     assert "guid" in stats
     assert stats["guid"].uuid_pattern_matches > 0
+
+
+def test_sample_collection_performance() -> None:
+    """Test that sample collection uses O(1) set lookup, not O(n) list scan."""
+    import time
+
+    # Create in-memory database with large dataset
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+
+    # Insert many rows to test performance
+    # With O(n) list lookup, this would be very slow
+    # With O(1) set lookup, should be fast
+    with engine.connect() as conn:
+        # Insert 1000 rows (well within MAX_SAMPLE_ROWS = 10000)
+        conn.execute(
+            SampleTable.__table__.insert(),
+            [
+                {
+                    "id": i,
+                    "status": f"status_{i % 10}",  # 10 unique statuses
+                    "category": f"cat_{i % 5}",  # 5 unique categories
+                    "score": i,
+                }
+                for i in range(1, 1001)
+            ],
+        )
+        conn.commit()
+
+    # Collect statistics - should complete quickly
+    collector = StatisticsCollector(engine)
+    start = time.time()
+    stats = collector.collect_table_statistics("test_table")
+    elapsed = time.time() - start
+
+    # Verify samples were collected correctly
+    assert len(stats["status"].value_samples) <= 50  # MAX_SAMPLES
+    assert len(stats["category"].value_samples) <= 50
+
+    # With O(1) lookup, should complete in well under 1 second
+    # With O(n) lookup, would take much longer
+    assert elapsed < 1.0, f"Collection took {elapsed}s, expected < 1s"
+
+    # Verify sample uniqueness (sets ensure no duplicates)
+    status_samples = stats["status"].value_samples
+    assert len(status_samples) == len(set(status_samples))
+
+    category_samples = stats["category"].value_samples
+    assert len(category_samples) == len(set(category_samples))
+
+
+def test_sample_collection_respects_max_samples() -> None:
+    """Test that sample collection doesn't exceed MAX_SAMPLES."""
+    # Create database with many unique values
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+
+    with engine.connect() as conn:
+        # Insert 100 rows with unique statuses
+        conn.execute(
+            SampleTable.__table__.insert(),
+            [
+                {
+                    "id": i,
+                    "status": f"unique_status_{i}",
+                    "category": "A",
+                    "score": i,
+                }
+                for i in range(1, 101)
+            ],
+        )
+        conn.commit()
+
+    collector = StatisticsCollector(engine)
+    stats = collector.collect_table_statistics("test_table")
+
+    # Should not exceed MAX_SAMPLES (50)
+    assert len(stats["status"].value_samples) <= collector.MAX_SAMPLES
+    assert len(stats["status"].value_samples) == 50  # Should be exactly 50
