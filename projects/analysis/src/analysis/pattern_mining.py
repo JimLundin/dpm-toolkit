@@ -23,10 +23,8 @@ class PatternMiner:
     ) -> list[NamePattern]:
         """Find common naming patterns in type recommendations."""
         # Group recommendations by inferred type
-        by_type: dict[InferredType, list[TypeRecommendation]] = {}
+        by_type: dict[InferredType, list[TypeRecommendation]] = defaultdict(list)
         for rec in recommendations:
-            if rec.inferred_type not in by_type:
-                by_type[rec.inferred_type] = []
             by_type[rec.inferred_type].append(rec)
 
         # Extract all pattern types for each inferred type
@@ -52,39 +50,72 @@ class PatternMiner:
 
         return sorted(patterns, key=lambda p: p.confidence, reverse=True)
 
+    def _extract_affix_patterns(
+        self,
+        column_names: list[str],
+        inferred_type: InferredType,
+        pattern_type: str,
+        min_length: int,
+        max_length: int,
+    ) -> list[NamePattern]:
+        """Extract common affix (prefix or suffix) patterns from column names.
+
+        Args:
+            column_names: List of column names to analyze
+            inferred_type: The inferred type for these columns
+            pattern_type: Either "prefix" or "suffix"
+            min_length: Minimum length of affix to consider
+            max_length: Maximum length of affix to consider
+
+        Returns:
+            List of discovered name patterns
+
+        """
+        if not column_names:
+            return []
+
+        affix_counts: dict[str, list[str]] = defaultdict(list)
+        is_suffix = pattern_type == "suffix"
+
+        # Try different affix lengths
+        for name in column_names:
+            name_lower = name.lower()
+            max_len = min(len(name_lower), max_length) + 1
+            for length in range(min_length, max_len):
+                affix = name_lower[-length:] if is_suffix else name_lower[:length]
+                affix_counts[affix].append(name)
+
+        # Filter and create patterns using comprehension
+        return [
+            NamePattern(
+                pattern_type=pattern_type,
+                pattern=affix,
+                inferred_type=inferred_type,
+                occurrences=len(examples),
+                confidence=min(
+                    len(examples) / len(column_names)
+                    + min(len(affix) / max_length, 1.0) * 0.1,
+                    1.0,
+                ),
+                examples=examples[:5],
+            )
+            for affix, examples in affix_counts.items()
+            if len(examples) >= self.MIN_OCCURRENCES
+        ]
+
     def _extract_suffix_patterns(
         self,
         column_names: list[str],
         inferred_type: InferredType,
     ) -> list[NamePattern]:
         """Extract common suffix patterns from column names."""
-        suffix_counts: dict[str, list[str]] = defaultdict(list)
-
-        # Try different suffix lengths
-        for name in column_names:
-            name_lower = name.lower()
-            max_length = min(len(name_lower), self.MAX_SUFFIX_LENGTH) + 1
-            for length in range(self.MIN_SUFFIX_LENGTH, max_length):
-                suffix = name_lower[-length:]
-                suffix_counts[suffix].append(name)
-
-        # Filter and create patterns using comprehension
-        return [
-            NamePattern(
-                pattern_type="suffix",
-                pattern=suffix,
-                inferred_type=inferred_type,
-                occurrences=len(examples),
-                confidence=min(
-                    len(examples) / len(column_names)
-                    + min(len(suffix) / self.MAX_SUFFIX_LENGTH, 1.0) * 0.1,
-                    1.0,
-                ),
-                examples=examples[:5],
-            )
-            for suffix, examples in suffix_counts.items()
-            if len(examples) >= self.MIN_OCCURRENCES
-        ]
+        return self._extract_affix_patterns(
+            column_names,
+            inferred_type,
+            "suffix",
+            self.MIN_SUFFIX_LENGTH,
+            self.MAX_SUFFIX_LENGTH,
+        )
 
     def _extract_prefix_patterns(
         self,
@@ -92,33 +123,13 @@ class PatternMiner:
         inferred_type: InferredType,
     ) -> list[NamePattern]:
         """Extract common prefix patterns from column names."""
-        prefix_counts: dict[str, list[str]] = defaultdict(list)
-
-        # Try different prefix lengths
-        for name in column_names:
-            name_lower = name.lower()
-            max_length = min(len(name_lower), self.MAX_PREFIX_LENGTH) + 1
-            for length in range(self.MIN_PREFIX_LENGTH, max_length):
-                prefix = name_lower[:length]
-                prefix_counts[prefix].append(name)
-
-        # Filter and create patterns using comprehension
-        return [
-            NamePattern(
-                pattern_type="prefix",
-                pattern=prefix,
-                inferred_type=inferred_type,
-                occurrences=len(examples),
-                confidence=min(
-                    len(examples) / len(column_names)
-                    + min(len(prefix) / self.MAX_PREFIX_LENGTH, 1.0) * 0.1,
-                    1.0,
-                ),
-                examples=examples[:5],
-            )
-            for prefix, examples in prefix_counts.items()
-            if len(examples) >= self.MIN_OCCURRENCES
-        ]
+        return self._extract_affix_patterns(
+            column_names,
+            inferred_type,
+            "prefix",
+            self.MIN_PREFIX_LENGTH,
+            self.MAX_PREFIX_LENGTH,
+        )
 
     def _extract_exact_patterns(
         self,
@@ -126,6 +137,9 @@ class PatternMiner:
         inferred_type: InferredType,
     ) -> list[NamePattern]:
         """Extract exact match patterns for frequently occurring names."""
+        if not column_names:
+            return []
+
         name_counts = Counter(name.lower() for name in column_names)
 
         # Create patterns using comprehension

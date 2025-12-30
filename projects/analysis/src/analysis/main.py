@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections import defaultdict
 from dataclasses import asdict
 from typing import TYPE_CHECKING
 
@@ -23,6 +24,14 @@ if TYPE_CHECKING:
 # Display limits for markdown reports
 MAX_RECOMMENDATIONS_DISPLAY = 20
 MAX_ENUM_VALUES_DISPLAY = 20
+
+# Jinja2 environment for markdown template rendering
+_JINJA_ENV = Environment(
+    loader=FileSystemLoader(TEMPLATE_DIR),
+    autoescape=select_autoescape(),
+    trim_blocks=True,
+    lstrip_blocks=True,
+)
 
 
 def create_engine_for_database(database: Path) -> Engine:
@@ -114,33 +123,20 @@ def report_to_markdown(report: AnalysisReport) -> str:
         Markdown string representation
 
     """
-    env = Environment(
-        loader=FileSystemLoader(TEMPLATE_DIR),
-        autoescape=select_autoescape(),
-        trim_blocks=True,
-        lstrip_blocks=True,
-    )
-
-    template = env.get_template("report.md")
+    template = _JINJA_ENV.get_template("report.md")
 
     # Group recommendations by type and sort by confidence
-    recommendations_by_type = {}
+    recommendations_by_type = defaultdict(list)
     for rec in report.recommendations:
-        type_key = rec.inferred_type.value
-        if type_key not in recommendations_by_type:
-            recommendations_by_type[type_key] = []
-        recommendations_by_type[type_key].append(rec)
+        recommendations_by_type[rec.inferred_type.value].append(rec)
 
     for recs in recommendations_by_type.values():
         recs.sort(key=lambda r: r.confidence, reverse=True)
 
     # Group patterns by type and sort by confidence
-    patterns_by_type = {}
+    patterns_by_type = defaultdict(list)
     for pat in report.patterns:
-        type_key = pat.inferred_type.value
-        if type_key not in patterns_by_type:
-            patterns_by_type[type_key] = []
-        patterns_by_type[type_key].append(pat)
+        patterns_by_type[pat.inferred_type.value].append(pat)
 
     for pats in patterns_by_type.values():
         pats.sort(key=lambda p: p.confidence, reverse=True)

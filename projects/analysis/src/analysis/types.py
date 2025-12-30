@@ -16,9 +16,6 @@ class InferredType(StrEnum):
     DATE = auto()
     DATETIME = auto()
     UUID = auto()
-    INTEGER = auto()
-    REAL = auto()
-    TEXT = auto()
 
 
 @dataclass
