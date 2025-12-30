@@ -17,6 +17,11 @@ class PatternMiner:
     MIN_PREFIX_LENGTH = 2  # Minimum prefix length
     MAX_PREFIX_LENGTH = 10  # Maximum prefix length
 
+    # Preferred affix lengths to check (most patterns found at these lengths)
+    # Reduces complexity from O(n×m) to O(n×k) where k is constant
+    PREFERRED_SUFFIX_LENGTHS = [3, 4, 5]  # Common suffix lengths
+    PREFERRED_PREFIX_LENGTHS = [2, 3, 4]  # Common prefix lengths
+
     def mine_patterns(
         self,
         recommendations: list[TypeRecommendation],
@@ -77,11 +82,21 @@ class PatternMiner:
         affix_counts: dict[str, list[str]] = defaultdict(list)
         is_suffix = pattern_type == "suffix"
 
-        # Try different affix lengths
+        # Use preferred lengths for better performance (O(n×k) instead of O(n×m))
+        # Most meaningful patterns are captured at common lengths
+        preferred_lengths = (
+            self.PREFERRED_SUFFIX_LENGTHS
+            if is_suffix
+            else self.PREFERRED_PREFIX_LENGTHS
+        )
+
+        # Try preferred affix lengths only
         for name in column_names:
             name_lower = name.lower()
-            max_len = min(len(name_lower), max_length) + 1
-            for length in range(min_length, max_len):
+            for length in preferred_lengths:
+                # Skip if name is too short for this length
+                if length > len(name_lower):
+                    continue
                 affix = name_lower[-length:] if is_suffix else name_lower[:length]
                 affix_counts[affix].append(name)
 
