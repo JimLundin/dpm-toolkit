@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
+
 from .types import (
     BOOLEAN_VALUE_SETS,
     ColumnStatistics,
@@ -93,7 +95,9 @@ class TypeInferenceEngine:
 
         """
         if filter_key:
-            items = ((k, v) for k, v in formats.items() if filter_key in k)
+            items: Iterable[tuple[str, int]] = (
+                (k, v) for k, v in formats.items() if filter_key in k
+            )
         else:
             items = formats.items()
 
