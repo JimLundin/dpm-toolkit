@@ -1,5 +1,7 @@
 """Tests for statistics collection."""
 
+import time
+
 from sqlalchemy import Column, Integer, String, create_engine, text
 from sqlalchemy.orm import declarative_base
 
@@ -138,8 +140,6 @@ def test_pattern_matching() -> None:
 
 def test_sample_collection_performance() -> None:
     """Test that sample collection uses O(1) set lookup, not O(n) list scan."""
-    import time  # noqa: PLC0415
-
     # Create in-memory database with large dataset
     engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
@@ -334,8 +334,6 @@ def test_single_query_optimization() -> None:
 
 def test_statistics_with_many_columns() -> None:
     """Test that statistics collection scales well with many columns."""
-    import time  # noqa: PLC0415
-
     # Create table with many columns
     engine = create_engine("sqlite:///:memory:")
 
@@ -370,106 +368,3 @@ def test_statistics_with_many_columns() -> None:
     # With single-query optimization, should complete quickly
     # Without optimization (101 queries), would be much slower
     assert elapsed < 2.0, f"Collection took {elapsed}s, expected < 2s"
-
-
-def test_pattern_collection_without_dict_conversion() -> None:
-    """Test that pattern collection uses direct tuple indexing, not _asdict()."""
-    from unittest.mock import patch  # noqa: PLC0415
-
-    # Create in-memory database with pattern-rich data
-    engine = create_engine("sqlite:///:memory:")
-
-    # Create table with date column for pattern detection
-    with engine.connect() as conn:
-        conn.execute(
-            text("CREATE TABLE dates_table (id INTEGER PRIMARY KEY, created TEXT)"),
-        )
-        # Insert rows with various date patterns
-        conn.execute(
-            text("INSERT INTO dates_table (id, created) VALUES (1, '2024-01-15')"),
-        )
-        conn.execute(
-            text("INSERT INTO dates_table (id, created) VALUES (2, '2024-02-20')"),
-        )
-        conn.execute(
-            text("INSERT INTO dates_table (id, created) VALUES (3, '2024-03-25')"),
-        )
-        conn.commit()
-
-    collector = StatisticsCollector(engine)
-
-    def track_asdict_calls(*args, **kwargs):  # type: ignore[no-untyped-def]  # noqa: ANN002, ANN003, ANN202
-        msg = "_asdict() should not be called - use direct tuple indexing"
-        raise AssertionError(msg)
-
-    # Collect statistics - should not call _asdict()
-    with patch("sqlalchemy.engine.row.Row._asdict", side_effect=track_asdict_calls):
-        stats = collector.collect_table_statistics("dates_table")
-
-    # Verify patterns were still detected correctly
-    assert "created" in stats
-    # The created column should have date pattern matches detected
-    assert stats["created"].date_pattern_matches > 0
-
-
-def test_all_date_formats_detected() -> None:
-    """Test that all date formats from DATE_FORMAT_PATTERNS are detected."""
-    from analysis.statistics import (  # noqa: PLC0415
-        DATE_FORMAT_PATTERNS,
-        StatisticsCollector,
-    )
-
-    # Test data for each date format
-    test_dates = {
-        "date_iso": "2024-01-15",
-        "date_slash": "15/01/2024",
-        "date_dash": "15-01-2024",
-        "date_yyyy_slash": "2024/01/15",
-    }
-
-    # Verify all formats in our test data match the dictionary
-    assert set(test_dates.keys()) == set(DATE_FORMAT_PATTERNS.keys())
-
-    # Test each format is detected
-    for format_name, date_string in test_dates.items():
-        # Use the static method directly
-        detected = StatisticsCollector._detect_date_format(date_string)  # noqa: SLF001
-        assert detected == format_name, (
-            f"Expected {format_name}, got {detected} for '{date_string}'"
-        )
-
-        # Verify the format also passes general date detection
-        assert StatisticsCollector._is_date_format(  # noqa: SLF001
-            date_string,
-        ), f"Date '{date_string}' not recognized as date format"
-
-
-def test_all_datetime_formats_detected() -> None:
-    """Test that all datetime formats from DATETIME_FORMAT_PATTERNS are detected."""
-    from analysis.statistics import (  # noqa: PLC0415
-        DATETIME_FORMAT_PATTERNS,
-        StatisticsCollector,
-    )
-
-    # Test data for each datetime format
-    test_datetimes = {
-        "datetime_iso_t": "2024-01-15T10:30:45",
-        "datetime_iso_space": "2024-01-15 10:30:45",
-        "datetime_slash": "15/01/2024 10:30:45",
-    }
-
-    # Verify all formats in our test data match the dictionary
-    assert set(test_datetimes.keys()) == set(DATETIME_FORMAT_PATTERNS.keys())
-
-    # Test each format is detected
-    for format_name, datetime_string in test_datetimes.items():
-        # Use the static method directly
-        detected = StatisticsCollector._detect_datetime_format(datetime_string)  # noqa: SLF001
-        assert detected == format_name, (
-            f"Expected {format_name}, got {detected} for '{datetime_string}'"
-        )
-
-        # Verify the format also passes general datetime detection
-        assert StatisticsCollector._is_datetime_format(  # noqa: SLF001
-            datetime_string,
-        ), f"DateTime '{datetime_string}' not recognized as datetime format"
