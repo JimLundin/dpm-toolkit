@@ -149,13 +149,13 @@ class StatisticsCollector:
         query = table.select().limit(self.MAX_SAMPLE_ROWS)
         result = conn.execute(query)
 
-        # Get column name to index mapping for row access
-        columns = list(table.columns)
-
         for row in result:
-            for idx, column in enumerate(columns):
+            # Convert row to dictionary for easier access
+            row_dict = dict(row._mapping)
+
+            for column in table.columns:
                 col_name = column.name
-                value = row[idx]  # Access by integer index
+                value = row_dict[col_name]
                 stats = column_stats[col_name]
 
                 if value is None:
