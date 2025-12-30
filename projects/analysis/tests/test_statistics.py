@@ -213,3 +213,74 @@ def test_sample_collection_respects_max_samples() -> None:
     # Should not exceed MAX_SAMPLES (50)
     assert len(stats["status"].value_samples) <= collector.MAX_SAMPLES
     assert len(stats["status"].value_samples) == 50  # Should be exactly 50
+
+
+def test_deterministic_sampling() -> None:
+    """Test that sampling produces consistent, reproducible results."""
+    # Create database with consistent data
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+
+    with engine.connect() as conn:
+        # Insert test data
+        conn.execute(
+            SampleTable.__table__.insert(),
+            [
+                {
+                    "id": i,
+                    "status": f"status_{i % 5}",
+                    "category": f"cat_{i % 3}",
+                    "score": i * 10,
+                }
+                for i in range(1, 101)
+            ],
+        )
+        conn.commit()
+
+    # Collect statistics twice
+    collector1 = StatisticsCollector(engine)
+    stats1 = collector1.collect_table_statistics("test_table")
+
+    collector2 = StatisticsCollector(engine)
+    stats2 = collector2.collect_table_statistics("test_table")
+
+    # Results should be identical
+    assert stats1["status"].value_samples == stats2["status"].value_samples
+    assert stats1["category"].value_samples == stats2["category"].value_samples
+    assert stats1["score"].value_samples == stats2["score"].value_samples
+
+
+def test_sampling_without_primary_key() -> None:
+    """Test that sampling works for tables without primary keys."""
+    # Create table without primary key
+    engine = create_engine("sqlite:///:memory:")
+
+    with engine.connect() as conn:
+        # Create table without PK
+        conn.execute(
+            text("CREATE TABLE no_pk_table (name TEXT, value INTEGER)"),
+        )
+        conn.execute(
+            text(
+                "INSERT INTO no_pk_table (name, value) VALUES "
+                "('a', 1), ('b', 2), ('c', 3), ('d', 4), ('e', 5)",
+            ),
+        )
+        conn.commit()
+
+    # Should not crash - should fallback to first column ordering
+    collector = StatisticsCollector(engine)
+    stats = collector.collect_table_statistics("no_pk_table")
+
+    # Verify statistics collected
+    assert "name" in stats
+    assert "value" in stats
+    assert len(stats["name"].value_samples) > 0
+    assert len(stats["value"].value_samples) > 0
+
+    # Should still be deterministic
+    collector2 = StatisticsCollector(engine)
+    stats2 = collector2.collect_table_statistics("no_pk_table")
+
+    assert stats["name"].value_samples == stats2["name"].value_samples
+    assert stats["value"].value_samples == stats2["value"].value_samples
