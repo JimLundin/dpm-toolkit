@@ -17,6 +17,11 @@ class TypeInferenceEngine:
     MIN_DISTINCT_VALUES = 2  # Minimum distinct values for enum
     BOOLEAN_VALUE_COUNT = 2  # Boolean columns have exactly 2 values
 
+    # Enum confidence calculation parameters
+    ENUM_DATA_THRESHOLD = 1000  # Row count threshold for data boost
+    ENUM_DATA_BOOST = 0.2  # Confidence boost for large datasets
+    ENUM_RATIO_PENALTY = 0.3  # Penalty multiplier for high cardinality ratio
+
     def infer_type(  # noqa: PLR0911
         self,
         table_name: str,
@@ -66,6 +71,28 @@ class TypeInferenceEngine:
             return enum_rec
 
         return None
+
+    def _get_most_common_format(
+        self,
+        formats: dict[str, int],
+        filter_key: str | None = None,
+    ) -> str | None:
+        """Find the most common format from detected formats.
+
+        Args:
+            formats: Dictionary mapping format names to occurrence counts
+            filter_key: Optional substring that format names must contain
+
+        Returns:
+            The most common format name, or None if no formats found
+
+        """
+        if filter_key:
+            items = ((k, v) for k, v in formats.items() if filter_key in k)
+        else:
+            items = formats.items()
+
+        return max(items, key=lambda x: x[1], default=(None, 0))[0]
 
     def _infer_enum(
         self,
@@ -168,11 +195,7 @@ class TypeInferenceEngine:
             return None
 
         # Find most common format
-        detected_format = max(
-            stats.detected_formats.items(),
-            key=lambda x: x[1],
-            default=(None, 0),
-        )[0]
+        detected_format = self._get_most_common_format(stats.detected_formats)
 
         confidence = pattern_match_ratio
 
@@ -206,12 +229,11 @@ class TypeInferenceEngine:
         if pattern_match_ratio < self.PATTERN_MATCH_THRESHOLD:
             return None
 
-        # Find most common format
-        detected_format = max(
-            ((k, v) for k, v in stats.detected_formats.items() if "datetime" in k),
-            key=lambda x: x[1],
-            default=(None, 0),
-        )[0]
+        # Find most common datetime format
+        detected_format = self._get_most_common_format(
+            stats.detected_formats,
+            filter_key="datetime",
+        )
 
         confidence = pattern_match_ratio
 
@@ -268,10 +290,12 @@ class TypeInferenceEngine:
         cardinality_score = 1.0 - (stats.cardinality / self.ENUM_CARDINALITY_THRESHOLD)
 
         # Boost confidence if we have lots of data
-        data_score = min(stats.total_rows / 1000, 1.0) * 0.2
+        data_score = (
+            min(stats.total_rows / self.ENUM_DATA_THRESHOLD, 1.0) * self.ENUM_DATA_BOOST
+        )
 
         # Reduce confidence for high cardinality ratio
-        ratio_penalty = stats.cardinality_ratio * 0.3
+        ratio_penalty = stats.cardinality_ratio * self.ENUM_RATIO_PENALTY
 
         confidence = cardinality_score + data_score - ratio_penalty
 

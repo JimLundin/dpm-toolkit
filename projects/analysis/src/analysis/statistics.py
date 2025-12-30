@@ -12,6 +12,29 @@ from sqlalchemy import Engine, MetaData
 
 from .types import ColumnStatistics
 
+# Compiled regex patterns for efficient pattern matching
+_DATE_PATTERNS = [
+    re.compile(r"^\d{4}-\d{2}-\d{2}$"),  # ISO: 2024-01-15
+    re.compile(r"^\d{2}/\d{2}/\d{4}$"),  # DD/MM/YYYY or MM/DD/YYYY
+    re.compile(r"^\d{2}-\d{2}-\d{4}$"),  # DD-MM-YYYY
+    re.compile(r"^\d{4}/\d{2}/\d{2}$"),  # YYYY/MM/DD
+]
+
+_DATETIME_PATTERNS = [
+    re.compile(r"^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}"),  # ISO
+    re.compile(r"^\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}"),  # DD/MM/YYYY HH:MM:SS
+]
+
+# Specific format detection patterns
+_DATE_ISO = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_DATE_SLASH = re.compile(r"^\d{2}/\d{2}/\d{4}$")
+_DATE_DASH = re.compile(r"^\d{2}-\d{2}-\d{4}$")
+_DATE_YYYY_SLASH = re.compile(r"^\d{4}/\d{2}/\d{2}$")
+
+_DATETIME_ISO_T = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}")
+_DATETIME_ISO_SPACE = re.compile(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}")
+_DATETIME_SLASH = re.compile(r"^\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}")
+
 
 class StatisticsCollector:
     """Collects statistics from a database table."""
@@ -60,10 +83,9 @@ class StatisticsCollector:
             }
 
             for row in result:
-                row_dict = dict(row._mapping)  # noqa: SLF001
                 for column in table.columns:
                     col_name = column.name
-                    value = row_dict[col_name]
+                    value = row[col_name]
                     stats = column_stats[col_name]
 
                     stats.total_rows += 1
@@ -96,10 +118,6 @@ class StatisticsCollector:
             # enum detection since high-cardinality columns aren't candidates)
             stats.unique_count = len(value_trackers[col_name])
             stats.value_counts = dict(value_counters[col_name])
-
-            # Normalize total_rows (all columns should have same count)
-            if stats.total_rows > 0:
-                stats.total_rows = stats.total_rows // len(table.columns)
 
         return column_stats
 
@@ -177,43 +195,33 @@ class StatisticsCollector:
     @staticmethod
     def _is_date_format(value: str) -> bool:
         """Check if string matches common date formats."""
-        date_patterns = [
-            r"^\d{4}-\d{2}-\d{2}$",  # ISO: 2024-01-15
-            r"^\d{2}/\d{2}/\d{4}$",  # DD/MM/YYYY or MM/DD/YYYY
-            r"^\d{2}-\d{2}-\d{4}$",  # DD-MM-YYYY
-            r"^\d{4}/\d{2}/\d{2}$",  # YYYY/MM/DD
-        ]
-        return any(re.match(pattern, value) for pattern in date_patterns)
+        return any(pattern.match(value) for pattern in _DATE_PATTERNS)
 
     @staticmethod
     def _is_datetime_format(value: str) -> bool:
         """Check if string matches common datetime formats."""
-        datetime_patterns = [
-            r"^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}",  # ISO
-            r"^\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}",  # DD/MM/YYYY HH:MM:SS
-        ]
-        return any(re.match(pattern, value) for pattern in datetime_patterns)
+        return any(pattern.match(value) for pattern in _DATETIME_PATTERNS)
 
     @staticmethod
     def _detect_date_format(value: str) -> str | None:
         """Detect the specific date format of a string."""
-        if re.match(r"^\d{4}-\d{2}-\d{2}$", value):
+        if _DATE_ISO.match(value):
             return "date_iso"
-        if re.match(r"^\d{2}/\d{2}/\d{4}$", value):
+        if _DATE_SLASH.match(value):
             return "date_slash"
-        if re.match(r"^\d{2}-\d{2}-\d{4}$", value):
+        if _DATE_DASH.match(value):
             return "date_dash"
-        if re.match(r"^\d{4}/\d{2}/\d{2}$", value):
+        if _DATE_YYYY_SLASH.match(value):
             return "date_yyyy_slash"
         return None
 
     @staticmethod
     def _detect_datetime_format(value: str) -> str | None:
         """Detect the specific datetime format of a string."""
-        if re.match(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}", value):
+        if _DATETIME_ISO_T.match(value):
             return "datetime_iso_t"
-        if re.match(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}", value):
+        if _DATETIME_ISO_SPACE.match(value):
             return "datetime_iso_space"
-        if re.match(r"^\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}", value):
+        if _DATETIME_SLASH.match(value):
             return "datetime_slash"
         return None
