@@ -6,7 +6,10 @@ from datetime import date
 from json import dumps
 from pathlib import Path
 from sys import stdout
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
+
+if TYPE_CHECKING:
+    from analysis import NamePattern, TypeRecommendation
 
 from archive import (
     Group,
@@ -125,8 +128,8 @@ def validate_database_has_tables(engine: Any) -> None:  # noqa: ANN401
 
 def generate_analysis_report(
     database_name: str,
-    recommendations: list[Any],
-    patterns: list[Any],
+    recommendations: list["TypeRecommendation"],
+    patterns: list["NamePattern"],
     fmt: Literal["json", "markdown"],
 ) -> str:
     """Generate analysis report in requested format."""
