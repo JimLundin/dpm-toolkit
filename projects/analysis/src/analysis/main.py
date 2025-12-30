@@ -12,7 +12,7 @@ from sqlalchemy import create_engine
 
 from .inference import TypeInferenceEngine
 from .pattern_mining import PatternMiner
-from .reporting import TEMPLATE_DIR, _json_default
+from .reporting import TEMPLATE_DIR, json_default
 from .statistics import StatisticsCollector
 
 if TYPE_CHECKING:
@@ -52,14 +52,13 @@ def create_engine_for_database(database: Path) -> Engine:
     suffix = database.suffix.lower()
 
     # Connection pool configuration for better resource management
-    pool_config = {
-        "pool_size": 5,  # Maintain 5 connections in pool
-        "max_overflow": 10,  # Allow up to 10 additional connections
-        "pool_pre_ping": True,  # Verify connections before use
-    }
-
     if suffix in {".sqlite", ".db", ".sqlite3"}:
-        return create_engine(f"sqlite:///{database}", **pool_config)
+        return create_engine(
+            f"sqlite:///{database}",
+            pool_size=5,  # Maintain 5 connections in pool
+            max_overflow=10,  # Allow up to 10 additional connections
+            pool_pre_ping=True,  # Verify connections before use
+        )
 
     if suffix in {".mdb", ".accdb"}:
         abs_path = database.resolve()
@@ -67,7 +66,9 @@ def create_engine_for_database(database: Path) -> Engine:
         connection_string = f"DRIVER={{{driver}}};DBQ={abs_path}"
         return create_engine(
             f"access+pyodbc:///?odbc_connect={connection_string}",
-            **pool_config,
+            pool_size=5,  # Maintain 5 connections in pool
+            max_overflow=10,  # Allow up to 10 additional connections
+            pool_pre_ping=True,  # Verify connections before use
         )
 
     msg = f"Unsupported database extension: {suffix}"
@@ -133,7 +134,7 @@ def report_to_json(report: AnalysisReport) -> str:
 
     """
     report_dict = asdict(report)
-    return json.dumps(report_dict, indent=2, default=_json_default)
+    return json.dumps(report_dict, indent=2, default=json_default)
 
 
 def report_to_markdown(report: AnalysisReport) -> str:
