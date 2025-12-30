@@ -7,6 +7,37 @@ from dataclasses import dataclass, field
 from enum import StrEnum, auto
 from typing import Any
 
+# Boolean value patterns for detection and validation
+# These represent common boolean representations across different database systems
+BOOLEAN_VALUE_SETS = [
+    {0, 1},  # Standard numeric boolean
+    {-1, 0},  # Access DB: -1 = True, 0 = False
+    {-1, 1},  # Alternative: -1 = True, 1 = False
+    {"0", "1"},  # String numeric
+    {"-1", "0"},  # String Access pattern
+    {"-1", "1"},  # String alternative pattern
+    {"true", "false"},  # String boolean
+    {"yes", "no"},  # String yes/no
+    {"y", "n"},  # String abbreviation
+]
+
+# Flattened set of all boolean string values for pattern matching
+BOOLEAN_STRING_VALUES = {
+    "true",
+    "false",
+    "yes",
+    "no",
+    "y",
+    "n",
+    "1",
+    "0",
+    "-1",
+}
+
+# Numeric values that indicate boolean-like data
+# Note: True==1 and False==0 in Python, so we only need numeric values
+BOOLEAN_NUMERIC_VALUES = {0, 1, -1}
+
 
 class InferredType(StrEnum):
     """Types that can be inferred from data analysis."""
