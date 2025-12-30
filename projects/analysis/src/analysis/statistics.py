@@ -19,27 +19,26 @@ from .types import (
 )
 
 # Compiled regex patterns for efficient pattern matching
-_DATE_PATTERNS = [
-    re.compile(r"^\d{4}-\d{2}-\d{2}$"),  # ISO: 2024-01-15
-    re.compile(r"^\d{2}/\d{2}/\d{4}$"),  # DD/MM/YYYY or MM/DD/YYYY
-    re.compile(r"^\d{2}-\d{2}-\d{4}$"),  # DD-MM-YYYY
-    re.compile(r"^\d{4}/\d{2}/\d{2}$"),  # YYYY/MM/DD
-]
+# Single source of truth for all date/datetime format patterns
 
-_DATETIME_PATTERNS = [
-    re.compile(r"^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}"),  # ISO
-    re.compile(r"^\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}"),  # DD/MM/YYYY HH:MM:SS
-]
+# Date format patterns: format_name -> compiled_regex
+DATE_FORMAT_PATTERNS = {
+    "date_iso": re.compile(r"^\d{4}-\d{2}-\d{2}$"),  # ISO: 2024-01-15
+    "date_slash": re.compile(r"^\d{2}/\d{2}/\d{4}$"),  # DD/MM/YYYY or MM/DD/YYYY
+    "date_dash": re.compile(r"^\d{2}-\d{2}-\d{4}$"),  # DD-MM-YYYY
+    "date_yyyy_slash": re.compile(r"^\d{4}/\d{2}/\d{2}$"),  # YYYY/MM/DD
+}
 
-# Specific format detection patterns
-_DATE_ISO = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-_DATE_SLASH = re.compile(r"^\d{2}/\d{2}/\d{4}$")
-_DATE_DASH = re.compile(r"^\d{2}-\d{2}-\d{4}$")
-_DATE_YYYY_SLASH = re.compile(r"^\d{4}/\d{2}/\d{2}$")
-
-_DATETIME_ISO_T = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}")
-_DATETIME_ISO_SPACE = re.compile(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}")
-_DATETIME_SLASH = re.compile(r"^\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}")
+# DateTime format patterns: format_name -> compiled_regex
+DATETIME_FORMAT_PATTERNS = {
+    "datetime_iso_t": re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}"),  # ISO with T
+    "datetime_iso_space": re.compile(
+        r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}",
+    ),  # ISO with space
+    "datetime_slash": re.compile(
+        r"^\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}",
+    ),  # DD/MM/YYYY HH:MM:SS
+}
 
 
 class StatisticsCollector:
@@ -285,33 +284,27 @@ class StatisticsCollector:
     @staticmethod
     def _is_date_format(value: str) -> bool:
         """Check if string matches common date formats."""
-        return any(pattern.match(value) for pattern in _DATE_PATTERNS)
+        return any(pattern.match(value) for pattern in DATE_FORMAT_PATTERNS.values())
 
     @staticmethod
     def _is_datetime_format(value: str) -> bool:
         """Check if string matches common datetime formats."""
-        return any(pattern.match(value) for pattern in _DATETIME_PATTERNS)
+        return any(
+            pattern.match(value) for pattern in DATETIME_FORMAT_PATTERNS.values()
+        )
 
     @staticmethod
     def _detect_date_format(value: str) -> str | None:
         """Detect the specific date format of a string."""
-        if _DATE_ISO.match(value):
-            return "date_iso"
-        if _DATE_SLASH.match(value):
-            return "date_slash"
-        if _DATE_DASH.match(value):
-            return "date_dash"
-        if _DATE_YYYY_SLASH.match(value):
-            return "date_yyyy_slash"
+        for format_name, pattern in DATE_FORMAT_PATTERNS.items():
+            if pattern.match(value):
+                return format_name
         return None
 
     @staticmethod
     def _detect_datetime_format(value: str) -> str | None:
         """Detect the specific datetime format of a string."""
-        if _DATETIME_ISO_T.match(value):
-            return "datetime_iso_t"
-        if _DATETIME_ISO_SPACE.match(value):
-            return "datetime_iso_space"
-        if _DATETIME_SLASH.match(value):
-            return "datetime_slash"
+        for format_name, pattern in DATETIME_FORMAT_PATTERNS.items():
+            if pattern.match(value):
+                return format_name
         return None
