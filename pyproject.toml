@@ -17,10 +17,7 @@ scrape = ["scrape"]
 migrate = ["migrate"]
 schema = ["schema"]
 compare = ["compare"]
-analysis = [
-    "analysis",
-    "types-sqlalchemy>=1.4.53.38",
-]
+analysis = ["analysis"]
 
 [tool.ruff]
 unsafe-fixes = true
