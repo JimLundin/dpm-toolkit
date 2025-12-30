@@ -150,8 +150,8 @@ class StatisticsCollector:
         result = conn.execute(query)
 
         for row in result:
-            # Convert row to dictionary for easier access
-            row_dict = dict(row._mapping)
+            # Convert row to dictionary using named tuple method
+            row_dict = row._asdict()
 
             for column in table.columns:
                 col_name = column.name
