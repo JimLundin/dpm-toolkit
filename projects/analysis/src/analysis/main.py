@@ -8,7 +8,7 @@ from dataclasses import asdict
 from typing import TYPE_CHECKING
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
-from sqlalchemy import Engine, create_engine
+from sqlalchemy import create_engine
 
 from .inference import TypeInferenceEngine
 from .pattern_mining import PatternMiner
@@ -18,6 +18,8 @@ from .statistics import StatisticsCollector
 if TYPE_CHECKING:
     from collections.abc import Iterator
     from pathlib import Path
+
+    from sqlalchemy.engine import Engine
 
     from .types import AnalysisReport, NamePattern, TypeRecommendation
 
