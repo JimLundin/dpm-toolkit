@@ -17,6 +17,7 @@ scrape = ["scrape"]
 migrate = ["migrate"]
 schema = ["schema"]
 compare = ["compare"]
+analysis = ["analysis"]
 
 [tool.ruff]
 unsafe-fixes = true
@@ -82,4 +83,5 @@ migrate = { workspace = true }
 scrape = { workspace = true }
 schema = { workspace = true }
 compare = { workspace = true }
+analysis = { workspace = true }
 dpm2 = { workspace = true }
