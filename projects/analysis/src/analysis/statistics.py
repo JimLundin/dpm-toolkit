@@ -183,16 +183,18 @@ class StatisticsCollector:
 
         result = conn.execute(query)
 
+        # Pre-compute column index mapping for efficient tuple access
+        # Avoids redundant _asdict() calls in the hot loop
+        column_indices = {col.name: idx for idx, col in enumerate(table.columns)}
+
         # Use sets for O(1) lookup during sample collection
         sample_sets: dict[str, set[Any]] = {col.name: set() for col in table.columns}
 
         for row in result:
-            # Convert row to dictionary using named tuple method
-            row_dict = row._asdict()
-
+            # Use direct tuple indexing instead of converting to dict
             for column in table.columns:
                 col_name = column.name
-                value = row_dict[col_name]
+                value = row[column_indices[col_name]]
                 stats = column_stats[col_name]
 
                 if value is None:
