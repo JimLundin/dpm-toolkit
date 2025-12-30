@@ -89,6 +89,66 @@ def validate_database_extension(
         sys.exit(1)
 
 
+def validate_output_path(output: Path) -> None:
+    """Validate output path is writable."""
+    output_dir = output.parent
+    if not output_dir.exists():
+        print_error(f"Output directory does not exist: {output_dir}")
+        sys.exit(1)
+    if not output_dir.is_dir():
+        print_error(f"Output path parent is not a directory: {output_dir}")
+        sys.exit(1)
+    # Test write permissions by checking if we can create a file
+    try:
+        output.touch()
+        output.unlink()
+    except (PermissionError, OSError) as e:
+        print_error(f"Cannot write to output path: {output} ({e})")
+        sys.exit(1)
+
+
+def validate_database_has_tables(engine: Any) -> None:  # noqa: ANN401
+    """Validate database has tables to analyze."""
+    from sqlalchemy import inspect
+    from sqlalchemy.exc import SQLAlchemyError
+
+    try:
+        inspector = inspect(engine)
+        table_names = inspector.get_table_names()
+        if not table_names:
+            print_error("Database has no tables to analyze")
+            sys.exit(1)
+    except SQLAlchemyError as e:
+        print_error(f"Failed to inspect database schema: {e}")
+        sys.exit(1)
+
+
+def generate_analysis_report(
+    database_name: str,
+    recommendations: list[Any],
+    patterns: list[Any],
+    fmt: Literal["json", "markdown"],
+) -> str:
+    """Generate analysis report in requested format."""
+    from datetime import UTC, datetime
+
+    from analysis import AnalysisReport, report_to_json, report_to_markdown
+
+    report = AnalysisReport(
+        database=database_name,
+        generated_at=datetime.now(UTC).isoformat(),
+        recommendations=recommendations,
+        patterns=patterns,
+    )
+
+    if fmt == "json":
+        return report_to_json(report)
+    if fmt == "markdown":
+        return report_to_markdown(report)
+    print_error(f"Unknown format: {fmt}")
+    sys.exit(1)
+
+
 def format_version_table(version: Version) -> None:
     """Format version information as a rich table."""
     table = Table(show_header=False)
@@ -312,18 +372,12 @@ def analyze(
 ) -> None:
     """Analyze database for type refinement opportunities."""
     try:
-        from datetime import UTC, datetime
-
-        from analysis import (
-            AnalysisReport,
-            analyze_database,
-            create_engine_for_database,
-            report_to_json,
-            report_to_markdown,
-        )
+        from analysis import analyze_database, create_engine_for_database
     except ImportError:
         print_error("Analysis requires [analysis] extra dependencies")
         sys.exit(1)
+
+    from sqlalchemy.exc import SQLAlchemyError
 
     validate_database_location(database, exists=True)
     validate_database_extension(database, SQLITE_EXTENSIONS | ACCESS_EXTENSIONS)
@@ -333,50 +387,64 @@ def analyze(
         print_error(f"Confidence must be between 0.0 and 1.0, got {confidence}")
         sys.exit(1)
 
+    # Validate output path before analysis
+    if output:
+        validate_output_path(output)
+
     print_info(f"Database: {database}")
     print_info(f"Output format: {fmt}")
     print_info(f"Confidence threshold: {confidence}")
 
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        console=err_console,
-    ) as progress:
-        task = progress.add_task("Analyzing database...", total=None)
+    try:
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=err_console,
+        ) as progress:
+            task = progress.add_task("Analyzing database...", total=None)
 
-        # Create engine and analyze database
-        engine = create_engine_for_database(database)
-        recommendations, patterns = analyze_database(
-            engine,
-            confidence_threshold=confidence,
-        )
+            # Create engine and validate schema
+            try:
+                engine = create_engine_for_database(database)
+                validate_database_has_tables(engine)
+            except SQLAlchemyError as e:
+                print_error(f"Failed to connect to database: {e}")
+                sys.exit(1)
 
-        progress.update(task, description="Generating report...")
+            # Analyze database
+            try:
+                recommendations, patterns = analyze_database(
+                    engine,
+                    confidence_threshold=confidence,
+                )
+            except SQLAlchemyError as e:
+                print_error(f"Analysis failed: {e}")
+                sys.exit(1)
 
-        # Create report with metadata
-        report = AnalysisReport(
-            database=database.stem,
-            generated_at=datetime.now(UTC).isoformat(),
-            recommendations=recommendations,
-            patterns=patterns,
-        )
+            progress.update(task, description="Generating report...")
 
-        # Convert to requested format
-        if fmt == "json":
-            output_text = report_to_json(report)
-        elif fmt == "markdown":
-            output_text = report_to_markdown(report)
+            # Generate report in requested format
+            output_text = generate_analysis_report(
+                database.stem,
+                recommendations,
+                patterns,
+                fmt,
+            )
+
+        # Write to stdout or file
+        if output:
+            try:
+                output.write_text(output_text)
+                print_success(f"Analysis complete! Report written to {output}")
+            except (PermissionError, OSError) as e:
+                print_error(f"Failed to write output file: {e}")
+                sys.exit(1)
         else:
-            print_error(f"Unknown format: {fmt}")
-            sys.exit(1)
-
-    # Write to stdout or file
-    if output:
-        output.write_text(output_text)
-        print_success(f"Analysis complete! Report written to {output}")
-    else:
-        stdout.write(output_text)
-        print_success("Analysis complete!")
+            stdout.write(output_text)
+            print_success("Analysis complete!")
+    except KeyboardInterrupt:
+        print_error("Analysis interrupted by user")
+        sys.exit(1)
 
 
 def main() -> None:
