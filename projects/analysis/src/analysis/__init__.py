@@ -4,8 +4,8 @@ from .inference import TypeInferenceEngine
 from .main import (
     analyze_database,
     create_engine_for_database,
-    report_to_json,
-    report_to_markdown,
+    generate_report,
+    validate_engine,
 )
 from .pattern_mining import PatternMiner
 from .statistics import StatisticsCollector
@@ -30,6 +30,6 @@ __all__ = [
     "TypeRecommendation",
     "analyze_database",
     "create_engine_for_database",
-    "report_to_json",
-    "report_to_markdown",
+    "generate_report",
+    "validate_engine",
 ]
