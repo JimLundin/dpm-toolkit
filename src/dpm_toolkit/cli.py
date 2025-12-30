@@ -327,6 +327,12 @@ def analyze(
 
     validate_database_location(database, exists=True)
     validate_database_extension(database, SQLITE_EXTENSIONS | ACCESS_EXTENSIONS)
+
+    # Validate confidence parameter bounds
+    if not 0.0 <= confidence <= 1.0:
+        print_error(f"Confidence must be between 0.0 and 1.0, got {confidence}")
+        sys.exit(1)
+
     print_info(f"Database: {database}")
     print_info(f"Output format: {fmt}")
     print_info(f"Confidence threshold: {confidence}")
