@@ -6,10 +6,7 @@ from datetime import date
 from json import dumps
 from pathlib import Path
 from sys import stdout
-from typing import TYPE_CHECKING, Any, Literal
-
-if TYPE_CHECKING:
-    from analysis import NamePattern, TypeRecommendation
+from typing import Any, Literal
 
 from archive import (
     Group,
@@ -108,48 +105,6 @@ def validate_output_path(output: Path) -> None:
     except (PermissionError, OSError) as e:
         print_error(f"Cannot write to output path: {output} ({e})")
         sys.exit(1)
-
-
-def validate_database_has_tables(engine: Any) -> None:  # noqa: ANN401
-    """Validate database has tables to analyze."""
-    from sqlalchemy import inspect
-    from sqlalchemy.exc import SQLAlchemyError
-
-    try:
-        inspector = inspect(engine)
-        table_names = inspector.get_table_names()
-        if not table_names:
-            print_error("Database has no tables to analyze")
-            sys.exit(1)
-    except SQLAlchemyError as e:
-        print_error(f"Failed to inspect database schema: {e}")
-        sys.exit(1)
-
-
-def generate_analysis_report(
-    database_name: str,
-    recommendations: list["TypeRecommendation"],
-    patterns: list["NamePattern"],
-    fmt: Literal["json", "markdown"],
-) -> str:
-    """Generate analysis report in requested format."""
-    from datetime import UTC, datetime
-
-    from analysis import AnalysisReport, report_to_json, report_to_markdown
-
-    report = AnalysisReport(
-        database=database_name,
-        generated_at=datetime.now(UTC).isoformat(),
-        recommendations=recommendations,
-        patterns=patterns,
-    )
-
-    if fmt == "json":
-        return report_to_json(report)
-    if fmt == "markdown":
-        return report_to_markdown(report)
-    print_error(f"Unknown format: {fmt}")
-    sys.exit(1)
 
 
 def format_version_table(version: Version) -> None:
@@ -375,11 +330,20 @@ def analyze(
 ) -> None:
     """Analyze database for type refinement opportunities."""
     try:
-        from analysis import analyze_database, create_engine_for_database
+        from datetime import UTC, datetime
+
+        from analysis import (
+            AnalysisReport,
+            analyze_database,
+            create_engine_for_database,
+            report_to_json,
+            report_to_markdown,
+        )
     except ImportError:
         print_error("Analysis requires [analysis] extra dependencies")
         sys.exit(1)
 
+    from sqlalchemy import inspect
     from sqlalchemy.exc import SQLAlchemyError
 
     validate_database_location(database, exists=True)
@@ -409,7 +373,11 @@ def analyze(
             # Create engine and validate schema
             try:
                 engine = create_engine_for_database(database)
-                validate_database_has_tables(engine)
+                inspector = inspect(engine)
+                table_names = inspector.get_table_names()
+                if not table_names:
+                    print_error("Database has no tables to analyze")
+                    sys.exit(1)
             except SQLAlchemyError as e:
                 print_error(f"Failed to connect to database: {e}")
                 sys.exit(1)
@@ -427,12 +395,17 @@ def analyze(
             progress.update(task, description="Generating report...")
 
             # Generate report in requested format
-            output_text = generate_analysis_report(
-                database.stem,
-                recommendations,
-                patterns,
-                fmt,
+            report = AnalysisReport(
+                database=database.stem,
+                generated_at=datetime.now(UTC).isoformat(),
+                recommendations=recommendations,
+                patterns=patterns,
             )
+
+            if fmt == "json":
+                output_text = report_to_json(report)
+            else:
+                output_text = report_to_markdown(report)
 
         # Write to stdout or file
         if output:
