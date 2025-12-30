@@ -17,6 +17,7 @@ wheels/
 assets/
 data/
 downloads/
+dbs/
 
 # database
 *.sqlite
