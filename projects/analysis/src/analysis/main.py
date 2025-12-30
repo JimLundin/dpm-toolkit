@@ -37,17 +37,38 @@ _JINJA_ENV = Environment(
 
 
 def create_engine_for_database(database: Path) -> Engine:
-    """Create SQLAlchemy engine for a database file."""
+    """Create SQLAlchemy engine for a database file with connection pooling.
+
+    Args:
+        database: Path to the database file (.sqlite, .db, .sqlite3, .mdb, .accdb)
+
+    Returns:
+        Configured SQLAlchemy engine with connection pooling
+
+    Raises:
+        ValueError: If database extension is not supported
+
+    """
     suffix = database.suffix.lower()
 
+    # Connection pool configuration for better resource management
+    pool_config = {
+        "pool_size": 5,  # Maintain 5 connections in pool
+        "max_overflow": 10,  # Allow up to 10 additional connections
+        "pool_pre_ping": True,  # Verify connections before use
+    }
+
     if suffix in {".sqlite", ".db", ".sqlite3"}:
-        return create_engine(f"sqlite:///{database}")
+        return create_engine(f"sqlite:///{database}", **pool_config)
 
     if suffix in {".mdb", ".accdb"}:
         abs_path = database.resolve()
         driver = "Microsoft Access Driver (*.mdb, *.accdb)"
         connection_string = f"DRIVER={{{driver}}};DBQ={abs_path}"
-        return create_engine(f"access+pyodbc:///?odbc_connect={connection_string}")
+        return create_engine(
+            f"access+pyodbc:///?odbc_connect={connection_string}",
+            **pool_config,
+        )
 
     msg = f"Unsupported database extension: {suffix}"
     raise ValueError(msg)
