@@ -10,7 +10,11 @@ from typing import Any
 
 from sqlalchemy import Engine, MetaData
 
-from .types import ColumnStatistics
+from .types import (
+    BOOLEAN_NUMERIC_VALUES,
+    BOOLEAN_STRING_VALUES,
+    ColumnStatistics,
+)
 
 # Compiled regex patterns for efficient pattern matching
 _DATE_PATTERNS = [
@@ -146,7 +150,7 @@ class StatisticsCollector:
             self._analyze_string_patterns(stats, value)
 
         # Boolean detection (numeric)
-        if isinstance(value, (int, bool)) and value in (0, 1, True, False):
+        if isinstance(value, (int, bool)) and value in BOOLEAN_NUMERIC_VALUES:
             stats.boolean_pattern_matches += 1
 
     def _analyze_string_patterns(
@@ -161,7 +165,7 @@ class StatisticsCollector:
             stats.detected_formats["uuid"] = stats.detected_formats.get("uuid", 0) + 1
 
         # Boolean string detection
-        if value.lower() in ("true", "false", "yes", "no", "y", "n", "1", "0"):
+        if value.lower() in BOOLEAN_STRING_VALUES:
             stats.boolean_pattern_matches += 1
 
         # Date pattern detection (various formats)
