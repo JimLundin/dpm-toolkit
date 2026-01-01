@@ -17,18 +17,16 @@ name: Analyze All Database Versions
 # Platform requirement: Uses Windows runners for Access ODBC driver support
 #
 # Trigger conditions:
-# - Runs on pushes to main branch
-# - Runs weekly on Sundays at 00:00 UTC
-# - Can be manually triggered via workflow_dispatch
+# - Runs on pushes to main branch (after PR merge)
+# - Can be manually triggered via workflow_dispatch for ad-hoc analysis
+#
+# Note: Database downloads are cached to avoid unnecessary load on EBA servers
 
 on:
   push:
     branches:
       - main
   workflow_dispatch: # Allow manual trigger
-  schedule:
-    # Run weekly on Sundays at 00:00 UTC
-    - cron: '0 0 * * 0'
 
 jobs:
   list-versions:
@@ -79,10 +77,26 @@ jobs:
       - name: Install project with analysis and migrate tools
         run: uv sync --extra analysis --extra migrate
 
+      - name: Cache database download
+        id: cache-database
+        uses: actions/cache@v4
+        with:
+          path: ./databases
+          key: database-archive-${{ matrix.version_id }}-${{ runner.os }}
+          restore-keys: |
+            database-archive-${{ matrix.version_id }}-
+
       - name: Download original Access database
+        if: steps.cache-database.outputs.cache-hit != 'true'
         run: |
           echo "Downloading original Access database for ${{ matrix.version_id }}..."
           uv run dpm-toolkit download ${{ matrix.version_id }} --variant archive --output ./databases/
+
+      - name: Verify cached database
+        if: steps.cache-database.outputs.cache-hit == 'true'
+        run: |
+          echo "Using cached database for ${{ matrix.version_id }}"
+          Get-ChildItem -Path ./databases -Recurse
 
       - name: Run type refinement analysis on original Access database
         shell: bash

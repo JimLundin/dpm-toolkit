@@ -273,8 +273,9 @@ DPM Toolkit is built as a modular workspace with specialized components:
 The `analyze-all-versions.yml` workflow runs type refinement analysis across all database versions:
 
 - **Original Database Analysis**: Analyzes original Access databases (not converted SQLite) to capture true type refinement opportunities before migration
-- **Automated Execution**: Runs weekly and on pushes to main branch
+- **Automated Execution**: Runs on pushes to main branch (after PR merges)
 - **Multi-Version Analysis**: Analyzes all available database versions in parallel on Windows runners
+- **Database Caching**: Caches downloaded databases to avoid unnecessary load on EBA servers
 - **Aggregate Reports**: Generates summary statistics and common recommendations across versions
 - **Trend Tracking**: Identifies columns that consistently appear in recommendations
 - **GitHub Actions Summary**: Results displayed directly in workflow run summaries
