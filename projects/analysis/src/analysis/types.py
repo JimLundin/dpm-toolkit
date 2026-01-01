@@ -7,6 +7,28 @@ from dataclasses import dataclass, field
 from enum import StrEnum, auto
 from typing import Any
 
+
+# Factory functions for dataclass fields with explicit return types
+def _default_list_any() -> list[Any]:
+    """Create empty list for Any-typed values."""
+    return []
+
+
+def _default_dict_any_int() -> dict[Any, int]:
+    """Create empty dict mapping Any to int."""
+    return {}
+
+
+def _default_dict_str_int() -> dict[str, int]:
+    """Create empty dict mapping str to int."""
+    return {}
+
+
+def _default_dict_str_any() -> dict[str, Any]:
+    """Create empty dict mapping str to Any."""
+    return {}
+
+
 # Boolean value patterns - single source of truth
 # Each tuple represents a pair of boolean values (order doesn't matter for our purposes)
 # These represent common boolean representations across different database systems
@@ -58,10 +80,10 @@ class ColumnStatistics:
     unique_count: int
 
     # Sample values for inspection
-    value_samples: list[Any] = field(default_factory=list)
+    value_samples: list[Any] = field(default_factory=_default_list_any)
 
     # Value distribution (for enum detection)
-    value_counts: dict[Any, int] = field(default_factory=dict)
+    value_counts: dict[Any, int] = field(default_factory=_default_dict_any_int)
 
     # Pattern matching counters
     date_pattern_matches: int = 0
@@ -70,7 +92,7 @@ class ColumnStatistics:
     boolean_pattern_matches: int = 0
 
     # Format detection
-    detected_formats: dict[str, int] = field(default_factory=dict)
+    detected_formats: dict[str, int] = field(default_factory=_default_dict_str_int)
 
     @property
     def cardinality(self) -> int:
@@ -106,7 +128,7 @@ class TypeRecommendation:
     current_type: str
     inferred_type: InferredType
     confidence: float  # 0.0 to 1.0
-    evidence: dict[str, Any] = field(default_factory=dict)
+    evidence: dict[str, Any] = field(default_factory=_default_dict_str_any)
 
     # Type-specific data
     enum_values: set[str] | None = None
