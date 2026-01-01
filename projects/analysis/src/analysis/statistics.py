@@ -104,11 +104,21 @@ class StatisticsCollector:
             for column in table.columns
         )
 
-        # Add unique count for each column
-        aggregations.extend(
-            func.count(func.distinct(column)).label(f"{column.name}__unique")
-            for column in table.columns
-        )
+        # Add unique count for each column using subquery approach
+        # (Access doesn't support COUNT(DISTINCT ...) so we use a subquery)
+        for column in table.columns:
+            # COUNT(*) FROM (SELECT DISTINCT col FROM tbl WHERE col IS NOT NULL)
+            distinct_subq = (
+                select(column)
+                .select_from(table)
+                .where(column.isnot(None))
+                .distinct()
+                .subquery()
+            )
+            unique_count_subq = (
+                select(func.count()).select_from(distinct_subq).scalar_subquery()
+            )
+            aggregations.append(unique_count_subq.label(f"{column.name}__unique"))
 
         # Execute single query with all aggregations
         query = select(*aggregations).select_from(table)
