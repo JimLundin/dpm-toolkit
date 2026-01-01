@@ -9,7 +9,6 @@ from analysis.types import (
     AnalysisReport,
     ColumnStatistics,
     InferredType,
-    NamePattern,
     TypeRecommendation,
 )
 
@@ -60,25 +59,6 @@ def test_type_recommendation_serializes_enum_values() -> None:
     assert result["confidence"] == 0.95
 
 
-def test_name_pattern_dataclass_conversion() -> None:
-    """Test that NamePattern dataclass can be converted to dict."""
-    pattern = NamePattern(
-        pattern_type="suffix",
-        pattern="code",
-        inferred_type=InferredType.ENUM,
-        occurrences=10,
-        confidence=0.85,
-        examples=[f"col_{i}_code" for i in range(10)],  # 10 examples
-    )
-
-    result = asdict(pattern)
-
-    # All examples should be included (template handles limiting)
-    assert len(result["examples"]) == 10
-    # StrEnum remains as StrEnum (it's already a string subclass)
-    assert result["inferred_type"] == InferredType.ENUM
-
-
 def test_analysis_report_json_serialization() -> None:
     """Test AnalysisReport serialization to JSON with custom default handler."""
     # Create a complete report
@@ -92,27 +72,15 @@ def test_analysis_report_json_serialization() -> None:
         enum_values={"pending", "active", "inactive"},  # Set (unsorted)
     )
 
-    pattern = NamePattern(
-        pattern_type="suffix",
-        pattern="flag",
-        inferred_type=InferredType.BOOLEAN,
-        occurrences=5,
-        confidence=0.88,
-        examples=["is_active", "is_deleted"],
-    )
-
     report = AnalysisReport(
         database="test.sqlite",
         generated_at="2024-01-01T00:00:00+00:00",
         recommendations=[recommendation],
-        patterns=[pattern],
     )
 
     # Summary should be computed in __post_init__
     assert report.summary.total_recommendations == 1
     assert report.summary.by_type["enum"] == 1
-    assert report.summary.total_patterns == 1
-    assert report.summary.by_pattern_type["suffix"] == 1
 
     # Convert to dict using asdict() (includes summary field)
     report_dict = asdict(report)
@@ -131,4 +99,3 @@ def test_analysis_report_json_serialization() -> None:
     assert parsed["recommendations"][0]["enum_values"] == expected_enum_values
     # StrEnum should be preserved as string
     assert parsed["recommendations"][0]["inferred_type"] == "enum"
-    assert parsed["patterns"][0]["pattern"] == "flag"
