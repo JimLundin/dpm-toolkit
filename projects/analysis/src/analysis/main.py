@@ -55,13 +55,13 @@ def validate_engine(engine: Engine) -> None:
 
 
 def create_engine_for_database(database: Path) -> Engine:
-    """Create SQLAlchemy engine for a database file with connection pooling.
+    """Create SQLAlchemy engine for a database file.
 
     Args:
         database: Path to the database file (.sqlite, .db, .sqlite3, .mdb, .accdb)
 
     Returns:
-        Configured SQLAlchemy engine with connection pooling
+        Configured SQLAlchemy engine
 
     Raises:
         ValueError: If database extension is not supported
@@ -82,11 +82,9 @@ def create_engine_for_database(database: Path) -> Engine:
         abs_path = database.resolve()
         driver = "Microsoft Access Driver (*.mdb, *.accdb)"
         connection_string = f"DRIVER={{{driver}}};DBQ={abs_path}"
+        # Access/ODBC uses NullPool which doesn't support pooling parameters
         return create_engine(
             f"access+pyodbc:///?odbc_connect={connection_string}",
-            pool_size=5,  # Maintain 5 connections in pool
-            max_overflow=10,  # Allow up to 10 additional connections
-            pool_pre_ping=True,  # Verify connections before use
         )
 
     msg = f"Unsupported database extension: {suffix}"
