@@ -21,6 +21,7 @@ name: Analyze All Database Versions
 # - Can be manually triggered via workflow_dispatch for ad-hoc analysis
 #
 # Note: Database downloads are cached to avoid unnecessary load on EBA servers
+# Cache key format matches download-database.yml for cross-workflow cache reuse
 
 on:
   push:
@@ -77,25 +78,28 @@ jobs:
       - name: Install project with analysis and migrate tools
         run: uv sync --extra analysis --extra migrate
 
+      # Cache key matches download-database.yml format for cross-workflow cache reuse
+      # Format: {version_id}-{database_type}
+      # This allows sharing cache with other workflows that download the same database
       - name: Cache database download
         id: cache-database
         uses: actions/cache@v4
         with:
           path: ./databases
-          key: database-archive-${{ matrix.version_id }}-${{ runner.os }}
+          key: ${{ matrix.version_id }}-archive
           restore-keys: |
-            database-archive-${{ matrix.version_id }}-
+            ${{ matrix.version_id }}-
 
       - name: Download original Access database
         if: steps.cache-database.outputs.cache-hit != 'true'
         run: |
-          echo "Downloading original Access database for ${{ matrix.version_id }}..."
+          echo "Cache miss - downloading original Access database for ${{ matrix.version_id }}..."
           uv run dpm-toolkit download ${{ matrix.version_id }} --variant archive --output ./databases/
 
       - name: Verify cached database
         if: steps.cache-database.outputs.cache-hit == 'true'
         run: |
-          echo "Using cached database for ${{ matrix.version_id }}"
+          echo "Cache hit - using cached database for ${{ matrix.version_id }}"
           Get-ChildItem -Path ./databases -Recurse
 
       - name: Run type refinement analysis on original Access database
@@ -142,6 +146,8 @@ jobs:
           echo "# Type Analysis Across All Database Versions" > aggregate_report.md
           echo "" >> aggregate_report.md
           echo "Generated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> aggregate_report.md
+          echo "" >> aggregate_report.md
+          echo "_Analysis of original Access databases before migration_" >> aggregate_report.md
           echo "" >> aggregate_report.md
 
           # Count total versions analyzed
