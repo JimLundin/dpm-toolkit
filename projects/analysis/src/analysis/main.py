@@ -12,7 +12,6 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from sqlalchemy import create_engine, inspect
 
 from .inference import TypeInferenceEngine
-from .pattern_mining import PatternMiner
 from .reporting import TEMPLATE_DIR, json_default
 from .statistics import StatisticsCollector
 from .types import AnalysisReport
@@ -23,7 +22,7 @@ if TYPE_CHECKING:
 
     from sqlalchemy.engine import Engine
 
-    from .types import NamePattern, TypeRecommendation
+    from .types import TypeRecommendation
 
 # Display limits for markdown reports
 MAX_RECOMMENDATIONS_DISPLAY = 20
@@ -98,7 +97,7 @@ def analyze_database(
     engine: Engine,
     *,
     confidence_threshold: float = 0.7,
-) -> tuple[list[TypeRecommendation], list[NamePattern]]:
+) -> list[TypeRecommendation]:
     """Analyze database for type refinement opportunities.
 
     Args:
@@ -106,7 +105,7 @@ def analyze_database(
         confidence_threshold: Minimum confidence threshold for recommendations
 
     Returns:
-        Tuple of (recommendations, patterns)
+        List of type recommendations
 
     """
     # Collect statistics and analyze
@@ -133,13 +132,7 @@ def analyze_database(
                     ):
                         yield recommendation
 
-    recommendations = list(analyze_tables())
-
-    # Mine patterns
-    pattern_miner = PatternMiner()
-    patterns = pattern_miner.mine_patterns(recommendations)
-
-    return recommendations, patterns
+    return list(analyze_tables())
 
 
 def report_to_json(report: AnalysisReport) -> str:
@@ -159,7 +152,6 @@ def report_to_json(report: AnalysisReport) -> str:
 def generate_report(
     database_name: str,
     recommendations: list[TypeRecommendation],
-    patterns: list[NamePattern],
     fmt: Literal["json", "markdown"],
 ) -> str:
     """Generate analysis report in requested format.
@@ -167,7 +159,6 @@ def generate_report(
     Args:
         database_name: Name of the database
         recommendations: List of type recommendations
-        patterns: List of name patterns
         fmt: Output format (json or markdown)
 
     Returns:
@@ -178,7 +169,6 @@ def generate_report(
         database=database_name,
         generated_at=datetime.now(UTC).isoformat(),
         recommendations=recommendations,
-        patterns=patterns,
     )
 
     if fmt == "json":
@@ -206,22 +196,12 @@ def report_to_markdown(report: AnalysisReport) -> str:
     for recs in recommendations_by_type.values():
         recs.sort(key=lambda r: r.confidence, reverse=True)
 
-    # Group patterns by type and sort by confidence
-    patterns_by_type = defaultdict(list)
-    for pat in report.patterns:
-        patterns_by_type[pat.inferred_type.value].append(pat)
-
-    for pats in patterns_by_type.values():
-        pats.sort(key=lambda p: p.confidence, reverse=True)
-
     return template.render(
         database_name=report.database,
         generated_at=report.generated_at,
         summary=report.summary,
         recommendations_by_type=recommendations_by_type,
-        patterns_by_type=patterns_by_type,
         max_recommendations=MAX_RECOMMENDATIONS_DISPLAY,
         max_enum_values=MAX_ENUM_VALUES_DISPLAY,
         recommendations=report.recommendations,
-        patterns=report.patterns,
     )

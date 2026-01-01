@@ -6,51 +6,12 @@
 ## Summary
 
 - **Total Recommendations:** {{ summary.total_recommendations }}
-- **High Confidence (≥0.9):** {{ summary.by_confidence.high }}
-- **Medium Confidence (0.7-0.9):** {{ summary.by_confidence.medium }}
-- **Low Confidence (<0.7):** {{ summary.by_confidence.low }}
 
 ### By Type
 
 {% for type_name, count in summary.by_type.items()|sort %}
 - **{{ type_name }}:** {{ count }}
 {% endfor %}
-
-{% if patterns %}
-## Discovered Naming Patterns
-
-These patterns can be added to `type_registry.py` to improve future migrations:
-
-{% for inferred_type, type_patterns in patterns_by_type.items()|sort %}
-### {{ inferred_type|upper }} Patterns
-
-{% for pattern in type_patterns[:5] %}
-#### {{ pattern.pattern_type|capitalize }}: `{{ pattern.pattern }}`
-
-- **Occurrences:** {{ pattern.occurrences }} ({{ "%.1f"|format(pattern.confidence * 100) }}% confidence)
-- **Examples:** {{ pattern.examples|join(', ') }}
-
-**Suggested addition to `type_registry.py`:**
-```python
-{% if pattern.pattern_type == "suffix" -%}
-if col_name.lower().endswith("{{ pattern.pattern }}"):
-    return {{ inferred_type|upper }}
-{%- elif pattern.pattern_type == "prefix" -%}
-if col_name.lower().startswith("{{ pattern.pattern }}"):
-    return {{ inferred_type|upper }}
-{%- elif pattern.pattern_type == "exact" -%}
-if col_name.lower() == "{{ pattern.pattern }}":
-    return {{ inferred_type|upper }}
-{%- endif %}
-```
-
-{% endfor %}
-{% endfor %}
-{% else %}
-## Discovered Naming Patterns
-
-No patterns discovered.
-{% endif %}
 
 {% if recommendations %}
 ## Detailed Recommendations
