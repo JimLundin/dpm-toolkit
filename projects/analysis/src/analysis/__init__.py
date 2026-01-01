@@ -7,13 +7,11 @@ from .main import (
     generate_report,
     validate_engine,
 )
-from .pattern_mining import PatternMiner
 from .statistics import StatisticsCollector
 from .types import (
     AnalysisReport,
     ColumnStatistics,
     InferredType,
-    NamePattern,
     ReportSummary,
     TypeRecommendation,
 )
@@ -22,8 +20,6 @@ __all__ = [
     "AnalysisReport",
     "ColumnStatistics",
     "InferredType",
-    "NamePattern",
-    "PatternMiner",
     "ReportSummary",
     "StatisticsCollector",
     "TypeInferenceEngine",
