@@ -122,7 +122,7 @@ jobs:
             > comparison-results/comparison-report.${{ inputs.output_format }}
 
       - name: Upload comparison results
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: database-comparison-${{ needs.get-previous-version.outputs.previous_version }}-to-${{ inputs.version_id }}
           path: comparison-results/
