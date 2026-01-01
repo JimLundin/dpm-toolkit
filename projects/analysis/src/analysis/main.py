@@ -189,7 +189,9 @@ def report_to_markdown(report: AnalysisReport) -> str:
     template = _JINJA_ENV.get_template("report.md")
 
     # Group recommendations by type and sort by confidence
-    recommendations_by_type = defaultdict(list)
+    recommendations_by_type: defaultdict[str, list[TypeRecommendation]] = defaultdict(
+        list,
+    )
     for rec in report.recommendations:
         recommendations_by_type[rec.inferred_type.value].append(rec)
 
