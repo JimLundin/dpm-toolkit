@@ -81,13 +81,13 @@ jobs:
         run: uv sync --extra compare
 
       - name: Download previous database artifact
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: ${{ needs.download-previous.outputs.artifact_name }}
           path: ./old-db/
 
       - name: Download current database artifact
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: ${{ inputs.current_database_artifact_name }}
           path: ./new-db/
