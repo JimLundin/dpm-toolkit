@@ -55,7 +55,7 @@ jobs:
           jq -r '.summary | "**Total Recommendations:** \(.total_recommendations)\n**High Confidence:** \(.by_confidence.high)\n**Medium Confidence:** \(.by_confidence.medium)\n\n### By Type\n" + (.by_type | to_entries | map("- **\(.key):** \(.value)") | join("\n"))' ${{ inputs.sqlite_artifact_name }}-analysis.json >> $GITHUB_STEP_SUMMARY
 
       - name: Upload analysis artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ inputs.sqlite_artifact_name }}-analysis
           path: |

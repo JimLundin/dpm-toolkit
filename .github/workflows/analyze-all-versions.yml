@@ -150,7 +150,7 @@ jobs:
             --output ${{ matrix.version_id }}-analysis.json
 
       - name: Upload analysis result
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: analysis-${{ matrix.version_id }}
           path: ${{ matrix.version_id }}-analysis.json
@@ -268,7 +268,7 @@ jobs:
           cat aggregate_report.md >> $GITHUB_STEP_SUMMARY
 
       - name: Upload aggregate report
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: aggregate-analysis-report
           path: |
@@ -299,7 +299,7 @@ jobs:
           }' ./analysis-results/*-analysis.json > aggregate_analysis.json
 
       - name: Upload JSON aggregate
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: aggregate-analysis-json
           path: aggregate_analysis.json
