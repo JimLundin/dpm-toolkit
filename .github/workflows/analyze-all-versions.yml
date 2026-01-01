@@ -1,0 +1,243 @@
+name: Analyze All Database Versions
+
+# This workflow runs type refinement analysis on all available database versions
+# and aggregates the results to identify trends and common recommendations across versions.
+#
+# The workflow:
+# 1. Lists all database versions with converted SQLite databases
+# 2. Downloads and analyzes each version in parallel (up to 5 concurrent jobs)
+# 3. Aggregates all analysis results into a summary report
+# 4. Displays aggregate statistics in the GitHub Actions summary
+# 5. Uploads individual and aggregate analysis artifacts
+#
+# Trigger conditions:
+# - Runs on pushes to main branch
+# - Runs weekly on Sundays at 00:00 UTC
+# - Can be manually triggered via workflow_dispatch
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Allow manual trigger
+  schedule:
+    # Run weekly on Sundays at 00:00 UTC
+    - cron: '0 0 * * 0'
+
+jobs:
+  list-versions:
+    runs-on: ubuntu-latest
+    outputs:
+      version_matrix: ${{ steps.set-matrix.outputs.version_matrix }}
+      version_count: ${{ steps.set-matrix.outputs.version_count }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install python
+        run: uv python install
+
+      - name: Install project
+        run: uv sync
+
+      - name: Get versions and set matrix
+        id: set-matrix
+        shell: bash
+        run: |
+          # Get all versions with converted SQLite databases available
+          VERSIONS=$(uv run dpm-toolkit versions --group all --fmt json | jq -c '[.[] | select(.converted != null) | .id]')
+          echo "version_matrix={\"version_id\":${VERSIONS}}" >> $GITHUB_OUTPUT
+          echo "version_count=$(echo $VERSIONS | jq 'length')" >> $GITHUB_OUTPUT
+          echo "Found $(echo $VERSIONS | jq 'length') versions to analyze"
+
+  analyze-versions:
+    needs: list-versions
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.list-versions.outputs.version_matrix) }}
+      fail-fast: false # Continue analyzing other versions even if one fails
+      max-parallel: 5 # Limit concurrent jobs to avoid rate limiting
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install python
+        run: uv python install
+
+      - name: Install project with analysis tools
+        run: uv sync --extra analysis
+
+      - name: Download converted SQLite database
+        run: |
+          echo "Downloading ${{ matrix.version_id }}..."
+          uv run dpm-toolkit download ${{ matrix.version_id }} --variant converted --output ./databases/
+
+      - name: Run type refinement analysis
+        run: |
+          SQLITE_FILE=$(find ./databases -name "*.sqlite" -type f | head -1)
+          echo "Analyzing database: $SQLITE_FILE"
+
+          uv run dpm-toolkit analyze "$SQLITE_FILE" \
+            --fmt json \
+            --confidence 0.8 \
+            --output ${{ matrix.version_id }}-analysis.json
+
+      - name: Upload analysis result
+        uses: actions/upload-artifact@v5
+        with:
+          name: analysis-${{ matrix.version_id }}
+          path: ${{ matrix.version_id }}-analysis.json
+          retention-days: 30
+
+  aggregate-results:
+    needs: [list-versions, analyze-versions]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download all analysis artifacts
+        uses: actions/download-artifact@v6
+        with:
+          pattern: analysis-*
+          path: ./analysis-results
+          merge-multiple: true
+
+      - name: Install jq for JSON processing
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Create aggregate report
+        run: |
+          cat > aggregate_analysis.sh << 'SCRIPT'
+          #!/bin/bash
+          set -e
+
+          echo "# Type Analysis Across All Database Versions" > aggregate_report.md
+          echo "" >> aggregate_report.md
+          echo "Generated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> aggregate_report.md
+          echo "" >> aggregate_report.md
+
+          # Count total versions analyzed
+          TOTAL_VERSIONS=$(find ./analysis-results -name "*-analysis.json" | wc -l)
+          echo "**Total versions analyzed:** $TOTAL_VERSIONS" >> aggregate_report.md
+          echo "" >> aggregate_report.md
+
+          # Create summary table
+          echo "## Summary by Version" >> aggregate_report.md
+          echo "" >> aggregate_report.md
+          echo "| Version | Total Recommendations | ENUM | BOOLEAN | UUID | DATE | DATETIME |" >> aggregate_report.md
+          echo "|---------|----------------------|------|---------|------|------|----------|" >> aggregate_report.md
+
+          for file in ./analysis-results/*-analysis.json; do
+            VERSION=$(basename "$file" | sed 's/-analysis.json//')
+            TOTAL=$(jq -r '.summary.total_recommendations' "$file")
+            ENUM=$(jq -r '.summary.by_type.enum // 0' "$file")
+            BOOLEAN=$(jq -r '.summary.by_type.boolean // 0' "$file")
+            UUID=$(jq -r '.summary.by_type.uuid // 0' "$file")
+            DATE=$(jq -r '.summary.by_type.date // 0' "$file")
+            DATETIME=$(jq -r '.summary.by_type.datetime // 0' "$file")
+
+            echo "| $VERSION | $TOTAL | $ENUM | $BOOLEAN | $UUID | $DATE | $DATETIME |" >> aggregate_report.md
+          done
+
+          echo "" >> aggregate_report.md
+
+          # Calculate aggregate statistics
+          echo "## Aggregate Statistics" >> aggregate_report.md
+          echo "" >> aggregate_report.md
+
+          TOTAL_RECOMMENDATIONS=$(jq -s 'map(.summary.total_recommendations) | add' ./analysis-results/*-analysis.json)
+          TOTAL_ENUM=$(jq -s 'map(.summary.by_type.enum // 0) | add' ./analysis-results/*-analysis.json)
+          TOTAL_BOOLEAN=$(jq -s 'map(.summary.by_type.boolean // 0) | add' ./analysis-results/*-analysis.json)
+          TOTAL_UUID=$(jq -s 'map(.summary.by_type.uuid // 0) | add' ./analysis-results/*-analysis.json)
+          TOTAL_DATE=$(jq -s 'map(.summary.by_type.date // 0) | add' ./analysis-results/*-analysis.json)
+          TOTAL_DATETIME=$(jq -s 'map(.summary.by_type.datetime // 0) | add' ./analysis-results/*-analysis.json)
+
+          echo "- **Total recommendations across all versions:** $TOTAL_RECOMMENDATIONS" >> aggregate_report.md
+          echo "- **ENUM recommendations:** $TOTAL_ENUM" >> aggregate_report.md
+          echo "- **BOOLEAN recommendations:** $TOTAL_BOOLEAN" >> aggregate_report.md
+          echo "- **UUID recommendations:** $TOTAL_UUID" >> aggregate_report.md
+          echo "- **DATE recommendations:** $TOTAL_DATE" >> aggregate_report.md
+          echo "- **DATETIME recommendations:** $TOTAL_DATETIME" >> aggregate_report.md
+          echo "" >> aggregate_report.md
+
+          # Find most common recommendations across versions
+          echo "## Most Common Recommendations" >> aggregate_report.md
+          echo "" >> aggregate_report.md
+          echo "Tables and columns that appear in recommendations across multiple versions:" >> aggregate_report.md
+          echo "" >> aggregate_report.md
+
+          jq -s '
+            map(.recommendations[]) |
+            group_by(.table_name + "." + .column_name) |
+            map({
+              location: .[0].table_name + "." + .[0].column_name,
+              inferred_type: .[0].inferred_type,
+              occurrences: length,
+              avg_confidence: (map(.confidence) | add / length | . * 100 | round / 100)
+            }) |
+            sort_by(-.occurrences) |
+            .[:20]
+          ' ./analysis-results/*-analysis.json > common_recommendations.json
+
+          echo "| Table.Column | Inferred Type | Occurrences | Avg Confidence |" >> aggregate_report.md
+          echo "|--------------|---------------|-------------|----------------|" >> aggregate_report.md
+
+          jq -r '.[] | "| \(.location) | \(.inferred_type) | \(.occurrences) | \(.avg_confidence) |"' common_recommendations.json >> aggregate_report.md
+
+          echo "" >> aggregate_report.md
+          echo "---" >> aggregate_report.md
+          echo "" >> aggregate_report.md
+          echo "*Analysis run with confidence threshold: 0.8*" >> aggregate_report.md
+          SCRIPT
+
+          chmod +x aggregate_analysis.sh
+          ./aggregate_analysis.sh
+
+      - name: Display aggregate report in job summary
+        run: |
+          cat aggregate_report.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload aggregate report
+        uses: actions/upload-artifact@v5
+        with:
+          name: aggregate-analysis-report
+          path: |
+            aggregate_report.md
+            ./analysis-results/*.json
+          retention-days: 90
+
+      - name: Create JSON aggregate
+        run: |
+          jq -s '{
+            generated_at: (now | strftime("%Y-%m-%dT%H:%M:%SZ")),
+            total_versions: length,
+            versions: map({
+              database: .database,
+              total_recommendations: .summary.total_recommendations,
+              by_type: .summary.by_type
+            }),
+            aggregate: {
+              total_recommendations: map(.summary.total_recommendations) | add,
+              by_type: {
+                enum: map(.summary.by_type.enum // 0) | add,
+                boolean: map(.summary.by_type.boolean // 0) | add,
+                uuid: map(.summary.by_type.uuid // 0) | add,
+                date: map(.summary.by_type.date // 0) | add,
+                datetime: map(.summary.by_type.datetime // 0) | add
+              }
+            }
+          }' ./analysis-results/*-analysis.json > aggregate_analysis.json
+
+      - name: Upload JSON aggregate
+        uses: actions/upload-artifact@v5
+        with:
+          name: aggregate-analysis-json
+          path: aggregate_analysis.json
+          retention-days: 90
