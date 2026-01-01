@@ -94,8 +94,8 @@ jobs:
         if: steps.cache-database.outputs.cache-hit != 'true'
         run: |
           echo "Cache miss - downloading original Access database for ${{ matrix.version_id }}..."
-          uv run dpm-toolkit download ${{ matrix.version_id }} --variant archive > /tmp/temp.zip
-          unzip /tmp/temp.zip -d ./databases/
+          uv run dpm-toolkit download ${{ matrix.version_id }} --variant archive > temp.zip
+          unzip temp.zip -d ./databases/
 
       - name: Verify cached database
         if: steps.cache-database.outputs.cache-hit == 'true'
