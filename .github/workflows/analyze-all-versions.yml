@@ -1,14 +1,20 @@
 name: Analyze All Database Versions
 
-# This workflow runs type refinement analysis on all available database versions
-# and aggregates the results to identify trends and common recommendations across versions.
+# This workflow runs type refinement analysis on ORIGINAL Access databases
+# to identify type refinement opportunities before any migration occurs.
+#
+# Why original databases?
+# The converted SQLite databases already have type inferences applied during migration,
+# so analyzing them would not give us accurate data about what refinements are needed.
 #
 # The workflow:
-# 1. Lists all database versions with converted SQLite databases
-# 2. Downloads and analyzes each version in parallel (up to 5 concurrent jobs)
+# 1. Lists all database versions with archive (original Access) databases available
+# 2. Downloads and analyzes each original Access database in parallel (up to 3 concurrent jobs)
 # 3. Aggregates all analysis results into a summary report
 # 4. Displays aggregate statistics in the GitHub Actions summary
 # 5. Uploads individual and aggregate analysis artifacts
+#
+# Platform requirement: Uses Windows runners for Access ODBC driver support
 #
 # Trigger conditions:
 # - Runs on pushes to main branch
@@ -47,19 +53,19 @@ jobs:
         id: set-matrix
         shell: bash
         run: |
-          # Get all versions with converted SQLite databases available
-          VERSIONS=$(uv run dpm-toolkit versions --group all --fmt json | jq -c '[.[] | select(.converted != null) | .id]')
+          # Get all versions with archive (original Access) databases available
+          VERSIONS=$(uv run dpm-toolkit versions --group all --fmt json | jq -c '[.[] | select(.archive != null) | .id]')
           echo "version_matrix={\"version_id\":${VERSIONS}}" >> $GITHUB_OUTPUT
           echo "version_count=$(echo $VERSIONS | jq 'length')" >> $GITHUB_OUTPUT
-          echo "Found $(echo $VERSIONS | jq 'length') versions to analyze"
+          echo "Found $(echo $VERSIONS | jq 'length') versions with original Access databases to analyze"
 
   analyze-versions:
     needs: list-versions
-    runs-on: ubuntu-latest
+    runs-on: windows-latest # Required for Access ODBC driver support
     strategy:
       matrix: ${{ fromJson(needs.list-versions.outputs.version_matrix) }}
       fail-fast: false # Continue analyzing other versions even if one fails
-      max-parallel: 5 # Limit concurrent jobs to avoid rate limiting
+      max-parallel: 3 # Limit concurrent Windows jobs to avoid resource constraints
 
     steps:
       - uses: actions/checkout@v5
@@ -70,20 +76,21 @@ jobs:
       - name: Install python
         run: uv python install
 
-      - name: Install project with analysis tools
-        run: uv sync --extra analysis
+      - name: Install project with analysis and migrate tools
+        run: uv sync --extra analysis --extra migrate
 
-      - name: Download converted SQLite database
+      - name: Download original Access database
         run: |
-          echo "Downloading ${{ matrix.version_id }}..."
-          uv run dpm-toolkit download ${{ matrix.version_id }} --variant converted --output ./databases/
+          echo "Downloading original Access database for ${{ matrix.version_id }}..."
+          uv run dpm-toolkit download ${{ matrix.version_id }} --variant archive --output ./databases/
 
-      - name: Run type refinement analysis
+      - name: Run type refinement analysis on original Access database
+        shell: bash
         run: |
-          SQLITE_FILE=$(find ./databases -name "*.sqlite" -type f | head -1)
-          echo "Analyzing database: $SQLITE_FILE"
+          ACCESS_FILE=$(find ./databases -name "*.accdb" -o -name "*.mdb" -type f | head -1)
+          echo "Analyzing original Access database: $ACCESS_FILE"
 
-          uv run dpm-toolkit analyze "$SQLITE_FILE" \
+          uv run dpm-toolkit analyze "$ACCESS_FILE" \
             --fmt json \
             --confidence 0.8 \
             --output ${{ matrix.version_id }}-analysis.json
