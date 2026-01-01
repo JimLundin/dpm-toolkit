@@ -116,7 +116,7 @@ class StatisticsCollector:
 
         # Parse result into per-column statistics
         total_rows = result[0]  # First column is total_rows
-        column_stats = {}
+        column_stats: dict[str, ColumnStatistics] = {}
 
         for idx, column in enumerate(table.columns):
             # Null counts start at index 1
