@@ -18,13 +18,13 @@ dpm-toolkit analyze database.sqlite --confidence 0.9
 ## What It Discovers
 
 - **Enum candidates**: Low-cardinality VARCHAR columns
-- **Boolean patterns**: Columns with binary values or boolean-like naming
+- **Boolean patterns**: Columns with binary values matching boolean patterns
 - **UUID patterns**: VARCHAR columns containing UUID values
-- **Naming patterns**: Suffix/prefix conventions correlated with specific types
+- **Date/DateTime patterns**: Columns containing date or datetime values
 
 ## Output
 
 Reports include:
 - Type recommendations with confidence scores
-- Pattern analysis (e.g., columns ending in `_flag` → boolean)
-- Statistical backing for each recommendation
+- Statistical evidence for each recommendation
+- Enum value sets for low-cardinality columns

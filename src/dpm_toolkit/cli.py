@@ -376,7 +376,7 @@ def analyze(
 
             # Analyze database
             try:
-                recommendations, patterns = analyze_database(
+                recommendations = analyze_database(
                     engine,
                     confidence_threshold=confidence,
                 )
@@ -387,7 +387,7 @@ def analyze(
             progress.update(task, description="Generating report...")
 
             # Generate report in requested format
-            output_text = generate_report(database.stem, recommendations, patterns, fmt)
+            output_text = generate_report(database.stem, recommendations, fmt)
 
         # Write to stdout or file
         if output:
