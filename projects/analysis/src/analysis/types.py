@@ -114,45 +114,27 @@ class TypeRecommendation:
 
 
 @dataclass
-class NamePattern:
-    """A discovered naming pattern correlated with a type."""
-
-    pattern_type: str  # "suffix", "prefix", "exact"
-    pattern: str
-    inferred_type: InferredType
-    occurrences: int
-    confidence: float  # 0.0 to 1.0
-    examples: list[str] = field(default_factory=list)
-
-
-@dataclass
 class ReportSummary:
     """Summary statistics for an analysis report."""
 
     total_recommendations: int
     by_type: dict[str, int]
-    total_patterns: int
-    by_pattern_type: dict[str, int]
 
 
 @dataclass
 class AnalysisReport:
-    """Complete analysis report with recommendations and patterns."""
+    """Complete analysis report with type recommendations."""
 
     database: str
     generated_at: str
     recommendations: list[TypeRecommendation]
-    patterns: list[NamePattern]
     summary: ReportSummary = field(init=False)
 
     def __post_init__(self) -> None:
-        """Compute summary from recommendations and patterns."""
+        """Compute summary from recommendations."""
         by_type = Counter(rec.inferred_type for rec in self.recommendations)
-        by_pattern_type = Counter(pat.pattern_type for pat in self.patterns)
 
         self.summary = ReportSummary(
             total_recommendations=len(self.recommendations),
             by_type={str(k): v for k, v in by_type.items()},
-            total_patterns=len(self.patterns),
-            by_pattern_type={str(k): v for k, v in by_pattern_type.items()},
         )
