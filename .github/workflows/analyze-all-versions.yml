@@ -240,7 +240,7 @@ jobs:
             map(.recommendations[]) |
             group_by(.table_name + "." + .column_name) |
             map({
-              location: .[0].table_name + "." + .[0].column_name,
+              location: (.[0].table_name + "." + .[0].column_name),
               inferred_type: .[0].inferred_type,
               occurrences: length,
               avg_confidence: (map(.confidence) | add / length | . * 100 | round / 100)
@@ -287,13 +287,13 @@ jobs:
               by_type: .summary.by_type
             }),
             aggregate: {
-              total_recommendations: map(.summary.total_recommendations) | add,
+              total_recommendations: (map(.summary.total_recommendations) | add),
               by_type: {
-                enum: map(.summary.by_type.enum // 0) | add,
-                boolean: map(.summary.by_type.boolean // 0) | add,
-                uuid: map(.summary.by_type.uuid // 0) | add,
-                date: map(.summary.by_type.date // 0) | add,
-                datetime: map(.summary.by_type.datetime // 0) | add
+                enum: (map(.summary.by_type.enum // 0) | add),
+                boolean: (map(.summary.by_type.boolean // 0) | add),
+                uuid: (map(.summary.by_type.uuid // 0) | add),
+                date: (map(.summary.by_type.date // 0) | add),
+                datetime: (map(.summary.by_type.datetime // 0) | add)
               }
             }
           }' ./analysis-results/*-analysis.json > aggregate_analysis.json
