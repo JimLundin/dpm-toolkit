@@ -168,9 +168,20 @@ class TypeInferenceEngine:
         if not is_boolean_like:
             return None
 
-        # High confidence if pattern matches
-        pattern_match_ratio = stats.boolean_pattern_matches / stats.non_null_count
-        confidence = min(pattern_match_ratio + 0.5, 1.0)
+        # When value_counts confirms exactly 2 boolean-like values, we have high
+        # confidence. The value_counts comes from full SQL aggregation (not sampling),
+        # so it's authoritative. Pattern matching is only needed for string columns
+        # where we verify format, not for numeric columns where values are exact.
+        if values in BOOLEAN_VALUE_SETS:
+            # Numeric boolean values verified from complete data
+            confidence = 1.0
+            pattern_match_ratio = 1.0
+        else:
+            # String boolean values - use pattern matching ratio
+            # Scale by sample size to avoid penalizing large tables
+            sampled_rows = min(stats.non_null_count, 10000)  # MAX_SAMPLE_ROWS
+            pattern_match_ratio = stats.boolean_pattern_matches / sampled_rows
+            confidence = min(pattern_match_ratio + 0.5, 1.0)
 
         return TypeRecommendation(
             table_name=table_name,
