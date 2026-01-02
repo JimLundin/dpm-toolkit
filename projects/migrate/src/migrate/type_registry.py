@@ -42,13 +42,7 @@ def column_type(column: ReflectedColumn) -> TypeEngine[Any] | None:
     elif name_lower.endswith("guid"):
         data_type = Uuid()
     elif name_lower.endswith("date"):
-        # Preserve DateTime if original Access type is DATETIME
-        # Otherwise use Date (for VARCHAR columns containing date strings)
-        original_type = str(column.get("type", "")).upper()
-        if "DATETIME" in original_type:
-            data_type = DateTime()
-        else:
-            data_type = Date()
+        data_type = Date()
 
     return data_type
 
