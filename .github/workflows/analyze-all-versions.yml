@@ -42,7 +42,7 @@ jobs:
       version_count: ${{ steps.set-matrix.outputs.version_count }}
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Install UV
         uses: astral-sh/setup-uv@v7
@@ -72,7 +72,7 @@ jobs:
       max-parallel: 3 # Limit concurrent Windows jobs to avoid resource constraints
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Install UV
         uses: astral-sh/setup-uv@v7
@@ -161,7 +161,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Download all analysis artifacts
         uses: actions/download-artifact@v7
