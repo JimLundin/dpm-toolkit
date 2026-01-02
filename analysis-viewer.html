@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DPM Analysis Viewer</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.5;
+        }
+
+        header {
+            background: #1a1a2e;
+            color: white;
+            padding: 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .upload-area {
+            padding: 1rem;
+            background: white;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .upload-area input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .tabs {
+            display: flex;
+            overflow-x: auto;
+            background: white;
+            border-bottom: 1px solid #ddd;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .tab {
+            padding: 0.75rem 1rem;
+            border: none;
+            background: none;
+            cursor: pointer;
+            white-space: nowrap;
+            font-size: 0.875rem;
+            color: #666;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab.active {
+            color: #1a1a2e;
+            border-bottom-color: #4a90d9;
+            font-weight: 600;
+        }
+
+        .container {
+            padding: 1rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .card .value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1a1a2e;
+        }
+
+        .card .label {
+            font-size: 0.75rem;
+            color: #666;
+            text-transform: uppercase;
+        }
+
+        .card.enum { border-top: 3px solid #e74c3c; }
+        .card.boolean { border-top: 3px solid #3498db; }
+        .card.uuid { border-top: 3px solid #9b59b6; }
+        .card.date { border-top: 3px solid #2ecc71; }
+        .card.datetime { border-top: 3px solid #f39c12; }
+
+        .filter-bar {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            background: white;
+            cursor: pointer;
+            font-size: 0.875rem;
+        }
+
+        .filter-btn.active {
+            background: #1a1a2e;
+            color: white;
+            border-color: #1a1a2e;
+        }
+
+        .recommendation {
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .recommendation-header {
+            padding: 1rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .recommendation-header:hover {
+            background: #f9f9f9;
+        }
+
+        .recommendation .table-name {
+            font-weight: 600;
+            color: #1a1a2e;
+        }
+
+        .recommendation .column-name {
+            color: #666;
+        }
+
+        .type-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .type-badge.enum { background: #fdeaea; color: #c0392b; }
+        .type-badge.boolean { background: #e8f4fc; color: #2980b9; }
+        .type-badge.uuid { background: #f3e8fc; color: #8e44ad; }
+        .type-badge.date { background: #e8fcf1; color: #27ae60; }
+        .type-badge.datetime { background: #fef5e7; color: #d68910; }
+
+        .recommendation-details {
+            display: none;
+            padding: 1rem;
+            border-top: 1px solid #eee;
+            background: #fafafa;
+        }
+
+        .recommendation.expanded .recommendation-details {
+            display: block;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            color: #666;
+            font-size: 0.875rem;
+        }
+
+        .detail-value {
+            font-weight: 500;
+            text-align: right;
+            word-break: break-word;
+            max-width: 60%;
+        }
+
+        .enum-values {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+            margin-top: 0.5rem;
+        }
+
+        .enum-value {
+            background: #eee;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-family: monospace;
+        }
+
+        .confidence-bar {
+            height: 4px;
+            background: #eee;
+            border-radius: 2px;
+            overflow: hidden;
+            width: 100px;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: #4a90d9;
+            border-radius: 2px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #666;
+        }
+
+        .chevron {
+            transition: transform 0.2s;
+        }
+
+        .recommendation.expanded .chevron {
+            transform: rotate(180deg);
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+        }
+
+        @media (min-width: 768px) {
+            header h1 {
+                font-size: 1.5rem;
+            }
+
+            .summary-cards {
+                grid-template-columns: repeat(5, 1fr);
+            }
+
+            .container {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>DPM Type Analysis Viewer</h1>
+    </header>
+
+    <div class="upload-area">
+        <input type="file" id="fileInput" accept=".json" multiple>
+    </div>
+
+    <div class="tabs" id="tabs"></div>
+
+    <div class="container">
+        <div id="content">
+            <div class="empty-state">
+                <p>Upload analysis JSON files to view results</p>
+                <p style="font-size: 0.875rem; margin-top: 0.5rem;">
+                    Select one or more *-analysis.json files
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let analyses = {};
+        let currentVersion = null;
+        let currentFilter = 'all';
+
+        document.getElementById('fileInput').addEventListener('change', handleFiles);
+
+        function handleFiles(e) {
+            const files = Array.from(e.target.files);
+            files.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        const version = file.name.replace('-analysis.json', '').replace('.json', '');
+                        analyses[version] = data;
+                        renderTabs();
+                        if (!currentVersion) {
+                            selectVersion(version);
+                        }
+                    } catch (err) {
+                        alert('Error parsing ' + file.name);
+                    }
+                };
+                reader.readAsText(file);
+            });
+        }
+
+        function renderTabs() {
+            const tabs = document.getElementById('tabs');
+            const versions = Object.keys(analyses).sort();
+            tabs.innerHTML = versions.map(v =>
+                `<button class="tab ${v === currentVersion ? 'active' : ''}" onclick="selectVersion('${v}')">${v}</button>`
+            ).join('');
+        }
+
+        function selectVersion(version) {
+            currentVersion = version;
+            renderTabs();
+            renderContent();
+        }
+
+        function renderContent() {
+            const data = analyses[currentVersion];
+            if (!data) return;
+
+            const summary = data.summary;
+            const byType = summary.by_type || {};
+
+            document.getElementById('content').innerHTML = `
+                <div class="summary-cards">
+                    <div class="card">
+                        <div class="value">${summary.total_recommendations}</div>
+                        <div class="label">Total</div>
+                    </div>
+                    <div class="card enum">
+                        <div class="value">${byType.enum || 0}</div>
+                        <div class="label">Enum</div>
+                    </div>
+                    <div class="card boolean">
+                        <div class="value">${byType.boolean || 0}</div>
+                        <div class="label">Boolean</div>
+                    </div>
+                    <div class="card uuid">
+                        <div class="value">${byType.uuid || 0}</div>
+                        <div class="label">UUID</div>
+                    </div>
+                    <div class="card date">
+                        <div class="value">${(byType.date || 0) + (byType.datetime || 0)}</div>
+                        <div class="label">Date/Time</div>
+                    </div>
+                </div>
+
+                <input type="text" class="search-box" placeholder="Search table or column..." oninput="filterBySearch(this.value)">
+
+                <div class="filter-bar">
+                    <button class="filter-btn ${currentFilter === 'all' ? 'active' : ''}" onclick="setFilter('all')">All</button>
+                    <button class="filter-btn ${currentFilter === 'enum' ? 'active' : ''}" onclick="setFilter('enum')">Enum</button>
+                    <button class="filter-btn ${currentFilter === 'boolean' ? 'active' : ''}" onclick="setFilter('boolean')">Boolean</button>
+                    <button class="filter-btn ${currentFilter === 'uuid' ? 'active' : ''}" onclick="setFilter('uuid')">UUID</button>
+                    <button class="filter-btn ${currentFilter === 'date' ? 'active' : ''}" onclick="setFilter('date')">Date</button>
+                    <button class="filter-btn ${currentFilter === 'datetime' ? 'active' : ''}" onclick="setFilter('datetime')">DateTime</button>
+                </div>
+
+                <div id="recommendations"></div>
+            `;
+
+            renderRecommendations();
+        }
+
+        let searchTerm = '';
+
+        function filterBySearch(term) {
+            searchTerm = term.toLowerCase();
+            renderRecommendations();
+        }
+
+        function setFilter(filter) {
+            currentFilter = filter;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.textContent.toLowerCase() === filter);
+            });
+            renderRecommendations();
+        }
+
+        function renderRecommendations() {
+            const data = analyses[currentVersion];
+            if (!data) return;
+
+            let recs = data.recommendations;
+
+            if (currentFilter !== 'all') {
+                recs = recs.filter(r => r.inferred_type === currentFilter);
+            }
+
+            if (searchTerm) {
+                recs = recs.filter(r =>
+                    r.table_name.toLowerCase().includes(searchTerm) ||
+                    r.column_name.toLowerCase().includes(searchTerm)
+                );
+            }
+
+            const container = document.getElementById('recommendations');
+
+            if (recs.length === 0) {
+                container.innerHTML = '<div class="empty-state">No recommendations match your filter</div>';
+                return;
+            }
+
+            container.innerHTML = recs.map((rec, i) => `
+                <div class="recommendation" id="rec-${i}">
+                    <div class="recommendation-header" onclick="toggleRec(${i})">
+                        <div>
+                            <span class="table-name">${rec.table_name}</span>.<span class="column-name">${rec.column_name}</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span class="type-badge ${rec.inferred_type}">${rec.inferred_type}</span>
+                            <span class="chevron">▼</span>
+                        </div>
+                    </div>
+                    <div class="recommendation-details">
+                        <div class="detail-row">
+                            <span class="detail-label">Original Type</span>
+                            <span class="detail-value">${rec.current_type}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Confidence</span>
+                            <span class="detail-value">
+                                <div class="confidence-bar">
+                                    <div class="confidence-fill" style="width: ${rec.confidence * 100}%"></div>
+                                </div>
+                                ${(rec.confidence * 100).toFixed(0)}%
+                            </span>
+                        </div>
+                        ${renderEvidence(rec.evidence)}
+                        ${rec.enum_values ? `
+                            <div class="detail-row" style="flex-direction: column; align-items: flex-start;">
+                                <span class="detail-label">Values (${rec.enum_values.length})</span>
+                                <div class="enum-values">
+                                    ${rec.enum_values.slice(0, 20).map(v => `<span class="enum-value">${escapeHtml(v)}</span>`).join('')}
+                                    ${rec.enum_values.length > 20 ? `<span class="enum-value">+${rec.enum_values.length - 20} more</span>` : ''}
+                                </div>
+                            </div>
+                        ` : ''}
+                        ${rec.detected_format ? `
+                            <div class="detail-row">
+                                <span class="detail-label">Detected Format</span>
+                                <span class="detail-value">${rec.detected_format}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderEvidence(evidence) {
+            if (!evidence) return '';
+            return Object.entries(evidence).map(([key, value]) => {
+                if (key === 'formats') {
+                    return `
+                        <div class="detail-row">
+                            <span class="detail-label">Formats</span>
+                            <span class="detail-value">${Object.entries(value).map(([f, c]) => `${f}: ${c}`).join(', ')}</span>
+                        </div>
+                    `;
+                }
+                return `
+                    <div class="detail-row">
+                        <span class="detail-label">${formatLabel(key)}</span>
+                        <span class="detail-value">${typeof value === 'number' ? value.toLocaleString() : value}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function formatLabel(key) {
+            return key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function toggleRec(i) {
+            document.getElementById(`rec-${i}`).classList.toggle('expanded');
+        }
+    </script>
+</body>
+</html>
