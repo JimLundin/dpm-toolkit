@@ -13,7 +13,7 @@ jobs:
       version_ids: ${{ steps.set-matrix.outputs.version_ids }}
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Install UV
         uses: astral-sh/setup-uv@v7
