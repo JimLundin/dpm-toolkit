@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from .statistics import StatisticsCollector
 from .types import (
     BOOLEAN_VALUE_SETS,
     ColumnStatistics,
@@ -13,6 +14,9 @@ from .types import (
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+
+# Re-export for clarity in this module
+MAX_SAMPLE_ROWS = StatisticsCollector.MAX_SAMPLE_ROWS
 
 
 class TypeInferenceEngine:
@@ -179,7 +183,7 @@ class TypeInferenceEngine:
         else:
             # String boolean values - use pattern matching ratio
             # Scale by sample size to avoid penalizing large tables
-            sampled_rows = min(stats.non_null_count, 10000)  # MAX_SAMPLE_ROWS
+            sampled_rows = min(stats.non_null_count, MAX_SAMPLE_ROWS)
             pattern_match_ratio = stats.boolean_pattern_matches / sampled_rows
             confidence = min(pattern_match_ratio + 0.5, 1.0)
 
@@ -209,7 +213,7 @@ class TypeInferenceEngine:
 
         # Scale by sampled rows to avoid penalizing large tables
         # (pattern matching only samples up to MAX_SAMPLE_ROWS)
-        sampled_rows = min(stats.non_null_count, 10000)  # MAX_SAMPLE_ROWS
+        sampled_rows = min(stats.non_null_count, MAX_SAMPLE_ROWS)
         pattern_match_ratio = stats.date_pattern_matches / sampled_rows
 
         if pattern_match_ratio < self.PATTERN_MATCH_THRESHOLD:
@@ -247,7 +251,7 @@ class TypeInferenceEngine:
 
         # Scale by sampled rows to avoid penalizing large tables
         # (pattern matching only samples up to MAX_SAMPLE_ROWS)
-        sampled_rows = min(stats.non_null_count, 10000)  # MAX_SAMPLE_ROWS
+        sampled_rows = min(stats.non_null_count, MAX_SAMPLE_ROWS)
         pattern_match_ratio = stats.datetime_pattern_matches / sampled_rows
 
         if pattern_match_ratio < self.PATTERN_MATCH_THRESHOLD:
