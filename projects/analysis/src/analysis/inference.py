@@ -207,7 +207,10 @@ class TypeInferenceEngine:
         if stats.date_pattern_matches == 0:
             return None
 
-        pattern_match_ratio = stats.date_pattern_matches / stats.non_null_count
+        # Scale by sampled rows to avoid penalizing large tables
+        # (pattern matching only samples up to MAX_SAMPLE_ROWS)
+        sampled_rows = min(stats.non_null_count, 10000)  # MAX_SAMPLE_ROWS
+        pattern_match_ratio = stats.date_pattern_matches / sampled_rows
 
         if pattern_match_ratio < self.PATTERN_MATCH_THRESHOLD:
             return None
@@ -242,7 +245,10 @@ class TypeInferenceEngine:
         if stats.datetime_pattern_matches == 0:
             return None
 
-        pattern_match_ratio = stats.datetime_pattern_matches / stats.non_null_count
+        # Scale by sampled rows to avoid penalizing large tables
+        # (pattern matching only samples up to MAX_SAMPLE_ROWS)
+        sampled_rows = min(stats.non_null_count, 10000)  # MAX_SAMPLE_ROWS
+        pattern_match_ratio = stats.datetime_pattern_matches / sampled_rows
 
         if pattern_match_ratio < self.PATTERN_MATCH_THRESHOLD:
             return None
