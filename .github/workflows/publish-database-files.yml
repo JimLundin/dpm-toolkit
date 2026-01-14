@@ -29,13 +29,20 @@ jobs:
     with:
       source_artifact_name: ${{ needs.download-original.outputs.artifact_name }}
 
+  analyze-converted:
+    needs: build-converted
+    uses: ./.github/workflows/analyze-database.yml
+    with:
+      sqlite_artifact_name: ${{ needs.build-converted.outputs.artifact_name }}
+      confidence_threshold: "0.8"
+
   create-release:
-    needs: [download-original, build-converted]
+    needs: [download-original, build-converted, analyze-converted]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set release tag
         run: |
@@ -43,16 +50,22 @@ jobs:
           echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
 
       - name: Download original files for archive
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: ${{ needs.download-original.outputs.artifact_name }}
           path: archive-files/
 
       - name: Download SQLite database for converted
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: ${{ needs.build-converted.outputs.artifact_name }}
           path: converted-files/
+
+      - name: Download analysis reports
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ needs.analyze-converted.outputs.artifact_name }}
+          path: analysis-files/
 
       - name: Create archive zip
         run: |
@@ -64,11 +77,22 @@ jobs:
           cd converted-files
           zip "../dpm-${{ env.VERSION_ID }}-sqlite.zip" *.sqlite
 
+      - name: Create analysis zip
+        run: |
+          cd analysis-files
+          zip -r "../dpm-${{ env.VERSION_ID }}-analysis.zip" .
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           name: "DPM Database Files - ${{ env.VERSION_ID }}"
-          body: "Database files for version ${{ env.VERSION_ID }}"
+          body: |
+            Database files for version ${{ env.VERSION_ID }}
+
+            **Available Downloads:**
+            - `dpm-${{ env.VERSION_ID }}-archive.zip` - Original Access database files
+            - `dpm-${{ env.VERSION_ID }}-sqlite.zip` - Converted SQLite database
+            - `dpm-${{ env.VERSION_ID }}-analysis.zip` - Type refinement analysis reports (JSON + Markdown)
           prerelease: ${{ inputs.prerelease }}
           files: dpm-${{ env.VERSION_ID }}-*.zip

@@ -264,8 +264,26 @@ DPM Toolkit is built as a modular workspace with specialized components:
 1. **Discovery**: GitHub Actions automatically detect new EBA releases
 2. **Conversion**: Windows runners convert Access databases to SQLite
 3. **Model Generation**: Creates type-safe SQLAlchemy models
-4. **Publishing**: Releases artifacts as GitHub releases
-5. **Distribution**: Makes databases available via CLI and direct download
+4. **Type Analysis**: Automated analysis across all database versions for type refinement opportunities
+5. **Publishing**: Releases artifacts as GitHub releases
+6. **Distribution**: Makes databases available via CLI and direct download
+
+### Analysis Workflow
+
+The `analyze-all-versions.yml` workflow runs type refinement analysis across all database versions:
+
+- **Original Database Analysis**: Analyzes original Access databases (not converted SQLite) to capture true type refinement opportunities before migration
+- **Automated Execution**: Runs on pushes to main branch (after PR merges)
+- **Multi-Version Analysis**: Analyzes all available database versions in parallel on Windows runners
+- **Database Caching**: Caches downloaded databases to avoid unnecessary load on EBA servers
+- **Aggregate Reports**: Generates summary statistics and common recommendations across versions
+- **Trend Tracking**: Identifies columns that consistently appear in recommendations
+- **GitHub Actions Summary**: Results displayed directly in workflow run summaries
+
+Manual trigger:
+```bash
+# Via GitHub Actions UI: Actions → Analyze All Database Versions → Run workflow
+```
 
 ## Important Notes
 
