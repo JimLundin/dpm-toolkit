@@ -120,3 +120,5 @@ type = "release"
 semver = "4.2.0"
 date = 2025-11-25
 original = { url = "https://www.eba.europa.eu/sites/default/files/2025-11/d67068fe-6327-4890-9163-3a9fcdabb58f/DPM2%20Database_v%204_2_20251125.zip", checksum = "sha256:4f6f62422ac2bbef7a5d8da969e61a81e653dfcec6bdccc1f5c9197a8392d5c0" }
+archive = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-4.2-release/dpm-4.2-release-archive.zip", checksum = "sha256:d39647be04e05553c9cc73b1dcd2339d16d7775a9a32b9473392be602fb78b88" }
+converted = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-4.2-release/dpm-4.2-release-sqlite.zip", checksum = "sha256:c07ea01529906e5a8d6150e7018c4a0c48a5141dca727a5d05a43694b9353d67" }
