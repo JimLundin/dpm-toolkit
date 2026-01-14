@@ -4,6 +4,7 @@ requires-python = ">=3.13"
 
 [manifest]
 members = [
+    "analysis",
     "archive",
     "compare",
     "dpm-toolkit",
@@ -11,6 +12,21 @@ members = [
     "migrate",
     "schema",
     "scrape",
+]
+
+[[package]]
+name = "analysis"
+version = "0.0.0"
+source = { editable = "projects/analysis" }
+dependencies = [
+    { name = "jinja2" },
+    { name = "sqlalchemy" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "jinja2", specifier = ">=3.0" },
+    { name = "sqlalchemy", specifier = ">=2.0" },
 ]
 
 [[package]]
@@ -149,6 +165,9 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+analysis = [
+    { name = "analysis" },
+]
 compare = [
     { name = "compare" },
 ]
@@ -176,6 +195,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "analysis", marker = "extra == 'analysis'", editable = "projects/analysis" },
     { name = "archive", editable = "projects/archive" },
     { name = "compare", marker = "extra == 'compare'", editable = "projects/compare" },
     { name = "cyclopts", specifier = ">=3.1.0" },
@@ -183,7 +203,7 @@ requires-dist = [
     { name = "schema", marker = "extra == 'schema'", editable = "projects/schema" },
     { name = "scrape", marker = "extra == 'scrape'", editable = "projects/scrape" },
 ]
-provides-extras = ["scrape", "migrate", "schema", "compare"]
+provides-extras = ["scrape", "migrate", "schema", "compare", "analysis"]
 
 [package.metadata.requires-dev]
 dev = [

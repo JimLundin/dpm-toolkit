@@ -21,11 +21,11 @@ jobs:
   download:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Cache downloaded databases
         id: cache-dbs
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: download-temp/
           key: ${{ inputs.version_id }}-${{ inputs.database_type }}
@@ -50,7 +50,7 @@ jobs:
           rm /tmp/temp.zip
 
       - name: Upload database artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ inputs.version_id }}-${{ inputs.database_type }}
           path: download-temp/

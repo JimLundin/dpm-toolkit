@@ -47,6 +47,10 @@ jobs:
             path: projects/scrape
             extras: --extra scrape
             os: ubuntu-latest
+          - name: Analysis Module
+            path: projects/analysis
+            extras: --extra analysis
+            os: ubuntu-latest
           - name: Migrate Module
             path: projects/migrate
             extras: --extra migrate
@@ -54,7 +58,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Install UV
         uses: astral-sh/setup-uv@v7
@@ -68,7 +72,7 @@ jobs:
       - name: Cache Access Database Engine
         if: matrix.project.os == 'windows-latest'
         id: cache-access-engine
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ env.ACCESS_ENGINE_INSTALLER }}
           key: access-engine-${{ env.ACCESS_ENGINE_SHA256 }}

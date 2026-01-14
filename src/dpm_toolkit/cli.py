@@ -89,6 +89,24 @@ def validate_database_extension(
         sys.exit(1)
 
 
+def validate_output_path(output: Path) -> None:
+    """Validate output path is writable."""
+    output_dir = output.parent
+    if not output_dir.exists():
+        print_error(f"Output directory does not exist: {output_dir}")
+        sys.exit(1)
+    if not output_dir.is_dir():
+        print_error(f"Output path parent is not a directory: {output_dir}")
+        sys.exit(1)
+    # Test write permissions by checking if we can create a file
+    try:
+        output.touch()
+        output.unlink()
+    except (PermissionError, OSError) as e:
+        print_error(f"Cannot write to output path: {output} ({e})")
+        sys.exit(1)
+
+
 def format_version_table(version: Version) -> None:
     """Format version information as a rich table."""
     table = Table(show_header=False)
@@ -300,6 +318,91 @@ def compare(old_location: Path, new_location: Path, fmt: Format = "table") -> No
     if fmt == "table":
         comparison_summary = comparisons_to_summary(comparisons)
         format_comparison_table(comparison_summary)
+
+
+@app.command
+def analyze(
+    database: Path,
+    fmt: Literal["json", "markdown"] = "json",
+    *,
+    output: Path | None = None,
+    confidence: float = 0.7,
+) -> None:
+    """Analyze database for type refinement opportunities."""
+    try:
+        from analysis import (
+            analyze_database,
+            create_engine_for_database,
+            generate_report,
+            validate_engine,
+        )
+    except ImportError:
+        print_error("Analysis requires [analysis] extra dependencies")
+        sys.exit(1)
+
+    from sqlalchemy.exc import SQLAlchemyError
+
+    validate_database_location(database, exists=True)
+    validate_database_extension(database, SQLITE_EXTENSIONS | ACCESS_EXTENSIONS)
+
+    # Validate confidence parameter bounds
+    if not 0.0 <= confidence <= 1.0:
+        print_error(f"Confidence must be between 0.0 and 1.0, got {confidence}")
+        sys.exit(1)
+
+    # Validate output path before analysis
+    if output:
+        validate_output_path(output)
+
+    print_info(f"Database: {database}")
+    print_info(f"Output format: {fmt}")
+    print_info(f"Confidence threshold: {confidence}")
+
+    try:
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=err_console,
+        ) as progress:
+            task = progress.add_task("Analyzing database...", total=None)
+
+            # Create engine and validate schema
+            try:
+                engine = create_engine_for_database(database)
+                validate_engine(engine)
+            except (SQLAlchemyError, ValueError) as e:
+                print_error(f"Failed to connect to database: {e}")
+                sys.exit(1)
+
+            # Analyze database
+            try:
+                recommendations = analyze_database(
+                    engine,
+                    confidence_threshold=confidence,
+                )
+            except SQLAlchemyError as e:
+                print_error(f"Analysis failed: {e}")
+                sys.exit(1)
+
+            progress.update(task, description="Generating report...")
+
+            # Generate report in requested format
+            output_text = generate_report(database.stem, recommendations, fmt)
+
+        # Write to stdout or file
+        if output:
+            try:
+                output.write_text(output_text)
+                print_success(f"Analysis complete! Report written to {output}")
+            except (PermissionError, OSError) as e:
+                print_error(f"Failed to write output file: {e}")
+                sys.exit(1)
+        else:
+            stdout.write(output_text)
+            print_success("Analysis complete!")
+    except KeyboardInterrupt:
+        print_error("Analysis interrupted by user")
+        sys.exit(1)
 
 
 def main() -> None:
