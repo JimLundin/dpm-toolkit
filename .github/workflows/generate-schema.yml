@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Install UV
         uses: astral-sh/setup-uv@v7
@@ -29,7 +29,7 @@ jobs:
         run: uv sync --extra schema --dev
 
       - name: Download SQLite database artifact
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: ${{ inputs.sqlite_artifact_name }}
 
@@ -65,7 +65,7 @@ jobs:
           echo "✅ HTML diagram is well-formed"
 
       - name: Upload schema artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ inputs.sqlite_artifact_name }}-schema
           path: |
