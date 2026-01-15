@@ -117,3 +117,76 @@ def test_no_inference_empty_data() -> None:
     result = engine.infer_type("users", "optional_field", "VARCHAR", stats)
 
     assert result is None
+
+
+def test_guid_columns_filtered_from_uuid_analysis() -> None:
+    """Test that columns with 'guid' in name are not identified as UUIDs."""
+    engine = TypeInferenceEngine()
+    stats = ColumnStatistics(
+        total_rows=1000,
+        null_count=0,
+        unique_count=1000,
+        uuid_pattern_matches=1000,  # 100% UUID pattern match
+    )
+
+    # Test various GUID column names
+    guid_columns = ["RowGUID", "rowguid", "entity_guid", "GUID", "user_GUID_id"]
+    for column_name in guid_columns:
+        result = engine.infer_type("users", column_name, "VARCHAR", stats)
+        assert result is None, (
+            f"Column {column_name} should be filtered from UUID analysis"
+        )
+
+
+def test_non_guid_columns_still_identified_as_uuid() -> None:
+    """Test that non-GUID columns are still identified as UUIDs."""
+    engine = TypeInferenceEngine()
+    stats = ColumnStatistics(
+        total_rows=1000,
+        null_count=0,
+        unique_count=1000,
+        uuid_pattern_matches=990,  # 99% match
+    )
+
+    # Test non-GUID column names
+    result = engine.infer_type("users", "external_id", "VARCHAR", stats)
+    assert result is not None
+    assert result.inferred_type == InferredType.UUID
+
+
+def test_integer_columns_not_inferred_as_enum() -> None:
+    """Test that integer columns with low cardinality are not inferred as enums."""
+    engine = TypeInferenceEngine()
+    stats = ColumnStatistics(
+        total_rows=1000,
+        null_count=0,
+        unique_count=3,
+        value_counts={1: 500, 2: 300, 3: 200},
+    )
+
+    # Test various integer type names
+    integer_types = ["INTEGER", "BIGINT", "SMALLINT", "INT", "TINYINT"]
+    for type_name in integer_types:
+        result = engine.infer_type("users", "status_code", type_name, stats)
+        # Should not be inferred as enum (could be boolean if values match pattern)
+        assert result is None or result.inferred_type != InferredType.ENUM, (
+            f"Type {type_name} should not be inferred as enum"
+        )
+
+
+def test_string_columns_still_inferred_as_enum() -> None:
+    """Test that string columns with low cardinality are still inferred as enums."""
+    engine = TypeInferenceEngine()
+    stats = ColumnStatistics(
+        total_rows=1000,
+        null_count=0,
+        unique_count=3,
+        value_counts={"active": 500, "inactive": 300, "pending": 200},
+    )
+
+    # Test various string type names
+    string_types = ["VARCHAR", "TEXT", "CHAR", "VARCHAR(50)", "NVARCHAR"]
+    for type_name in string_types:
+        result = engine.infer_type("users", "status", type_name, stats)
+        assert result is not None, f"Type {type_name} should be inferred as enum"
+        assert result.inferred_type == InferredType.ENUM

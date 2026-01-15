@@ -36,6 +36,29 @@ class TypeInferenceEngine:
     ENUM_DATA_BOOST = 0.2  # Confidence boost for large datasets
     ENUM_RATIO_PENALTY = 0.3  # Penalty multiplier for high cardinality ratio
 
+    @staticmethod
+    def _is_string_type(type_str: str) -> bool:
+        """Check if a SQL type is a string/text type.
+
+        Args:
+            type_str: SQL type string (e.g., "VARCHAR", "TEXT", "INTEGER")
+
+        Returns:
+            True if the type is a string type, False otherwise
+
+        """
+        type_upper = type_str.upper()
+        string_types = (
+            "VARCHAR",
+            "CHAR",
+            "TEXT",
+            "STRING",
+            "CLOB",
+            "NVARCHAR",
+            "NCHAR",
+        )
+        return any(string_type in type_upper for string_type in string_types)
+
     def infer_type(  # noqa: PLR0911
         self,
         table_name: str,
@@ -117,7 +140,15 @@ class TypeInferenceEngine:
         current_type: str,
         stats: ColumnStatistics,
     ) -> TypeRecommendation | None:
-        """Check if column should be an enum."""
+        """Check if column should be an enum.
+
+        Only analyzes string/text columns to avoid false positives on
+        low-cardinality integer columns.
+        """
+        # Only analyze string columns as enums
+        if not self._is_string_type(current_type):
+            return None
+
         # Low cardinality check
         if stats.cardinality > self.ENUM_CARDINALITY_THRESHOLD:
             return None
@@ -286,7 +317,14 @@ class TypeInferenceEngine:
         current_type: str,
         stats: ColumnStatistics,
     ) -> TypeRecommendation | None:
-        """Check if column should be a UUID."""
+        """Check if column should be a UUID.
+
+        Filters out trivial cases where column name contains 'guid'.
+        """
+        # Skip columns with "guid" in their name - this is trivial
+        if "guid" in column_name.lower():
+            return None
+
         if stats.uuid_pattern_matches == 0:
             return None
 
