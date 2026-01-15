@@ -120,7 +120,7 @@ def test_no_inference_empty_data() -> None:
 
 
 def test_guid_columns_filtered_from_uuid_analysis() -> None:
-    """Test that columns with 'guid' in name are not identified as UUIDs."""
+    """Test that columns with GUID/UUID type are not identified as UUIDs."""
     engine = TypeInferenceEngine()
     stats = ColumnStatistics(
         total_rows=1000,
@@ -129,17 +129,23 @@ def test_guid_columns_filtered_from_uuid_analysis() -> None:
         uuid_pattern_matches=1000,  # 100% UUID pattern match
     )
 
-    # Test various GUID column names
-    guid_columns = ["RowGUID", "rowguid", "entity_guid", "GUID", "user_GUID_id"]
-    for column_name in guid_columns:
-        result = engine.infer_type("users", column_name, "VARCHAR", stats)
-        assert result is None, (
-            f"Column {column_name} should be filtered from UUID analysis"
-        )
+    # Test various GUID/UUID type names from different databases:
+    # Access/SQL Server use GUID/UNIQUEIDENTIFIER, PostgreSQL uses UUID
+    guid_types = [
+        "GUID",
+        "guid",
+        "UNIQUEIDENTIFIER",
+        "uniqueidentifier",
+        "UUID",
+        "uuid",
+    ]
+    for type_name in guid_types:
+        result = engine.infer_type("users", "id", type_name, stats)
+        assert result is None, f"Type {type_name} should be filtered from UUID analysis"
 
 
-def test_non_guid_columns_still_identified_as_uuid() -> None:
-    """Test that non-GUID columns are still identified as UUIDs."""
+def test_non_guid_types_still_identified_as_uuid() -> None:
+    """Test that non-GUID types with UUID patterns are still identified."""
     engine = TypeInferenceEngine()
     stats = ColumnStatistics(
         total_rows=1000,
@@ -148,7 +154,7 @@ def test_non_guid_columns_still_identified_as_uuid() -> None:
         uuid_pattern_matches=990,  # 99% match
     )
 
-    # Test non-GUID column names
+    # Test string types that contain UUID patterns
     result = engine.infer_type("users", "external_id", "VARCHAR", stats)
     assert result is not None
     assert result.inferred_type == InferredType.UUID
