@@ -184,7 +184,16 @@ class TypeInferenceEngine:
         current_type: str,
         stats: ColumnStatistics,
     ) -> TypeRecommendation | None:
-        """Check if column should be a boolean."""
+        """Check if column should be a boolean.
+
+        Filters out trivial cases where type is already a boolean type.
+        """
+        # Skip columns already typed as boolean - this is trivial
+        # Common database types: BOOLEAN, BOOL, BIT, YESNO (Access)
+        type_lower = current_type.lower()
+        if "bool" in type_lower or "bit" in type_lower or "yesno" in type_lower:
+            return None
+
         # Must have exactly 2 unique values
         if stats.cardinality != self.BOOLEAN_VALUE_COUNT:
             return None
@@ -238,7 +247,15 @@ class TypeInferenceEngine:
         current_type: str,
         stats: ColumnStatistics,
     ) -> TypeRecommendation | None:
-        """Check if column should be a date."""
+        """Check if column should be a date.
+
+        Filters out trivial cases where type is already a date type.
+        """
+        # Skip columns already typed as date - this is trivial
+        type_lower = current_type.lower()
+        if "date" in type_lower and "datetime" not in type_lower:
+            return None
+
         if stats.date_pattern_matches == 0:
             return None
 
@@ -276,7 +293,15 @@ class TypeInferenceEngine:
         current_type: str,
         stats: ColumnStatistics,
     ) -> TypeRecommendation | None:
-        """Check if column should be a datetime."""
+        """Check if column should be a datetime.
+
+        Filters out trivial cases where type is already a datetime/timestamp type.
+        """
+        # Skip columns already typed as datetime/timestamp - this is trivial
+        type_lower = current_type.lower()
+        if "datetime" in type_lower or "timestamp" in type_lower:
+            return None
+
         if stats.datetime_pattern_matches == 0:
             return None
 
