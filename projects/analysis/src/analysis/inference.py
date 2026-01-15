@@ -319,10 +319,16 @@ class TypeInferenceEngine:
     ) -> TypeRecommendation | None:
         """Check if column should be a UUID.
 
-        Filters out trivial cases where column name contains 'guid'.
+        Filters out trivial cases where type is already GUID/UUID.
         """
-        # Skip columns with "guid" in their name - this is trivial
-        if "guid" in column_name.lower():
+        # Skip columns already typed as GUID/UUID - this is trivial
+        # Common database types: GUID, UNIQUEIDENTIFIER (SQL Server), UUID (PostgreSQL)
+        type_lower = current_type.lower()
+        if (
+            "guid" in type_lower
+            or "uuid" in type_lower
+            or "uniqueidentifier" in type_lower
+        ):
             return None
 
         if stats.uuid_pattern_matches == 0:
