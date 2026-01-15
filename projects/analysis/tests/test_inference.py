@@ -196,3 +196,131 @@ def test_string_columns_still_inferred_as_enum() -> None:
         result = engine.infer_type("users", "status", type_name, stats)
         assert result is not None, f"Type {type_name} should be inferred as enum"
         assert result.inferred_type == InferredType.ENUM
+
+
+def test_boolean_types_filtered_from_boolean_analysis() -> None:
+    """Test that columns already typed as boolean are not identified as booleans."""
+    engine = TypeInferenceEngine()
+    stats = ColumnStatistics(
+        total_rows=1000,
+        null_count=0,
+        unique_count=2,
+        value_counts={0: 600, 1: 400},
+        boolean_pattern_matches=1000,
+    )
+
+    # Test various boolean type names from different databases:
+    # BOOLEAN (standard), BOOL (PostgreSQL), BIT (SQL Server), YESNO (Access)
+    boolean_types = [
+        "BOOLEAN",
+        "boolean",
+        "BOOL",
+        "bool",
+        "BIT",
+        "bit",
+        "YESNO",
+        "yesno",
+        "BIT(1)",
+    ]
+    for type_name in boolean_types:
+        result = engine.infer_type("users", "is_active", type_name, stats)
+        assert result is None, (
+            f"Type {type_name} should be filtered from boolean analysis"
+        )
+
+
+def test_non_boolean_types_still_identified_as_boolean() -> None:
+    """Test that non-boolean types with boolean patterns are still identified."""
+    engine = TypeInferenceEngine()
+    stats = ColumnStatistics(
+        total_rows=1000,
+        null_count=0,
+        unique_count=2,
+        value_counts={0: 600, 1: 400},
+        boolean_pattern_matches=1000,
+    )
+
+    # Test types that aren't boolean but contain boolean-like values
+    result = engine.infer_type("users", "is_active", "INTEGER", stats)
+    assert result is not None
+    assert result.inferred_type == InferredType.BOOLEAN
+
+
+def test_date_types_filtered_from_date_analysis() -> None:
+    """Test that columns already typed as date are not identified as dates."""
+    engine = TypeInferenceEngine()
+    stats = ColumnStatistics(
+        total_rows=1000,
+        null_count=0,
+        unique_count=365,
+        date_pattern_matches=1000,
+        detected_formats={"date:YYYY-MM-DD": 1000},
+    )
+
+    # Test various date type names
+    date_types = ["DATE", "date", "Date"]
+    for type_name in date_types:
+        result = engine.infer_type("users", "birth_date", type_name, stats)
+        assert result is None, f"Type {type_name} should be filtered from date analysis"
+
+
+def test_datetime_types_filtered_from_datetime_analysis() -> None:
+    """Test that columns already typed as datetime/timestamp are not identified."""
+    engine = TypeInferenceEngine()
+    stats = ColumnStatistics(
+        total_rows=1000,
+        null_count=0,
+        unique_count=1000,
+        datetime_pattern_matches=1000,
+        detected_formats={"datetime:YYYY-MM-DD HH:MM:SS": 1000},
+    )
+
+    # Test various datetime/timestamp type names
+    datetime_types = [
+        "DATETIME",
+        "datetime",
+        "DateTime",
+        "TIMESTAMP",
+        "timestamp",
+        "DATETIME2",
+        "TIMESTAMPTZ",
+    ]
+    for type_name in datetime_types:
+        result = engine.infer_type("users", "created_at", type_name, stats)
+        assert result is None, (
+            f"Type {type_name} should be filtered from datetime analysis"
+        )
+
+
+def test_string_types_with_date_patterns_still_identified() -> None:
+    """Test that string types with date patterns are still identified as dates."""
+    engine = TypeInferenceEngine()
+    stats = ColumnStatistics(
+        total_rows=1000,
+        null_count=0,
+        unique_count=365,
+        date_pattern_matches=990,  # 99% match
+        detected_formats={"date:YYYY-MM-DD": 990},
+    )
+
+    # Test string types that contain date patterns
+    result = engine.infer_type("users", "birth_date", "VARCHAR", stats)
+    assert result is not None
+    assert result.inferred_type == InferredType.DATE
+
+
+def test_string_types_with_datetime_patterns_still_identified() -> None:
+    """Test that string types with datetime patterns are still identified."""
+    engine = TypeInferenceEngine()
+    stats = ColumnStatistics(
+        total_rows=1000,
+        null_count=0,
+        unique_count=1000,
+        datetime_pattern_matches=990,  # 99% match
+        detected_formats={"datetime:YYYY-MM-DD HH:MM:SS": 990},
+    )
+
+    # Test string types that contain datetime patterns
+    result = engine.infer_type("users", "created_at", "TEXT", stats)
+    assert result is not None
+    assert result.inferred_type == InferredType.DATETIME
