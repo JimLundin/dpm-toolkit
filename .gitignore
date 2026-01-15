@@ -25,3 +25,7 @@ dbs/
 *.db
 *.accdb
 .vscode/settings.json
+
+# generated artifacts
+analysis-results/
+analysis-viewer.html
