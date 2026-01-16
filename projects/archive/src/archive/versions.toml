@@ -124,10 +124,10 @@ archive = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db
 converted = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-4.2-release/dpm-4.2-release-sqlite.zip", checksum = "sha256:c07ea01529906e5a8d6150e7018c4a0c48a5141dca727a5d05a43694b9353d67" }
 
 [[versions]]
-id = "4.2-errata-1"
+id = "4.2-hotfix"
 previous = "4.2-release"
 version = "4.2"
-type = "errata"
+type = "hotfix"
 semver = "4.2.1"
 date = 2026-01-13
 revision = 1
