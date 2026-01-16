@@ -10,7 +10,7 @@ from typing import Literal, NotRequired, TypedDict
 type VersionUrls = dict[str, set[str]]
 
 
-type VersionType = Literal["sample", "draft", "final", "release", "errata"]
+type VersionType = Literal["sample", "draft", "final", "release", "errata", "hotfix"]
 
 type Group = Literal["all", "release", "draft"]
 
@@ -65,7 +65,7 @@ def get_versions_by_type(versions: Versions, group: Group) -> Versions:
     if group == "all":
         return versions
     if group == "release":
-        return (v for v in versions if v["type"] in ("release", "errata"))
+        return (v for v in versions if v["type"] in ("release", "errata", "hotfix"))
     if group == "draft":
         return (v for v in versions if v["type"] in ("draft", "sample"))
     msg = f"Unknown version group: {group}"
