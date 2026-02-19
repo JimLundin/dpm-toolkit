@@ -173,8 +173,13 @@ def download(version_id: str, variant: SourceType = "archive") -> None:
     """Download databases."""
     version = get_version(VERSIONS, version_id)
     if not version:
-        print_error(f"Invalid version '{version_id}'")
-        sys.exit(1)
+        # Try resolving as a group name (e.g., "release" -> latest release version)
+        try:
+            group_versions = get_versions_by_type(VERSIONS, version_id)  # type: ignore[arg-type]
+            version = latest_version(group_versions)
+        except ValueError:
+            print_error(f"Invalid version '{version_id}'")
+            sys.exit(1)
 
     try:
         database_source = get_source(version, variant)
