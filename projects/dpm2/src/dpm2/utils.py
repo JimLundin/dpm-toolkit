@@ -57,14 +57,8 @@ def get_db(*, in_memory: bool = True) -> Engine:
     """
     db_resource = get_source_db_resource()
     with as_file(db_resource) as db_path:
-        if not db_path.exists():
-            msg = f"Database file not found: {db_path}"
-            raise FileNotFoundError(msg)
-
         if in_memory:
             return in_memory_engine(db_path)
-
-        # Resolve the real path while the context manager is still open.
         resolved = db_path.resolve()
 
     return disk_engine(resolved)
