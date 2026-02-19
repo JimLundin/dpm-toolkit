@@ -7,8 +7,8 @@ Generated Python models for EBA DPM 2.0 databases with full type safety and SQLA
 This package contains auto-generated, type-safe Python models for working with EBA DPM 2.0 databases. It provides:
 - Fully typed SQLAlchemy ORM models
 - Relationship mapping between tables
+- Bundled SQLite database ready to query
 - IDE support with autocompletion and type checking
-- Ready-to-use database models for analysis and reporting
 
 ## Installation
 
@@ -19,20 +19,34 @@ pip install dpm2
 ## Usage
 
 ```python
-from sqlalchemy import create_engine, select
-from dpm2 import DPM, TableVersionCell, Cell
+from sqlalchemy import select
+from dpm2 import get_db, models
 
-# Connect to your SQLite database
-engine = create_engine("sqlite:///path/to/dpm.sqlite")
+# Get an in-memory engine backed by the bundled database (default)
+engine = get_db()
 
 # Type-safe queries with full IDE support
 with engine.connect() as conn:
-    stmt = select(TableVersionCell).where(
-        TableVersionCell.IsActive == True
-    )
-    
+    stmt = select(models.ConceptClass)
+
     for row in conn.execute(stmt):
-        print(f"Cell: {row.CellID} - {row.CellContent}")
+        print(row)
+```
+
+### Engine options
+
+```python
+from dpm2 import get_db, disk_engine
+
+# In-memory copy (default) - fast, safe for temporary work
+engine = get_db()
+
+# Read-only file-backed engine - lower memory usage
+engine = get_db(in_memory=False)
+
+# Custom path with disk_engine
+from pathlib import Path
+engine = disk_engine(Path("my_local_copy.sqlite"))
 ```
 
 ## Features
@@ -41,7 +55,7 @@ with engine.connect() as conn:
 - **IDE Integration** - Full autocompletion and error detection
 - **SQLAlchemy 2.0+** - Uses modern SQLAlchemy with `Mapped` annotations
 - **Relationship Navigation** - Foreign keys mapped to navigable Python objects
-- **Documentation** - Every model includes generated documentation
+- **Bundled Database** - Ships with a ready-to-query SQLite database
 
 ## Generated Models
 
