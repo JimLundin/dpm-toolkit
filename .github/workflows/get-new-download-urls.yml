@@ -28,38 +28,62 @@ jobs:
 
       - name: Install UV
         uses: astral-sh/setup-uv@v7
-      
+
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
           python-version-file: 'pyproject.toml'
-      
+
       - name: Install dependencies
         run: |
           uv sync --locked --extra scrape
-      
+
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Run scraper and capture output
+
+      - name: Run scraper and check for new URLs
         id: scrape
         run: |
-          # Update command is deprecated - workflow may need manual intervention
-          echo "SCRAPE_RESULT=Update command deprecated - manual intervention required" >> $GITHUB_ENV
-      
+          RESULT=$(uv run python -c "
+          from json import dumps
+          from scrape import get_active_reporting_frameworks
+          from archive.versions import compare_version_urls
+
+          scraped = get_active_reporting_frameworks()
+          new_urls = compare_version_urls(scraped)
+
+          if new_urls:
+              output = {v: sorted(urls) for v, urls in new_urls.items()}
+              print(dumps(output, indent=2))
+          else:
+              print('No new URLs found.')
+          ")
+
+          echo "SCRAPE_RESULT<<EOF" >> $GITHUB_ENV
+          echo "$RESULT" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+          if echo "$RESULT" | grep -q "No new URLs found"; then
+            echo "HAS_NEW=false" >> $GITHUB_ENV
+          else
+            echo "HAS_NEW=true" >> $GITHUB_ENV
+          fi
+
       - name: Create or update branch
+        if: env.HAS_NEW == 'true'
         run: |
           git checkout -B "${{ env.BRANCH_NAME }}"
           git commit --allow-empty -m "Trigger PR for new download URLs" || true
           git push -u origin "${{ env.BRANCH_NAME }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Create PR if it doesn't exist
+        if: env.HAS_NEW == 'true'
         id: create_pr
         run: |
           PR_EXISTS=$(gh pr list --head "${{ env.BRANCH_NAME }}" --json number | jq 'length')
@@ -72,10 +96,18 @@ jobs:
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Comment on PR with scrape results
+        if: env.HAS_NEW == 'true'
         run: |
-          COMMENT_BODY="Update command status:\n\n\`\`\`\n${SCRAPE_RESULT}\n\`\`\`"
+          COMMENT_BODY=$(cat <<ENDOFCOMMENT
+          New DPM database URLs discovered:
+
+          \`\`\`json
+          ${SCRAPE_RESULT}
+          \`\`\`
+          ENDOFCOMMENT
+          )
           gh pr comment "${PR_NUMBER}" --body "$COMMENT_BODY"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

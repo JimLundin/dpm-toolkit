@@ -1,85 +1,165 @@
-"""Module for scraping and managing Access database files."""
+"""Scrape EBA reporting framework pages for DPM 2.0 database download URLs."""
 
-from collections.abc import Iterable
-from http import HTTPStatus
+import logging
+import re
 from typing import Final
+from urllib.parse import unquote, urljoin
 
 from bs4 import BeautifulSoup, Tag
-from requests import get, head
+from requests import Session
+from requests.exceptions import RequestException
 
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
 # Constants
-EBA_URL: Final[str] = "https://eba.europa.eu"
-WWW_EBA_URL: Final[str] = "https://www.eba.europa.eu"
-MID_PATH: Final[str] = "/risk-and-data-analysis/reporting-frameworks"
-REPORTING_FRAMEWORKS_URL: Final[str] = f"{EBA_URL}{MID_PATH}"
-FRAMEWORK_PATTERN: Final[str] = "reporting-framework-"
+# ---------------------------------------------------------------------------
+
+BASE_URL: Final[str] = "https://www.eba.europa.eu"
+FRAMEWORKS_URL: Final[str] = f"{BASE_URL}/risk-and-data-analysis/reporting-frameworks"
+FRAMEWORK_PATTERN: Final[re.Pattern[str]] = re.compile(
+    r"reporting-framework-(\d+)$",
+)
+
+# Two patterns to detect DPM 2.0 database references (case-insensitive):
+#   1) URL filenames: DPM2.0_release.zip, dpm_2.0_release.zip, DPM 2.0.zip
+#   2) Link text:     "DPM database 2.0"
+DPM2_PATTERNS: Final[tuple[re.Pattern[str], ...]] = (
+    re.compile(r"dpm[_ ]?2", re.IGNORECASE),
+    re.compile(r"dpm\s+database\s+2", re.IGNORECASE),
+)
+
+EXCLUDE_PATTERNS: Final[tuple[re.Pattern[str], ...]] = (
+    re.compile(r"glossary", re.IGNORECASE),
+    re.compile(r"conversion", re.IGNORECASE),
+    re.compile(r"table.layout", re.IGNORECASE),
+    re.compile(r"categorization", re.IGNORECASE),
+)
+
+USER_AGENT: Final[str] = (
+    "Mozilla/5.0 (compatible; dpm-toolkit/1.0; "
+    "+https://github.com/JimLundin/dpm-toolkit)"
+)
+
+MIN_VERSION: Final[float] = 3.0
 
 
-def normalize_url(url: str) -> str:
-    """Normalize a URL by standardizing the domain."""
-    if not url.startswith((EBA_URL, WWW_EBA_URL)):
-        url = f"{WWW_EBA_URL}{url}"
-
-    return url.replace(EBA_URL, WWW_EBA_URL)
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 
-def get_final_url(url: str) -> str:
-    """Get the final URL after following redirects."""
-    if MID_PATH in url:
-        return url
-
-    response = head(url, allow_redirects=True, timeout=30)
-
-    # Follow any 301 (permanent) redirects
-    for resp in response.history:
-        if resp.status_code == HTTPStatus.MOVED_PERMANENTLY:
-            url = resp.headers["location"]
-
-    return url
+def _create_session() -> Session:
+    """Return a :class:`requests.Session` with a proper ``User-Agent``."""
+    session = Session()
+    session.headers["User-Agent"] = USER_AGENT
+    return session
 
 
-def extract_urls(
-    url: str,
-    match_patterns: Iterable[str] = (),
-    exclude_patterns: Iterable[str] = (),
-) -> set[str]:
-    """Extract framework URLs from HTML content."""
-    response = get(url, timeout=10)
-    soup = BeautifulSoup(response.text, "html.parser")
-    urls = [link.get("href") for link in soup.find_all("a") if isinstance(link, Tag)]
-    return {
-        url
-        for url in urls
-        if isinstance(url, str)
-        and all(match.lower() in url.lower() for match in match_patterns)
-        and not any(exclude.lower() in url.lower() for exclude in exclude_patterns)
-    }
+def _fetch_page(session: Session, url: str) -> BeautifulSoup:
+    """Fetch *url* and return the parsed HTML tree."""
+    response = session.get(url, timeout=30)
+    response.raise_for_status()
+    return BeautifulSoup(response.text, "html.parser")
 
 
-def get_reporting_frameworks() -> Iterable[str]:
-    """Get a list of reporting frameworks."""
-    framework_urls = extract_urls(REPORTING_FRAMEWORKS_URL, (FRAMEWORK_PATTERN,))
-    final_urls = {normalize_url(url) for url in framework_urls}
-    unique_urls = {get_final_url(url) for url in final_urls}
-    return sorted(unique_urls)
+def _parse_version(digits: str) -> str:
+    """Convert a digit string into a dotted version (``"42"`` → ``"4.2"``)."""
+    if len(digits) < 2:  # noqa: PLR2004
+        return digits
+    return f"{digits[0]}.{digits[1:]}"
 
 
-def get_framework_version(url: str) -> str:
-    """Get the version of a reporting framework."""
-    match = url.split("-")[-1]
-    digits = "".join(c for c in match if c.isdigit())
-    return f"{digits[0]}.{digits[1:]}" if digits else ""
+def _is_dpm2_database(href: str, text: str) -> bool:
+    """Return *True* when *href*/*text* point to a DPM 2.0 database ZIP."""
+    decoded = unquote(href)
+    if not decoded.lower().endswith(".zip"):
+        return False
+    combined = f"{decoded} {text}"
+    if not any(p.search(combined) for p in DPM2_PATTERNS):
+        return False
+    return not any(p.search(combined) for p in EXCLUDE_PATTERNS)
+
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
+
+
+def get_framework_urls(session: Session | None = None) -> dict[str, str]:
+    """Discover reporting framework page URLs from the EBA website.
+
+    Returns a mapping of version strings (e.g. ``"4.2"``) to the absolute
+    URL of the corresponding framework page.
+    """
+    if session is None:
+        session = _create_session()
+
+    soup = _fetch_page(session, FRAMEWORKS_URL)
+    frameworks: dict[str, str] = {}
+
+    for tag in soup.find_all("a", href=True):
+        if not isinstance(tag, Tag):
+            continue
+        href = tag.get("href")
+        if not isinstance(href, str):
+            continue
+
+        match = FRAMEWORK_PATTERN.search(href)
+        if match:
+            version = _parse_version(match.group(1))
+            frameworks[version] = urljoin(BASE_URL, href)
+
+    return frameworks
+
+
+def get_dpm_urls(session: Session, framework_url: str) -> set[str]:
+    """Extract DPM 2.0 database download URLs from a framework page."""
+    soup = _fetch_page(session, framework_url)
+    urls: set[str] = set()
+
+    for tag in soup.find_all("a", href=True):
+        if not isinstance(tag, Tag):
+            continue
+        href = tag.get("href")
+        if not isinstance(href, str):
+            continue
+
+        text = tag.get_text(strip=True)
+        full_url = urljoin(framework_url, href)
+
+        if _is_dpm2_database(full_url, text):
+            urls.add(full_url)
+
+    return urls
 
 
 def get_active_reporting_frameworks() -> dict[str, set[str]]:
-    """Get active reporting frameworks."""
-    version_url = {
-        get_framework_version(url): url for url in get_reporting_frameworks()
-    }
-    filter_version_url = {
-        version: url for version, url in version_url.items() if version[0] > "3"
-    }
-    return {
-        version: extract_urls(url, ("dpm", "2.0", "zip"), ("glossary",))
-        for version, url in filter_version_url.items()
-    }
+    """Discover DPM 2.0 database URLs across active EBA reporting frameworks.
+
+    Scans each framework page whose version is ``>= MIN_VERSION`` and returns
+    a mapping of version strings to the set of DPM database download URLs
+    found on that page.
+    """
+    session = _create_session()
+    frameworks = get_framework_urls(session)
+
+    results: dict[str, set[str]] = {}
+    for version, url in sorted(frameworks.items()):
+        try:
+            if float(version) < MIN_VERSION:
+                continue
+        except ValueError:
+            continue
+
+        logger.info("Scanning framework %s: %s", version, url)
+        try:
+            dpm_urls = get_dpm_urls(session, url)
+        except RequestException:
+            logger.warning("Failed to fetch framework %s page", version)
+            continue
+
+        if dpm_urls:
+            results[version] = dpm_urls
+
+    return results
