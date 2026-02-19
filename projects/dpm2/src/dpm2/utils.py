@@ -22,14 +22,21 @@ def set_readonly(connection: Connection, _record: ConnectionPoolEntry) -> None:
 
 
 def disk_engine(db_path: Path) -> Engine:
-    """Get an engine to the dpm db."""
-    engine = create_engine(f"sqlite:///{db_path}?mode=ro", connect_args={"uri": True})
+    """Create a read-only engine connected to a SQLite file on disk."""
+    resolved = db_path.resolve()
+    if not resolved.exists():
+        msg = f"Database file not found: {resolved}"
+        raise FileNotFoundError(msg)
+    engine = create_engine(
+        f"sqlite:///{resolved}?mode=ro",
+        connect_args={"uri": True},
+    )
     listen(engine, "connect", set_readonly)
     return engine
 
 
 def in_memory_engine(db_path: Path) -> Engine:
-    """Get an engine to the dpm db."""
+    """Load a SQLite file into memory and return an engine to the copy."""
     memory_db = connect(":memory:")
     with connect(db_path) as source_db:
         source_db.backup(memory_db)
@@ -37,11 +44,27 @@ def in_memory_engine(db_path: Path) -> Engine:
 
 
 def get_db(*, in_memory: bool = True) -> Engine:
-    """Get an engine to the dpm db."""
+    """Get an engine to the bundled DPM database.
+
+    When *in_memory* is ``True`` (default) the database is copied into
+    memory inside the ``as_file`` context so the temporary extraction
+    path can be safely cleaned up afterwards.
+
+    When *in_memory* is ``False`` the path is resolved to an absolute
+    path before the context manager exits.  This works reliably for
+    regular installs (where the resource lives on disk) but may break
+    for zip-imported packages that extract to a temporary directory.
+    """
     db_resource = get_source_db_resource()
     with as_file(db_resource) as db_path:
         if not db_path.exists():
             msg = f"Database file not found: {db_path}"
             raise FileNotFoundError(msg)
 
-        return in_memory_engine(db_path) if in_memory else disk_engine(db_path)
+        if in_memory:
+            return in_memory_engine(db_path)
+
+        # Resolve the real path while the context manager is still open.
+        resolved = db_path.resolve()
+
+    return disk_engine(resolved)
