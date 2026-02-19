@@ -23,12 +23,8 @@ def set_readonly(connection: Connection, _record: ConnectionPoolEntry) -> None:
 
 def disk_engine(db_path: Path) -> Engine:
     """Create a read-only engine connected to a SQLite file on disk."""
-    resolved = db_path.resolve()
-    if not resolved.exists():
-        msg = f"Database file not found: {resolved}"
-        raise FileNotFoundError(msg)
     engine = create_engine(
-        f"sqlite:///{resolved}?mode=ro",
+        f"sqlite:///{db_path}?mode=ro",
         connect_args={"uri": True},
     )
     listen(engine, "connect", set_readonly)
@@ -57,6 +53,10 @@ def get_db(*, in_memory: bool = True) -> Engine:
     """
     db_resource = get_source_db_resource()
     with as_file(db_resource) as db_path:
+        if not db_path.exists():
+            msg = f"Database file not found: {db_path}"
+            raise FileNotFoundError(msg)
+
         if in_memory:
             return in_memory_engine(db_path)
         resolved = db_path.resolve()
