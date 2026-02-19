@@ -94,11 +94,17 @@ def get_version_urls() -> VersionUrls:
 
 
 def compare_version_urls(new_urls: VersionUrls) -> VersionUrls:
-    """Compare new URLs with existing version URLs."""
+    """Compare new URLs with existing version URLs.
+
+    Checks each scraped URL against *all* known original URLs regardless of
+    version, so that a URL already tracked under one version is not
+    incorrectly flagged as new when it appears on a different framework page.
+    """
     version_urls = get_version_urls()
+    all_known = {url for urls in version_urls.values() for url in urls}
 
     return {
-        version: new_urls - version_urls.get(version, set())
-        for version, new_urls in new_urls.items()
-        if new_urls - version_urls.get(version, set())
+        version: urls - all_known
+        for version, urls in new_urls.items()
+        if urls - all_known
     }
