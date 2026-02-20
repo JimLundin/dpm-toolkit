@@ -35,8 +35,7 @@ jobs:
           python-version-file: 'pyproject.toml'
 
       - name: Install dependencies
-        run: |
-          uv sync --locked --extra scrape
+        run: uv sync --locked --extra scrape
 
       - name: Configure Git
         run: |
@@ -48,30 +47,12 @@ jobs:
       - name: Run scraper and check for new URLs
         id: scrape
         run: |
-          RESULT=$(uv run python -c "
-          from json import dumps
-          from scrape import get_active_reporting_frameworks
-          from archive.versions import compare_version_urls
-
-          scraped = get_active_reporting_frameworks()
-          new_urls = compare_version_urls(scraped)
-
-          if new_urls:
-              output = {v: sorted(urls) for v, urls in new_urls.items()}
-              print(dumps(output, indent=2))
-          else:
-              print('No new URLs found.')
-          ")
-
-          echo "SCRAPE_RESULT<<EOF" >> $GITHUB_ENV
-          echo "$RESULT" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
-
-          if echo "$RESULT" | grep -q "No new URLs found"; then
-            echo "HAS_NEW=false" >> $GITHUB_ENV
+          if uv run python -m scrape > scrape_result.txt 2>&1; then
+            echo "HAS_NEW=true" >> "$GITHUB_ENV"
           else
-            echo "HAS_NEW=true" >> $GITHUB_ENV
+            echo "HAS_NEW=false" >> "$GITHUB_ENV"
           fi
+          cat scrape_result.txt
 
       - name: Create or update branch
         if: env.HAS_NEW == 'true'
@@ -89,25 +70,16 @@ jobs:
           PR_EXISTS=$(gh pr list --head "${{ env.BRANCH_NAME }}" --json number | jq 'length')
           if [ "$PR_EXISTS" -eq "0" ]; then
             PR_NUMBER=$(gh pr create --title "${{ env.PR_TITLE }}" --body "${{ env.PR_BODY }}" --head "${{ env.BRANCH_NAME }}" | grep -oE '[0-9]+$')
-            echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
+            echo "PR_NUMBER=$PR_NUMBER" >> "$GITHUB_ENV"
           else
             PR_NUMBER=$(gh pr view "${{ env.BRANCH_NAME }}" --json number --jq '.number')
-            echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
+            echo "PR_NUMBER=$PR_NUMBER" >> "$GITHUB_ENV"
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Comment on PR with scrape results
         if: env.HAS_NEW == 'true'
-        run: |
-          COMMENT_BODY=$(cat <<ENDOFCOMMENT
-          New DPM database URLs discovered:
-
-          \`\`\`json
-          ${SCRAPE_RESULT}
-          \`\`\`
-          ENDOFCOMMENT
-          )
-          gh pr comment "${PR_NUMBER}" --body "$COMMENT_BODY"
+        run: gh pr comment "${PR_NUMBER}" --body-file scrape_result.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
