@@ -373,7 +373,7 @@ uv run pytest
 
 ### Requirements
 
-- **Python**: 3.13+
+- **Python**: 3.12+
 - **Package Manager**: UV (recommended) or pip
 - **Platform**: Windows required for conversion functionality
 - **Dependencies**: Microsoft Access ODBC driver (for conversion)
