@@ -216,18 +216,26 @@ def generate_imports(imports: Imports) -> str:
 
 
 def generate_base_class(base_name: str) -> str:
-    """Generate the base class definition."""
-    return f"""# We use DeclarativeMeta instead of DeclarativeBase
-# to be compatible with mypy and __mapper_args__
+    """Generate the base class definition.
+
+    We use DeclarativeMeta instead of DeclarativeBase so that subclasses can
+    override __mapper_args__ as a ClassVar without a mypy 'misc' error.
+    DeclarativeMeta requires an explicit registry and metadata on the base.
+    """
+    return f"""_registry = registry()
+
 class {base_name}(metaclass=DeclarativeMeta):
-    \"\"\"Base class for all DPM models.\"\"\""""
+    \"\"\"Base class for all DPM models.\"\"\"
+    __abstract__ = True
+    registry = _registry
+    metadata = _registry.metadata"""
 
 
 def schema_to_sqlalchemy(schema: DatabaseSchema) -> str:
     """Generate SQLAlchemy models from schema - clean and direct approach."""
     imports: Imports = defaultdict(set)
     imports["__future__"].add("annotations")
-    imports["sqlalchemy.orm"].add("DeclarativeMeta")
+    imports["sqlalchemy.orm"].update(("DeclarativeMeta", "registry"))
 
     base_class = "DPM"
 
