@@ -115,7 +115,7 @@ The `compare` module uses a streaming, memory-efficient approach:
 - **Platform Dependency**: Migration requires Windows due to Microsoft Access ODBC drivers
 - **UV Build System**: Uses `uv_build` as build backend instead of standard setuptools
 - **Strict Code Quality**: All code must pass ruff linting, mypy, and pyright type checking
-- **Python Version**: Requires Python 3.13+
+- **Python Version**: Requires Python 3.12+
 - **Memory Considerations**: Compare module designed for efficient handling of large databases
 
 ### Testing and CI/CD
