@@ -82,12 +82,14 @@ class Model:
 
     def _generate_base_class(self) -> str:
         """Generate the base class definition."""
-        self.imports["sqlalchemy.orm"].add("DeclarativeMeta")
+        self.imports["sqlalchemy.orm"].update(("DeclarativeMeta", "registry"))
         return (
-            "# We use DeclarativeMeta instead of DeclarativeBase\n"
-            "# to be compatible with mypy and __mapper_args__\n"
+            "_registry = registry()\n\n"
             f"class {self.base}(metaclass=DeclarativeMeta):\n"
-            f'{INDENT}"""Base class for all DPM models."""'
+            f'{INDENT}"""Base class for all DPM models."""\n'
+            f"{INDENT}__abstract__ = True\n"
+            f"{INDENT}registry = _registry\n"
+            f"{INDENT}metadata = _registry.metadata"
         )
 
     def _generate_imports(self) -> str:
