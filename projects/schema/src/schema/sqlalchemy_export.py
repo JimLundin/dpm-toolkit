@@ -64,15 +64,14 @@ def relationship_name(source: ColumnSchema, target: ColumnSchema) -> str:
 def render_foreign_key(
     target: ColumnSchema,
     *,
-    self_ref: bool = False,
     quoted: bool = False,
 ) -> str:
     """Render ForeignKey reference from target column."""
-    if self_ref:
-        ref = f'"{target["name"]}"'
-    elif quoted:
-        ref = f'"{pascal_case(target["table_name"])}.{snake_case(target["name"])}"'
+    if quoted:
+        # String refs use __tablename__ and the actual DB column name
+        ref = f'"{target["table_name"]}.{target["name"]}"'
     else:
+        # Direct Python refs use the class name and mapped attribute name
         ref = f"{pascal_case(target['table_name'])}.{snake_case(target['name'])}"
 
     return f"ForeignKey({ref})"
@@ -95,9 +94,9 @@ def generate_column_definition(column: ColumnSchema, imports: Imports) -> str:
     # Add foreign key if present
     for fk_column in column["foreign_keys"]:
         is_self_ref = fk_column["table_name"] == column["table_name"]
-        needs_quoting = column["table_name"] == "Concept"
+        needs_quoting = column["table_name"] == "Concept" or is_self_ref
         imports["sqlalchemy"].add("ForeignKey")
-        fk = render_foreign_key(fk_column, self_ref=is_self_ref, quoted=needs_quoting)
+        fk = render_foreign_key(fk_column, quoted=needs_quoting)
         args.append(fk)
 
     # Add primary key if needed
