@@ -1,0 +1,178 @@
+"""Tests for the DeclarativeMeta registry fix.
+
+The generated base class must provide an explicit ``registry()`` and
+``metadata`` so that SQLAlchemy can track mapped classes.  Without
+these attributes, importing the generated module raises
+``InvalidRequestError``.
+"""
+
+from __future__ import annotations
+
+import importlib
+import sys
+import tempfile
+from collections.abc import Generator
+from pathlib import Path
+from types import ModuleType
+
+import pytest
+from sqlalchemy import Column, Integer, MetaData, String, Table, create_engine
+
+from schema.generation import Model
+from schema.main import sqlite_to_schema
+from schema.sqlalchemy_export import generate_base_class, schema_to_sqlalchemy
+
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(name="simple_db")
+def simple_database() -> str:
+    """Create a minimal SQLite database with one table."""
+    with tempfile.NamedTemporaryFile(suffix=".sqlite", delete=False) as tmp:
+        db_path = tmp.name
+
+    engine = create_engine(f"sqlite:///{db_path}")
+    metadata = MetaData()
+    Table(
+        "Items",
+        metadata,
+        Column("ItemID", Integer, primary_key=True),
+        Column("Name", String(100)),
+    )
+    metadata.create_all(engine)
+    return db_path
+
+
+@pytest.fixture(autouse=True)
+def _cleanup(simple_db: str) -> Generator[None]:
+    yield
+    Path(simple_db).unlink(missing_ok=True)
+
+
+def _import_generated_code(code: str, module_name: str) -> ModuleType:
+    """Write generated code to a temp file and import it as a real module.
+
+    This ensures ``from __future__ import annotations`` resolves correctly
+    and SQLAlchemy can find ``Mapped`` in the module's namespace.
+    """
+    with tempfile.NamedTemporaryFile(
+        suffix=".py", delete=False, mode="w"
+    ) as tmp:
+        tmp.write(code)
+        tmp_path = tmp.name
+
+    spec = importlib.util.spec_from_file_location(module_name, tmp_path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.modules.pop(module_name, None)
+        Path(tmp_path).unlink(missing_ok=True)
+    return module
+
+
+# ---------------------------------------------------------------------------
+# Unit tests – generate_base_class (sqlalchemy_export)
+# ---------------------------------------------------------------------------
+
+
+class TestGenerateBaseClass:
+    """Tests for the standalone ``generate_base_class`` helper."""
+
+    def test_contains_registry_instantiation(self) -> None:
+        code = generate_base_class("DPM")
+        assert "_registry = registry()" in code
+
+    def test_contains_abstract_marker(self) -> None:
+        code = generate_base_class("DPM")
+        assert "__abstract__ = True" in code
+
+    def test_contains_registry_assignment(self) -> None:
+        code = generate_base_class("DPM")
+        assert "registry = _registry" in code
+
+    def test_contains_metadata_assignment(self) -> None:
+        code = generate_base_class("DPM")
+        assert "metadata = _registry.metadata" in code
+
+    def test_uses_declarative_meta(self) -> None:
+        code = generate_base_class("DPM")
+        assert "metaclass=DeclarativeMeta" in code
+
+    def test_custom_base_name(self) -> None:
+        code = generate_base_class("Base")
+        assert "class Base(metaclass=DeclarativeMeta):" in code
+
+
+# ---------------------------------------------------------------------------
+# Unit tests – Model._generate_base_class (generation.py)
+# ---------------------------------------------------------------------------
+
+
+class TestModelGenerateBaseClass:
+    """Tests for the class-based ``Model._generate_base_class`` method."""
+
+    def test_contains_registry_instantiation(self) -> None:
+        model = Model(MetaData())
+        code = model._generate_base_class()
+        assert "_registry = registry()" in code
+
+    def test_contains_abstract_marker(self) -> None:
+        model = Model(MetaData())
+        code = model._generate_base_class()
+        assert "__abstract__ = True" in code
+
+    def test_contains_registry_assignment(self) -> None:
+        model = Model(MetaData())
+        code = model._generate_base_class()
+        assert "registry = _registry" in code
+
+    def test_contains_metadata_assignment(self) -> None:
+        model = Model(MetaData())
+        code = model._generate_base_class()
+        assert "metadata = _registry.metadata" in code
+
+    def test_adds_registry_import(self) -> None:
+        model = Model(MetaData())
+        model._generate_base_class()
+        assert "registry" in model.imports["sqlalchemy.orm"]
+        assert "DeclarativeMeta" in model.imports["sqlalchemy.orm"]
+
+
+# ---------------------------------------------------------------------------
+# Integration – generated code can be imported without InvalidRequestError
+# ---------------------------------------------------------------------------
+
+
+class TestGeneratedCodeImportable:
+    """Verify that generated models can be imported as a real Python module.
+
+    Without the registry fix the import raises
+    ``sqlalchemy.exc.InvalidRequestError``.
+    """
+
+    def test_schema_to_sqlalchemy_importable(self, simple_db: str) -> None:
+        """Generated code from schema_to_sqlalchemy should import cleanly."""
+        engine = create_engine(f"sqlite:///{simple_db}")
+        schema = sqlite_to_schema(engine)
+        code = schema_to_sqlalchemy(schema)
+
+        module = _import_generated_code(code, "_test_registry_schema")
+        assert hasattr(module, "DPM")
+        assert hasattr(module, "Items")
+
+    def test_full_schema_imports_registry(self, simple_db: str) -> None:
+        """Generated code should import both DeclarativeMeta and registry."""
+        engine = create_engine(f"sqlite:///{simple_db}")
+        schema = sqlite_to_schema(engine)
+        code = schema_to_sqlalchemy(schema)
+
+        assert "from sqlalchemy.orm import" in code
+        assert "DeclarativeMeta" in code
+        assert "registry" in code
