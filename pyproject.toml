@@ -5,7 +5,7 @@ description = "Open-source tools and models for working with DPM databases"
 authors = [{ name = "Jim Lundin", email = "jimeriklundin@gmail.com" }]
 readme = "README.md"
 license = { file = "LICENSE" }
-requires-python = ">= 3.13"
+requires-python = ">= 3.12"
 
 dependencies = ["archive", "cyclopts>=3.1.0"]
 
