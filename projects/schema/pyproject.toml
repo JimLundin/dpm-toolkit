@@ -3,7 +3,7 @@ name = "schema"
 version = "0.0.0"
 description = "SQLAlchemy schema generation from Access databases"
 authors = [{ name = "Jim Lundin", email = "jimeriklundin@gmail.com" }]
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = ["sqlalchemy>=2.0.37", "jinja2>=3.1.0"]
 
 [tool.ruff]
