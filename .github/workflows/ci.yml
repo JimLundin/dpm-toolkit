@@ -143,3 +143,19 @@ jobs:
           echo "::group::Pyright - ${{ matrix.project.name }}"
           uv run pyright src/
           echo "::endgroup::"
+
+      - name: Run Ty on ${{ matrix.project.name }}
+        continue-on-error: true
+        working-directory: ${{ matrix.project.path }}
+        run: |
+          echo "::group::Ty (beta) - ${{ matrix.project.name }}"
+          uv run ty check src/
+          echo "::endgroup::"
+
+      - name: Run Pyrefly on ${{ matrix.project.name }}
+        continue-on-error: true
+        working-directory: ${{ matrix.project.path }}
+        run: |
+          echo "::group::Pyrefly (beta) - ${{ matrix.project.name }}"
+          uv run pyrefly check src/
+          echo "::endgroup::"
