@@ -133,17 +133,16 @@ def sql_to_string(sql_type: TypeEngine[Any]) -> str:
             return sql_type.__class__.__name__
 
 
-# Stdlib modules whose types are emitted as qualified references (e.g.
-# datetime.date) to avoid shadowing when a column attribute has the same
-# name as the type under ``from __future__ import annotations``.
-_QUALIFIED_MODULES = frozenset({"datetime", "decimal", "uuid"})
-
-
 def sql_to_python(sql_type: TypeEngine[Any]) -> TypeInfo:
     """Get the 3 components needed for code generation from SQLAlchemy type.
 
     Returns module, import_name, and expression.
     For most types these are straightforward, but enums need special handling.
+
+    The returned TypeInfo encodes the import style directly:
+    - module="" means no import needed (builtins).
+    - module set, name="" means bare ``import module`` (qualified reference).
+    - module set, name set means ``from module import name``.
     """
     match sql_type:
         # Special case: Enum types need Literal type hints
@@ -161,10 +160,11 @@ def sql_to_python(sql_type: TypeEngine[Any]) -> TypeInfo:
             type_name = py_type.__name__
             module_name = py_type.__module__
 
+            if module_name == "builtins":
+                return TypeInfo(module="", name="", expression=type_name)
+
             return TypeInfo(
                 module=module_name,
-                name=type_name,
-                expression=f"{module_name}.{type_name}"
-                if module_name in _QUALIFIED_MODULES
-                else type_name,
+                name="",
+                expression=f"{module_name}.{type_name}",
             )
