@@ -43,7 +43,6 @@ class Model:
         """Initialize the model generator."""
         self.metadata = metadata
         self.imports: dict[str, set[str]] = defaultdict(set)
-        self.typing_imports: dict[str, set[str]] = defaultdict(set)
         self.base = "DPM"
 
     def render(self) -> str:
@@ -69,12 +68,10 @@ class Model:
     def _generate_file(self, models: list[str]) -> str:
         """Render the complete model file."""
         base_class = self._generate_base_class()
-        typing_imports = self._generate_typing_imports()
         imports = self._generate_imports()
         header = [
             '"""SQLAlchemy models generated from DPM by the DPM Toolkit project."""',
             imports,
-            typing_imports,
             base_class,
         ]
 
@@ -97,16 +94,6 @@ class Model:
         return "\n".join(
             f"from {module} import {', '.join(names)}" if names else f"import {module}"
             for module, names in self.imports.items()
-        )
-
-    def _generate_typing_imports(self) -> str:
-        """Generate typing import statements."""
-        if not self.typing_imports:
-            return ""
-        self.imports["typing"].add("TYPE_CHECKING")
-        return "if TYPE_CHECKING:\n" + "\n".join(
-            f"{INDENT}from {module} import {', '.join(names)}"
-            for module, names in self.typing_imports.items()
         )
 
     def _generate_table(self, table: Table) -> str:
@@ -167,7 +154,7 @@ class Model:
         if row_guid_column is None or row_guid_column.nullable:
             return ""
 
-        self.typing_imports["typing"].add("ClassVar")
+        self.imports["typing"].add("ClassVar")
         return (
             "__mapper_args__: ClassVar = {\n"
             f'{INDENT}"primary_key": ({snake_case(row_guid)},)\n'
