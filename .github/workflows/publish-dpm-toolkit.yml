@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
+      contents: write  # Required for creating version tags
       id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
     steps:
       - uses: actions/checkout@v6
@@ -22,7 +23,17 @@ jobs:
 
       - name: Set CalVer version
         run: |
-          VERSION=$(date +'%Y.%-m.%-d')
+          git fetch --tags
+          DATE=$(date +'%Y.%-m.%-d')
+          LATEST=$(git tag -l "dpm-toolkit/v${DATE}.*" | sort -t. -k4 -n | tail -1)
+          if [ -z "$LATEST" ]; then
+            VERSION="${DATE}.1"
+          else
+            LAST_NUM=${LATEST##*.}
+            VERSION="${DATE}.$((LAST_NUM + 1))"
+          fi
+          git tag "dpm-toolkit/v${VERSION}"
+          git push origin "dpm-toolkit/v${VERSION}"
           uv version $VERSION
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
