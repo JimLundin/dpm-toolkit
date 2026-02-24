@@ -16,7 +16,7 @@ from pathlib import Path
 from types import ModuleType
 
 import pytest
-from sqlalchemy import Column, Integer, MetaData, String, Table, create_engine
+from sqlalchemy import Column, Date, DateTime, Integer, MetaData, Numeric, String, Table, create_engine
 
 from schema.generation import Model
 from schema.main import sqlite_to_schema
@@ -176,3 +176,57 @@ class TestGeneratedCodeImportable:
         assert "from sqlalchemy.orm import" in code
         assert "DeclarativeMeta" in code
         assert "registry" in code
+
+
+# ---------------------------------------------------------------------------
+# Integration – date/datetime/numeric types resolve at runtime
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(name="typed_db")
+def typed_database() -> Generator[str]:
+    """Create a SQLite database with Date, DateTime, and Numeric columns."""
+    with tempfile.NamedTemporaryFile(suffix=".sqlite", delete=False) as tmp:
+        db_path = tmp.name
+
+    engine = create_engine(f"sqlite:///{db_path}")
+    metadata = MetaData()
+    Table(
+        "Events",
+        metadata,
+        Column("EventID", Integer, primary_key=True),
+        Column("Name", String(100)),
+        Column("EventDate", Date),
+        Column("CreatedAt", DateTime),
+        Column("Price", Numeric(10, 2)),
+    )
+    metadata.create_all(engine)
+    yield db_path
+    Path(db_path).unlink(missing_ok=True)
+
+
+class TestDateTimeTypesImportable:
+    """Verify that generated models with date/datetime/numeric types can be imported.
+
+    Previously these types were placed inside ``if TYPE_CHECKING:`` and were
+    unavailable at runtime, causing ``MappedAnnotationError``.
+    """
+
+    def test_generation_model_importable(self, typed_db: str) -> None:
+        """Model.render() output should import without MappedAnnotationError."""
+        engine = create_engine(f"sqlite:///{typed_db}")
+        metadata = MetaData()
+        metadata.reflect(bind=engine)
+        code = Model(metadata).render()
+
+        module = _import_generated_code(code, "_test_generation_dates")
+        assert hasattr(module, "Events")
+
+    def test_schema_to_sqlalchemy_importable(self, typed_db: str) -> None:
+        """schema_to_sqlalchemy output should import without MappedAnnotationError."""
+        engine = create_engine(f"sqlite:///{typed_db}")
+        schema = sqlite_to_schema(engine)
+        code = schema_to_sqlalchemy(schema)
+
+        module = _import_generated_code(code, "_test_schema_dates")
+        assert hasattr(module, "Events")
