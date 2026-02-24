@@ -22,7 +22,7 @@ jobs:
 
       - name: Set CalVer version
         run: |
-          VERSION=$(date +'%Y.%-m.%-d')
+          VERSION=$(date +'%Y.%-m.%-d').${{ github.run_number }}
           uv version $VERSION
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
