@@ -8,6 +8,8 @@ jobs:
     uses: ./.github/workflows/build-database.yml
     with:
       version_id: "release"
+      include_analyze: false
+      include_compare: false
 
   publish:
     needs: build-database
