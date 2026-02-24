@@ -23,4 +23,13 @@ downloads/
 *.sqlite3
 *.db
 *.accdb
-.vscode/settings.json
+
+# generated output
+/*.html
+
+# editor / IDE
+.vscode/
+
+# planning / temporary docs
+REFACTORING_PLAN.md
+WORKFLOW.md
