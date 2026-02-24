@@ -83,12 +83,11 @@ def generate_column_definition(column: ColumnSchema, imports: Imports) -> str:
     sql_type = data_type_to_sql(column["type"])
     type_info = sql_to_python(sql_type)
 
-    # Qualified types (e.g. datetime.date) need a bare module import;
-    # simple types use a from-import.
-    if "." in type_info.expression:
-        imports.setdefault(type_info.module, set())
-    else:
-        imports[type_info.module].add(type_info.name)
+    if type_info.module:
+        if type_info.name:
+            imports[type_info.module].add(type_info.name)
+        else:
+            imports.setdefault(type_info.module, set())
 
     python_type = (
         f"{type_info.expression} | None" if column["nullable"] else type_info.expression
@@ -213,13 +212,12 @@ def generate_table_definition(
 
 def generate_imports(imports: Imports) -> str:
     """Generate import statements from collected imports."""
-    lines: list[str] = []
-    for module, names in imports.items():
-        if names:
-            joined = ", ".join(sorted(names))
-            lines.append(f"from {module} import {joined}")
-        else:
-            lines.append(f"import {module}")
+    lines = [
+        f"from {module} import {', '.join(sorted(names))}"
+        if names
+        else f"import {module}"
+        for module, names in imports.items()
+    ]
     return "\n".join(lines)
 
 
