@@ -149,6 +149,22 @@ def sql_to_python(sql_type: TypeEngine[Any]) -> TypeInfo:
                 name="Literal",
                 expression=f"Literal[{values_string}]",
             )
+        # Date/DateTime: use qualified references (datetime.date, datetime.datetime)
+        # to avoid shadowing when a column attribute has the same name as the type
+        # (e.g. a "Date" column produces attribute `date` which shadows `date` type
+        # under `from __future__ import annotations`, causing MappedAnnotationError).
+        case Date():
+            return TypeInfo(
+                module="datetime",
+                name="date",
+                expression="datetime.date",
+            )
+        case DateTime():
+            return TypeInfo(
+                module="datetime",
+                name="datetime",
+                expression="datetime.datetime",
+            )
         case _:
             # Standard case: Use SQLAlchemy's python_type
             py_type = sql_type.python_type
