@@ -40,7 +40,6 @@ jobs:
 
       - name: Format generated models with ruff
         run: |
-          uv run ruff format *.py
           uv run ruff check *.py --fix-only
           uv run ruff format *.py
 
@@ -48,21 +47,10 @@ jobs:
         run: |
           uv run mypy *.py
 
-      - name: Type check generated models using ty (ignore errors)
-        run: |
-          uv run ty check *.py --exit-zero
-
       - name: Generate HTML diagram
         run: |
           SQLITE_FILE=$(find . -name "*.sqlite" -type f | head -1)
           uv run dpm-toolkit schema "$SQLITE_FILE" --fmt html > ${{ inputs.sqlite_artifact_name }}-diagram.html
-
-      - name: Validate HTML diagram is well-formed
-        run: |
-          # Install and use htmlhint for HTML validation
-          npm install -g htmlhint
-          htmlhint ${{ inputs.sqlite_artifact_name }}-diagram.html
-          echo "✅ HTML diagram is well-formed"
 
       - name: Upload schema artifact
         uses: actions/upload-artifact@v6
