@@ -82,7 +82,13 @@ def generate_column_definition(column: ColumnSchema, imports: Imports) -> str:
     # Build Python type annotation
     sql_type = data_type_to_sql(column["type"])
     type_info = sql_to_python(sql_type)
-    imports[type_info.module].add(type_info.name)
+
+    # Qualified types (e.g. datetime.date) need a bare module import;
+    # simple types use a from-import.
+    if "." in type_info.expression:
+        imports[type_info.module].add("__bare__")
+    else:
+        imports[type_info.module].add(type_info.name)
 
     python_type = (
         f"{type_info.expression} | None" if column["nullable"] else type_info.expression
@@ -207,10 +213,13 @@ def generate_table_definition(
 
 def generate_imports(imports: Imports) -> str:
     """Generate import statements from collected imports."""
-    lines = [
-        f"from {module} import {', '.join(names)}" if names else f"import {module}"
-        for module, names in imports.items()
-    ]
+    lines = []
+    for module, names in imports.items():
+        actual_names = sorted(n for n in names if n != "__bare__")
+        if actual_names:
+            lines.append(f"from {module} import {', '.join(actual_names)}")
+        if "__bare__" in names or not actual_names:
+            lines.append(f"import {module}")
     return "\n".join(lines)
 
 
