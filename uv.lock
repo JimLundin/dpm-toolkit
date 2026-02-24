@@ -9,6 +9,7 @@ members = [
     "compare",
     "dpm-toolkit",
     "dpm2",
+    "dpmlite",
     "migrate",
     "schema",
     "scrape",
@@ -232,6 +233,17 @@ dev = [
 name = "dpm2"
 version = "0.0.0"
 source = { editable = "projects/dpm2" }
+dependencies = [
+    { name = "sqlalchemy" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "sqlalchemy", specifier = ">=2.0.37" }]
+
+[[package]]
+name = "dpmlite"
+version = "0.0.0"
+source = { editable = "projects/dpmlite" }
 dependencies = [
     { name = "sqlalchemy" },
 ]

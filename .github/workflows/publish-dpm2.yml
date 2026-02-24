@@ -75,3 +75,14 @@ jobs:
 
       - name: Publish dpm2 to PyPI
         run: uv publish
+
+      - name: Commit generated models.py to repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Stage only the generated models file
+          cp projects/dpm2/src/dpm2/models.py projects/dpm2/src/dpm2/models.py
+          git add projects/dpm2/src/dpm2/models.py
+          # Only commit if there are changes
+          git diff --cached --quiet || git commit -m "Update dpm2 models.py from ${{ env.VERSION }}"
+          git push origin HEAD
