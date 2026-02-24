@@ -86,7 +86,7 @@ def generate_column_definition(column: ColumnSchema, imports: Imports) -> str:
     # Qualified types (e.g. datetime.date) need a bare module import;
     # simple types use a from-import.
     if "." in type_info.expression:
-        imports[type_info.module].add("__bare__")
+        imports.setdefault(type_info.module, set())
     else:
         imports[type_info.module].add(type_info.name)
 
@@ -213,12 +213,12 @@ def generate_table_definition(
 
 def generate_imports(imports: Imports) -> str:
     """Generate import statements from collected imports."""
-    lines = []
+    lines: list[str] = []
     for module, names in imports.items():
-        actual_names = sorted(n for n in names if n != "__bare__")
-        if actual_names:
-            lines.append(f"from {module} import {', '.join(actual_names)}")
-        if "__bare__" in names or not actual_names:
+        if names:
+            joined = ", ".join(sorted(names))
+            lines.append(f"from {module} import {joined}")
+        else:
             lines.append(f"import {module}")
     return "\n".join(lines)
 
