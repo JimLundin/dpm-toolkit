@@ -101,6 +101,8 @@ class Model:
 
     def _generate_typing_imports(self) -> str:
         """Generate typing import statements."""
+        if not self.typing_imports:
+            return ""
         self.imports["typing"].add("TYPE_CHECKING")
         return "if TYPE_CHECKING:\n" + "\n".join(
             f"{INDENT}from {module} import {', '.join(names)}"
@@ -197,13 +199,13 @@ class Model:
         python_type_name = python_type.__name__
 
         if python_type == date:
-            self.typing_imports["datetime"].add("date")
+            self.imports["datetime"].add("date")
         elif python_type == datetime:
-            self.typing_imports["datetime"].add("datetime")
+            self.imports["datetime"].add("datetime")
         elif python_type == Decimal:
-            self.typing_imports["decimal"].add("Decimal")
+            self.imports["decimal"].add("Decimal")
         elif python_type == UUID:
-            self.typing_imports["uuid"].add("UUID")
+            self.imports["uuid"].add("UUID")
 
         if isinstance(column_type, Enum):
             self.imports["typing"].add("Literal")
