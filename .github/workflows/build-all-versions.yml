@@ -2,8 +2,7 @@ name: Build All Database Versions
 
 on:
   push:
-    branches:
-      - "**" # Run on all branches
+    branches: [main, develop]
   workflow_dispatch: # Allow manual trigger
 
 jobs:

@@ -7,6 +7,16 @@ on:
         description: "The version ID to build."
         required: true
         type: string
+      include_analyze:
+        description: "Whether to run type refinement analysis."
+        required: false
+        type: boolean
+        default: true
+      include_compare:
+        description: "Whether to run comparison with previous version."
+        required: false
+        type: boolean
+        default: true
     outputs:
       database_artifact_name:
         description: "The name of the uploaded artifact containing the SQLite database"
@@ -38,6 +48,7 @@ jobs:
       sqlite_artifact_name: ${{ needs.migrate.outputs.artifact_name }}
 
   analyze:
+    if: ${{ inputs.include_analyze }}
     needs: migrate
     uses: ./.github/workflows/analyze-database.yml
     with:
@@ -45,6 +56,7 @@ jobs:
       confidence_threshold: "0.8"
 
   compare:
+    if: ${{ inputs.include_compare }}
     needs: migrate
     uses: ./.github/workflows/compare-previous.yml
     with:
