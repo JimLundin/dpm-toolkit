@@ -133,6 +133,12 @@ def sql_to_string(sql_type: TypeEngine[Any]) -> str:
             return sql_type.__class__.__name__
 
 
+# Stdlib modules whose types are emitted as qualified references (e.g.
+# datetime.date) to avoid shadowing when a column attribute has the same
+# name as the type under ``from __future__ import annotations``.
+_QUALIFIED_MODULES = frozenset({"datetime", "decimal", "uuid"})
+
+
 def sql_to_python(sql_type: TypeEngine[Any]) -> TypeInfo:
     """Get the 3 components needed for code generation from SQLAlchemy type.
 
@@ -149,22 +155,6 @@ def sql_to_python(sql_type: TypeEngine[Any]) -> TypeInfo:
                 name="Literal",
                 expression=f"Literal[{values_string}]",
             )
-        # Date/DateTime: use qualified references (datetime.date, datetime.datetime)
-        # to avoid shadowing when a column attribute has the same name as the type
-        # (e.g. a "Date" column produces attribute `date` which shadows `date` type
-        # under `from __future__ import annotations`, causing MappedAnnotationError).
-        case Date():
-            return TypeInfo(
-                module="datetime",
-                name="date",
-                expression="datetime.date",
-            )
-        case DateTime():
-            return TypeInfo(
-                module="datetime",
-                name="datetime",
-                expression="datetime.datetime",
-            )
         case _:
             # Standard case: Use SQLAlchemy's python_type
             py_type = sql_type.python_type
@@ -174,5 +164,7 @@ def sql_to_python(sql_type: TypeEngine[Any]) -> TypeInfo:
             return TypeInfo(
                 module=module_name,
                 name=type_name,
-                expression=type_name,
+                expression=f"{module_name}.{type_name}"
+                if module_name in _QUALIFIED_MODULES
+                else type_name,
             )
