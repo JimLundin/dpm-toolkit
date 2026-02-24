@@ -1,0 +1,91 @@
+name: Publish DPM Lite Package
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-database:
+    uses: ./.github/workflows/build-database.yml
+    with:
+      version_id: "release"
+      include_analyze: false
+      include_compare: false
+
+  publish:
+    needs: build-database
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: write  # Required for creating version tags
+      id-token: write # IMPORTANT: this permission is mandatory for trusted publishing
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@v7
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Sync dependencies
+        run: uv sync --extra schema --dev
+
+      - name: Set CalVer version
+        run: |
+          git fetch --tags
+          DATE=$(date +'%Y.%-m.%-d')
+          LATEST=$(git tag -l "dpmlite/v${DATE}.*" | sort -t. -k4 -n | tail -1)
+          if [ -z "$LATEST" ]; then
+            VERSION="${DATE}.1"
+          else
+            LAST_NUM=${LATEST##*.}
+            VERSION="${DATE}.$((LAST_NUM + 1))"
+          fi
+          git tag "dpmlite/v${VERSION}"
+          git push origin "dpmlite/v${VERSION}"
+          uv version $VERSION --package dpmlite
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Download full SQLite database
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ needs.build-database.outputs.database_artifact_name }}
+          path: database/
+
+      # ---- dpmlite-specific: filter database to allowlist ----
+      - name: Filter database to dpmlite allowlist
+        run: |
+          FULL_DB=$(find database -name "*.sqlite" -type f | head -1)
+          echo "Source database: $FULL_DB"
+          uv run python projects/dpmlite/filter_db.py "$FULL_DB" dpmlite-filtered.sqlite
+
+      - name: Generate schema from filtered database
+        run: |
+          uv run dpm-toolkit schema dpmlite-filtered.sqlite > dpmlite-models.py
+
+      - name: Format and lint generated models
+        run: |
+          uv run ruff format dpmlite-models.py
+          uv run ruff check dpmlite-models.py --fix-only
+          uv run ruff format dpmlite-models.py
+
+      - name: Type check generated models
+        run: |
+          uv run mypy dpmlite-models.py
+      # ---- end dpmlite-specific ----
+
+      - name: Package database and schema for dpmlite
+        run: |
+          mkdir -p projects/dpmlite/src/dpmlite
+          echo "Packaging artifacts for dpmlite..."
+          cp dpmlite-filtered.sqlite projects/dpmlite/src/dpmlite/dpm.sqlite
+          cp dpmlite-models.py projects/dpmlite/src/dpmlite/models.py
+          echo "Final dpmlite package contents:"
+          ls -la projects/dpmlite/src/dpmlite/
+
+      - name: Build dpmlite package
+        run: uv build
+        working-directory: projects/dpmlite
+
+      - name: Publish dpmlite to PyPI
+        run: uv publish

@@ -95,3 +95,4 @@ schema = { workspace = true }
 compare = { workspace = true }
 analysis = { workspace = true }
 dpm2 = { workspace = true }
+dpmlite = { workspace = true }
