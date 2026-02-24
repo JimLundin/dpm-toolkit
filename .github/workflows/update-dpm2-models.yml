@@ -1,0 +1,43 @@
+name: Update DPM2 Models
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-database:
+    uses: ./.github/workflows/build-database.yml
+    with:
+      version_id: "release"
+      include_analyze: false
+      include_compare: false
+
+  update-models:
+    needs: build-database
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download generated schema
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ needs.build-database.outputs.schema_artifact_name }}
+          path: schema/
+
+      - name: Update models.py
+        run: |
+          find schema -name "*.py" -exec cp {} projects/dpm2/src/dpm2/models.py \;
+          echo "Updated models.py:"
+          wc -l projects/dpm2/src/dpm2/models.py
+
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add projects/dpm2/src/dpm2/models.py
+          git diff --cached --quiet || git commit -m "Update dpm2 models.py"
+          git push origin HEAD
