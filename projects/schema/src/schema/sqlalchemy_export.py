@@ -258,6 +258,7 @@ def schema_to_sqlalchemy(schema: DatabaseSchema) -> str:
     # Assemble final file
     parts = (
         '"""SQLAlchemy models generated from DPM by the DPM Toolkit project."""',
+        "# ruff: noqa: TC001, TC002, TC003",
         generate_imports(imports),
         generate_base_class(base_class),
         *models,
