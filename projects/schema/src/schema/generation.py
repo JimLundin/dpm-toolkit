@@ -71,6 +71,7 @@ class Model:
         imports = self._generate_imports()
         header = [
             '"""SQLAlchemy models generated from DPM by the DPM Toolkit project."""',
+            "# ruff: noqa: TC001, TC002, TC003",
             imports,
             base_class,
         ]
