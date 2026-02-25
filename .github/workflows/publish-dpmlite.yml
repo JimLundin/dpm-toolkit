@@ -4,15 +4,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-database:
-    uses: ./.github/workflows/build-database.yml
-    with:
-      version_id: "release"
-      include_analyze: false
-      include_compare: false
-
   publish:
-    needs: build-database
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
@@ -46,22 +38,14 @@ jobs:
           uv version $VERSION --package dpmlite
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
-      - name: Download full SQLite database
-        uses: actions/download-artifact@v7
-        with:
-          name: ${{ needs.build-database.outputs.database_artifact_name }}
-          path: database/
-
-      # ---- dpmlite-specific: filter database to allowlist ----
-      - name: Filter database to dpmlite allowlist
+      # ---- Build dpmlite database from dpm2 ----
+      - name: Build dpmlite database from dpm2
         run: |
-          FULL_DB=$(find database -name "*.sqlite" -type f | head -1)
-          echo "Source database: $FULL_DB"
-          uv run python projects/dpmlite/filter_db.py "$FULL_DB" dpmlite-filtered.sqlite
+          uv run python projects/dpmlite/build_db.py dpmlite.sqlite
 
-      - name: Generate schema from filtered database
+      - name: Generate schema from dpmlite database
         run: |
-          uv run dpm-toolkit schema dpmlite-filtered.sqlite > dpmlite-models.py
+          uv run dpm-toolkit schema dpmlite.sqlite > dpmlite-models.py
 
       - name: Format and lint generated models
         run: |
@@ -72,13 +56,12 @@ jobs:
       - name: Type check generated models
         run: |
           uv run mypy dpmlite-models.py
-      # ---- end dpmlite-specific ----
 
+      # ---- Package and publish ----
       - name: Package database and schema for dpmlite
         run: |
-          mkdir -p projects/dpmlite/src/dpmlite
           echo "Packaging artifacts for dpmlite..."
-          cp dpmlite-filtered.sqlite projects/dpmlite/src/dpmlite/dpm.sqlite
+          cp dpmlite.sqlite projects/dpmlite/src/dpmlite/dpm.sqlite
           cp dpmlite-models.py projects/dpmlite/src/dpmlite/models.py
           echo "Final dpmlite package contents:"
           ls -la projects/dpmlite/src/dpmlite/
