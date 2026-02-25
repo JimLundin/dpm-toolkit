@@ -20,7 +20,7 @@ jobs:
         run: uv python install
 
       - name: Sync dependencies
-        run: uv sync --extra schema --dev
+        run: uv sync
 
       - name: Set CalVer version
         run: |
@@ -41,31 +41,9 @@ jobs:
       # ---- Build dpmlite database from dpm2 ----
       - name: Build dpmlite database from dpm2
         run: |
-          uv run python projects/dpmlite/build_db.py dpmlite.sqlite
-
-      - name: Generate schema from dpmlite database
-        run: |
-          uv run dpm-toolkit schema dpmlite.sqlite > dpmlite-models.py
-
-      - name: Format and lint generated models
-        run: |
-          uv run ruff format dpmlite-models.py
-          uv run ruff check dpmlite-models.py --fix-only
-          uv run ruff format dpmlite-models.py
-
-      - name: Type check generated models
-        run: |
-          uv run mypy dpmlite-models.py
+          uv run python projects/dpmlite/build_db.py projects/dpmlite/src/dpmlite/dpm.sqlite
 
       # ---- Package and publish ----
-      - name: Package database and schema for dpmlite
-        run: |
-          echo "Packaging artifacts for dpmlite..."
-          cp dpmlite.sqlite projects/dpmlite/src/dpmlite/dpm.sqlite
-          cp dpmlite-models.py projects/dpmlite/src/dpmlite/models.py
-          echo "Final dpmlite package contents:"
-          ls -la projects/dpmlite/src/dpmlite/
-
       - name: Build dpmlite package
         run: uv build
         working-directory: projects/dpmlite

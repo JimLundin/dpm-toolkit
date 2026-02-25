@@ -1,8 +1,9 @@
 """Build the dpmlite database from dpm2.
 
-This script imports dpm2, queries the full DPM database for the tables
-and data relevant to report building, table structure, and validation
-rules, and writes a new simplified SQLite database.
+This script uses dpm2's SQLAlchemy models to read from the full DPM
+database and dpmlite's own models to write into a new simplified
+database.  Both sides are fully typed — if dpm2's schema changes in
+a way that breaks a read, you get a real import or query error.
 
 Usage::
 
@@ -11,75 +12,58 @@ Usage::
 The resulting database is a standalone artifact — dpmlite does not
 depend on dpm2 at runtime.
 
-To add or change what's included, edit the ``build_tables`` function.
-Each table is defined by a CREATE TABLE statement and a SELECT query
-against the dpm2 source.
+To add or change what's included, define new models in
+``dpmlite.models`` and add the corresponding query here.
 """
 
 from __future__ import annotations
 
-import sqlite3
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from sqlalchemy.engine import Engine
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import Session
 
-
-def get_source() -> Engine:
-    """Get an in-memory engine to the full dpm2 database."""
-    from dpm2 import get_db  # noqa: PLC0415
-
-    return get_db()
-
-
-def build_tables(source: Engine, dest: sqlite3.Connection) -> None:
-    """Define and populate the dpmlite tables from dpm2.
-
-    Each block below creates one table in the destination database by
-    querying the source.  Add, remove, or modify blocks here to change
-    what dpmlite contains.
-
-    Pattern for adding a table::
-
-        with source.connect() as conn:
-            dest.execute("CREATE TABLE ...")
-            rows = conn.execute(text("SELECT ... FROM ..."))
-            dest.executemany("INSERT INTO ... VALUES (...)", rows.fetchall())
-    """
-    # Report structure
-    # ---------------------------------------------------------------
-    # Populate once dpm2 models.py is committed and table names known
-
-    # Table layout
-    # ---------------------------------------------------------------
-
-    # Validation rules
-    # ---------------------------------------------------------------
-
-    _ = source, dest  # placeholder until real queries are added
+from dpmlite.models import DPMLite
 
 
 def build_database(output: Path) -> None:
     """Build the dpmlite SQLite database at *output*."""
-    source = get_source()
+    from dpm2 import get_db  # noqa: PLC0415
 
-    dest = sqlite3.connect(output)
-    try:
-        build_tables(source, dest)
-        dest.execute("VACUUM")
+    source_engine = get_db()
+    dest_engine = create_engine(f"sqlite:///{output}")
+
+    # Create all tables defined in dpmlite.models
+    DPMLite.metadata.create_all(dest_engine)
+
+    with Session(source_engine) as source, Session(dest_engine) as dest:
+        populate(source, dest)
         dest.commit()
 
-        cursor = dest.execute(
-            "SELECT name FROM sqlite_master"
-            " WHERE type='table' AND name NOT LIKE 'sqlite_%'"
-            " ORDER BY name",
-        )
-        tables = [row[0] for row in cursor.fetchall()]
-        print(f"Built dpmlite database with {len(tables)} tables: {tables}")
-    finally:
-        dest.close()
+    tables = list(DPMLite.metadata.tables)
+    print(f"Built dpmlite database with {len(tables)} tables: {tables}")
+
+
+def populate(source: Session, dest: Session) -> None:
+    """Query dpm2 and insert into dpmlite.
+
+    Each block reads from dpm2's typed models and writes into dpmlite's
+    typed models.  Add new blocks here when adding tables to dpmlite.
+
+    Example once models are defined::
+
+        from dpm2.models import Template as DpmTemplate
+        from dpmlite.models import Template
+
+        for row in source.execute(select(DpmTemplate)):
+            dest.add(Template(
+                template_id=row.template_id,
+                name=row.name,
+            ))
+    """
+    _ = source, dest  # placeholder until real models are added
+    _ = select  # used by populate blocks
 
 
 def main() -> None:
@@ -88,8 +72,7 @@ def main() -> None:
         print(f"Usage: {sys.argv[0]} OUTPUT_PATH", file=sys.stderr)
         sys.exit(1)
 
-    output = Path(sys.argv[1])
-    build_database(output)
+    build_database(Path(sys.argv[1]))
 
 
 if __name__ == "__main__":
