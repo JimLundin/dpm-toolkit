@@ -4,11 +4,9 @@ Lightweight subset of EBA DPM 2.0 focused on report structure, table layout, and
 
 ## Purpose
 
-This package is derived from the full [dpm2](https://pypi.org/project/dpm2/) package by filtering the database to only the tables needed for building and validating reports. It provides:
-- Fully typed SQLAlchemy ORM models for the included tables
-- Relationship mapping between tables
-- Bundled SQLite database ready to query
-- Significantly smaller install size than the full dpm2 package
+This package is derived from the full [dpm2](https://pypi.org/project/dpm2/) package at build time. It uses dpm2's typed SQLAlchemy models to query the full database and writes the results into dpmlite's own hand-written models. Both sides are fully type-checked — if dpm2's schema changes in a way that breaks a query, you get a real error.
+
+At runtime dpmlite is standalone — it ships its own bundled SQLite database and models with no dependency on dpm2.
 
 ## Installation
 
@@ -24,13 +22,6 @@ from dpmlite import get_db, models
 
 # Get an in-memory engine backed by the bundled database (default)
 engine = get_db()
-
-# Type-safe queries with full IDE support
-with engine.connect() as conn:
-    stmt = select(models.TableVersion)
-
-    for row in conn.execute(stmt):
-        print(row)
 ```
 
 ### Engine options
@@ -49,22 +40,30 @@ from pathlib import Path
 engine = disk_engine(Path("my_local_copy.sqlite"))
 ```
 
-## Included Table Domains
+## Architecture
 
-DPM Lite includes tables from three domains:
+### Models (hand-written)
+
+`dpmlite/models.py` defines the simplified SQLAlchemy schema. These models are committed source code, not generated output. They represent an intentional subset of DPM 2.0.
+
+### Build script
+
+`build_db.py` reads from `dpm2.models` (typed) and writes into `dpmlite.models` (typed). This gives full type safety on both sides:
+
+```python
+from dpm2.models import Template as DpmTemplate  # typed reads
+from dpmlite.models import Template               # typed writes
+
+for row in source.execute(select(DpmTemplate)):
+    dest.add(Template(template_id=row.template_id, name=row.name))
+```
+
+### Included domains
 
 1. **Report structure** — templates, modules, and how reports are organised
 2. **Table layout** — the row/column structure of each reporting table
 3. **Validation rules** — the business rules applied to reported data
 
-Plus shared reference tables that these domains depend on.
-
-See `dpmlite.tables.INCLUDED_TABLES` for the exact set of tables included.
-
-## Relationship to dpm2
-
-DPM Lite is built from the same EBA DPM source as dpm2, using the committed `dpm2/models.py` as the source of truth for available tables. The build pipeline filters the full database to the dpmlite allowlist and regenerates models for the subset.
-
 ## Regeneration
 
-Models are regenerated with each new EBA DPM release alongside dpm2. Install the latest version to get updated schemas and data structures.
+The bundled database is rebuilt with each release by running `build_db.py` against the latest dpm2. Install the latest version to get updated data.
