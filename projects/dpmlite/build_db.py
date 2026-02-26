@@ -160,14 +160,16 @@ def populate_tables(
         group_info = _resolve_groups(
             source, mvc_rows, TableGroup, TableGroupComposition,
         )
+        group_orders, tg_orders = _compute_orders(mvc_rows, group_info)
         _insert_groups(dest, group_info, group_map, next_id)
         _insert_module_group_memberships(
-            dest, mvid, group_info, group_map, seen_module_groups,
+            dest, mvid, group_info, group_map,
+            group_orders, seen_module_groups,
         )
         _insert_templates(dest, mvc_rows, template_map, next_id)
         _link_templates_to_groups(
-            dest, mvc_rows, group_info, group_map,
-            template_map, seen_template_groups,
+            dest, group_map,
+            template_map, tg_orders, seen_template_groups,
         )
         _insert_concrete_tables(
             dest, mvc_rows, template_map, table_map, table_vid_map, next_id,
@@ -254,6 +256,41 @@ def _build_header_lookup(
     return result
 
 
+def _compute_orders(
+    mvc_rows: list,
+    group_info: dict[int, tuple[str, str]],
+) -> tuple[dict[tuple[str, str], int], dict[tuple[tuple[str, str], int], int]]:
+    """Derive rendering orders for group and template junctions.
+
+    Returns ``(group_orders, template_group_orders)`` where:
+
+    * ``group_orders`` maps ``group_key -> min(MVC.order)`` across all
+      concrete tables in that group for this module version.
+    * ``template_group_orders`` maps ``(group_key, tmpl_key) ->
+      min(MVC.order)`` across all concrete tables belonging to that
+      template within that group.
+    """
+    group_orders: dict[tuple[str, str], int] = {}
+    tg_orders: dict[tuple[tuple[str, str], int], int] = {}
+
+    for r in mvc_rows:
+        if r.is_abstract:
+            continue
+        gk = group_info.get(r.table_id)
+        if gk is None:
+            continue
+
+        if gk not in group_orders or r.order < group_orders[gk]:
+            group_orders[gk] = r.order
+
+        tk = r.abstract_table_id or r.table_id
+        pair = (gk, tk)
+        if pair not in tg_orders or r.order < tg_orders[pair]:
+            tg_orders[pair] = r.order
+
+    return group_orders, tg_orders
+
+
 def _fetch_module_tables(
     source: Session,
     MVC: type,  # noqa: N803
@@ -264,7 +301,7 @@ def _fetch_module_tables(
     """Fetch all table entries for a single module version."""
     return source.execute(
         select(
-            MVC.table_id, MVC.table_vid,
+            MVC.table_id, MVC.table_vid, MVC.order,
             TV.code.label("tv_code"),
             TV.name.label("tv_name"),
             TV.description.label("tv_description"),
@@ -321,11 +358,12 @@ def _insert_groups(
             next_id["group"] += 1
 
 
-def _insert_module_group_memberships(
+def _insert_module_group_memberships(  # noqa: PLR0913
     dest: Session,
     mvid: int,
     group_info: dict[int, tuple[str, str]],
     group_map: dict[tuple[str, str], int],
+    group_orders: dict[tuple[str, str], int],
     seen: set[tuple[int, int]],
 ) -> None:
     """Insert ModuleGroupMembership rows for this module version."""
@@ -334,7 +372,13 @@ def _insert_module_group_memberships(
         pair = (mvid, lite_group)
         if pair not in seen:
             seen.add(pair)
-            dest.add(LiteModuleGroup(module_id=mvid, group_id=lite_group))
+            dest.add(
+                LiteModuleGroup(
+                    module_id=mvid,
+                    group_id=lite_group,
+                    order=group_orders.get(group_key, 0),
+                ),
+            )
 
 
 def _insert_templates(
@@ -370,26 +414,22 @@ def _insert_templates(
             next_id["template"] += 1
 
 
-def _link_templates_to_groups(  # noqa: PLR0913
+def _link_templates_to_groups(
     dest: Session,
-    mvc_rows: list,
-    group_info: dict[int, tuple[str, str]],
     group_map: dict[tuple[str, str], int],
     template_map: dict[int, int],
+    tg_orders: dict[tuple[tuple[str, str], int], int],
     seen: set[tuple[int, int]],
 ) -> None:
     """Insert TemplateGroupMembership rows linking templates to groups.
 
     The link is inferred from each concrete table's group membership:
     if a table belongs to group G and template T, then T belongs to G.
+    The order for each (group, template) pair is precomputed in
+    *tg_orders* as the minimum ``MVC.order`` of concrete tables in
+    that (group, template) combination.
     """
-    for r in mvc_rows:
-        if r.is_abstract:
-            continue
-        group_key = group_info.get(r.table_id)
-        if group_key is None:
-            continue
-        tmpl_key = r.abstract_table_id or r.table_id
+    for (group_key, tmpl_key), order in tg_orders.items():
         lite_group = group_map[group_key]
         lite_template = template_map[tmpl_key]
         pair = (lite_group, lite_template)
@@ -399,6 +439,7 @@ def _link_templates_to_groups(  # noqa: PLR0913
                 LiteTemplateMembership(
                     group_id=lite_group,
                     template_id=lite_template,
+                    order=order,
                 ),
             )
 
