@@ -16,6 +16,7 @@ To add a new table:
 
 from __future__ import annotations
 
+from sqlalchemy import ForeignKey
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -50,3 +51,79 @@ class Module(DPMLite):
     framework_name: Mapped[str]
     organisation_code: Mapped[str]
     organisation_name: Mapped[str]
+
+
+# ---------------------------------------------------------------------------
+# TableGroup — grouping of tables within a module
+# ---------------------------------------------------------------------------
+
+
+class TableGroup(DPMLite):
+    """A group of tables within a module.
+
+    Groups organise the concrete tables of a module into logical sections
+    (e.g. "Credit Risk", "Capital Adequacy").  The relationship to module
+    is inferred during the build by checking which module's tables appear
+    in each group.
+
+    Source tables: ``TableGroup`` + ``TableGroupComposition``
+                   (linked to modules via shared ``Table`` rows)
+    """
+
+    __tablename__ = "TableGroup"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str]
+    name: Mapped[str]
+    module_id: Mapped[int] = mapped_column(ForeignKey("Module.id"))
+
+
+# ---------------------------------------------------------------------------
+# Template — abstract table that defines a shared shape for concrete tables
+# ---------------------------------------------------------------------------
+
+
+class Template(DPMLite):
+    """An abstract table that acts as a template for a set of concrete tables.
+
+    Templates represent the DPM concept of an *abstract* table — a table
+    whose structure (rows/columns) is shared by several concrete tables
+    that differ only in the reporting population or sheet variant
+    (e.g. ``F_32.02`` → ``F_32.02.a``, ``F_32.02.b``).
+
+    Source tables: ``TableVersion`` / ``Table`` where ``is_abstract = True``
+    """
+
+    __tablename__ = "Template"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str]
+    name: Mapped[str]
+    module_id: Mapped[int] = mapped_column(ForeignKey("Module.id"))
+
+
+# ---------------------------------------------------------------------------
+# Table — concrete reporting table
+# ---------------------------------------------------------------------------
+
+
+class Table(DPMLite):
+    """A concrete reporting table within a module.
+
+    Each row is a specific version of a table assigned to a module version.
+    Tables belong to a ``TableGroup`` and optionally derive their shape
+    from a ``Template`` (abstract table).
+
+    Source tables: ``ModuleVersionComposition`` → ``TableVersion`` → ``Table``
+                   + ``TableGroupComposition`` for group membership
+    """
+
+    __tablename__ = "Table"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str]
+    name: Mapped[str]
+    module_id: Mapped[int] = mapped_column(ForeignKey("Module.id"))
+    group_id: Mapped[int] = mapped_column(ForeignKey("TableGroup.id"))
+    template_id: Mapped[int | None] = mapped_column(ForeignKey("Template.id"))
+    order: Mapped[int | None]
