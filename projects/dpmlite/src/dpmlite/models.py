@@ -59,12 +59,12 @@ class Module(DPMLite):
 
 
 class TableGroup(DPMLite):
-    """A group of tables within a module.
+    """A template group within a module.
 
-    Groups organise the concrete tables of a module into logical sections
-    (e.g. "Credit Risk", "Capital Adequacy").  The relationship to module
-    is inferred during the build by checking which module's tables appear
-    in each group.
+    Groups organise templates (and therefore tables) into logical sections
+    (e.g. "Credit Risk", "Capital Adequacy").  Each group belongs to one
+    module, and links to templates via the ``TemplateGroupMembership``
+    junction table.
 
     Source tables: ``TableGroup`` + ``TableGroupComposition``
                    (linked to modules via shared ``Table`` rows)
@@ -76,6 +76,29 @@ class TableGroup(DPMLite):
     code: Mapped[str]
     name: Mapped[str]
     module_id: Mapped[int] = mapped_column(ForeignKey("Module.id"))
+
+
+# ---------------------------------------------------------------------------
+# TemplateGroupMembership — many-to-many between TableGroup and Template
+# ---------------------------------------------------------------------------
+
+
+class TemplateGroupMembership(DPMLite):
+    """Junction linking templates to the groups they belong to.
+
+    A template may appear in more than one group within the same module
+    (roughly 8 templates across the full DPM dataset have children that
+    span two groups).
+    """
+
+    __tablename__ = "TemplateGroupMembership"
+
+    group_id: Mapped[int] = mapped_column(
+        ForeignKey("TableGroup.id"), primary_key=True,
+    )
+    template_id: Mapped[int] = mapped_column(
+        ForeignKey("Template.id"), primary_key=True,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -113,15 +136,14 @@ class Template(DPMLite):
 
 
 class Table(DPMLite):
-    """A concrete reporting table within a module.
+    """A concrete reporting table.
 
     Each row is a specific version of a table assigned to a module version.
-    Tables belong to a ``TableGroup`` and always belong to a ``Template``
-    (either a real abstract table or a synthetic one-to-one template for
-    standalone tables).
+    Tables always belong to a ``Template`` (either a real abstract table
+    or a synthetic one-to-one template for standalone tables).  The module
+    and group are reachable through the template's membership links.
 
     Source tables: ``ModuleVersionComposition`` → ``TableVersion`` → ``Table``
-                   + ``TableGroupComposition`` for group membership
     """
 
     __tablename__ = "Table"
@@ -129,7 +151,5 @@ class Table(DPMLite):
     id: Mapped[int] = mapped_column(primary_key=True)
     code: Mapped[str]
     name: Mapped[str]
-    module_id: Mapped[int] = mapped_column(ForeignKey("Module.id"))
-    group_id: Mapped[int] = mapped_column(ForeignKey("TableGroup.id"))
     template_id: Mapped[int] = mapped_column(ForeignKey("Template.id"))
     order: Mapped[int | None]
