@@ -25,6 +25,7 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
 from dpmlite.models import DPMLite
+from dpmlite.models import Module as LiteModule
 
 
 def build_database(output: Path) -> None:
@@ -34,7 +35,6 @@ def build_database(output: Path) -> None:
     source_engine = get_db()
     dest_engine = create_engine(f"sqlite:///{output}")
 
-    # Create all tables defined in dpmlite.models
     DPMLite.metadata.create_all(dest_engine)
 
     with Session(source_engine) as source, Session(dest_engine) as dest:
@@ -49,21 +49,42 @@ def populate(source: Session, dest: Session) -> None:
     """Query dpm2 and insert into dpmlite.
 
     Each block reads from dpm2's typed models and writes into dpmlite's
-    typed models.  Add new blocks here when adding tables to dpmlite.
-
-    Example once models are defined::
-
-        from dpm2.models import Template as DpmTemplate
-        from dpmlite.models import Template
-
-        for row in source.execute(select(DpmTemplate)):
-            dest.add(Template(
-                template_id=row.template_id,
-                name=row.name,
-            ))
+    typed models.
     """
-    _ = source, dest  # placeholder until real models are added
-    _ = select  # used by populate blocks
+    populate_modules(source, dest)
+
+
+def populate_modules(source: Session, dest: Session) -> None:
+    """Flatten ModuleVersion + Module + Framework into dpmlite Module."""
+    from dpm2.models import Framework, ModuleVersion  # noqa: PLC0415
+    from dpm2.models import Module as DpmModule  # noqa: PLC0415
+
+    rows = source.execute(
+        select(
+            ModuleVersion.module_vid,
+            ModuleVersion.code,
+            ModuleVersion.name,
+            ModuleVersion.description,
+            ModuleVersion.version_number,
+            Framework.code.label("framework_code"),
+            Framework.name.label("framework_name"),
+        )
+        .join(DpmModule, ModuleVersion.module_id == DpmModule.module_id)
+        .join(Framework, DpmModule.framework_id == Framework.framework_id),
+    )
+
+    for row in rows:
+        dest.add(
+            LiteModule(
+                module_vid=row.module_vid,
+                code=row.code,
+                name=row.name,
+                description=row.description,
+                version_number=row.version_number,
+                framework_code=row.framework_code,
+                framework_name=row.framework_name,
+            ),
+        )
 
 
 def main() -> None:
