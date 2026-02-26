@@ -57,6 +57,11 @@ class Module(DPMLite):
     group_memberships: Mapped[list[ModuleGroupMembership]] = relationship(
         back_populates="module", order_by="ModuleGroupMembership.order",
     )
+    groups: Mapped[list[TableGroup]] = relationship(
+        secondary="ModuleGroupMembership",
+        order_by="ModuleGroupMembership.order",
+        viewonly=True,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -86,8 +91,16 @@ class TableGroup(DPMLite):
     module_memberships: Mapped[list[ModuleGroupMembership]] = relationship(
         back_populates="group",
     )
+    modules: Mapped[list[Module]] = relationship(
+        secondary="ModuleGroupMembership", viewonly=True,
+    )
     template_memberships: Mapped[list[TemplateGroupMembership]] = relationship(
         back_populates="group", order_by="TemplateGroupMembership.order",
+    )
+    templates: Mapped[list[Template]] = relationship(
+        secondary="TemplateGroupMembership",
+        order_by="TemplateGroupMembership.order",
+        viewonly=True,
     )
 
 
@@ -183,6 +196,9 @@ class Template(DPMLite):
 
     group_memberships: Mapped[list[TemplateGroupMembership]] = relationship(
         back_populates="template",
+    )
+    groups: Mapped[list[TableGroup]] = relationship(
+        secondary="TemplateGroupMembership", viewonly=True,
     )
     tables: Mapped[list[Table]] = relationship(back_populates="template")
 
