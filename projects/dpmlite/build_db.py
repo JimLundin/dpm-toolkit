@@ -73,7 +73,8 @@ def populate_modules(source: Session, dest: Session) -> None:
             ModuleVersion.version_number,
             Framework.code.label("framework_code"),
             Framework.name.label("framework_name"),
-            Organisation.acronym.label("organisation"),
+            Organisation.acronym.label("organisation_code"),
+            Organisation.name.label("organisation_name"),
         )
         .join(DpmModule, ModuleVersion.module_id == DpmModule.module_id)
         .join(Framework, DpmModule.framework_id == Framework.framework_id)
@@ -91,7 +92,8 @@ def populate_modules(source: Session, dest: Session) -> None:
                 version_number=row.version_number,
                 framework_code=row.framework_code,
                 framework_name=row.framework_name,
-                organisation=row.organisation,
+                organisation_code=row.organisation_code,
+                organisation_name=row.organisation_name,
             ),
         )
 

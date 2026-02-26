@@ -48,4 +48,5 @@ class Module(DPMLite):
     version_number: Mapped[str]
     framework_code: Mapped[str]
     framework_name: Mapped[str]
-    organisation: Mapped[str]
+    organisation_code: Mapped[str]
+    organisation_name: Mapped[str]
