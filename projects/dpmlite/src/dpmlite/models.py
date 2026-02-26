@@ -118,6 +118,9 @@ class Template(DPMLite):
     template), standalone concrete tables that have no abstract parent
     in DPM are given a synthetic template with the same code and name.
 
+    A template does not belong to a module directly.  Its module is
+    reachable via ``TemplateGroupMembership`` -> ``TableGroup.module_id``.
+
     Source tables: ``TableVersion`` / ``Table`` where ``is_abstract = True``,
                    plus synthetic entries for standalone concrete tables.
     """
@@ -127,7 +130,6 @@ class Template(DPMLite):
     id: Mapped[int] = mapped_column(primary_key=True)
     code: Mapped[str]
     name: Mapped[str]
-    module_id: Mapped[int] = mapped_column(ForeignKey("Module.id"))
 
 
 # ---------------------------------------------------------------------------
