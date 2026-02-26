@@ -16,6 +16,8 @@ To add a new table:
 
 from __future__ import annotations
 
+from typing import Literal
+
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -168,7 +170,10 @@ class Table(DPMLite):
     or a synthetic one-to-one template for standalone tables).  The module
     and group are reachable through the template's membership links.
 
-    Source tables: ``ModuleVersionComposition`` → ``TableVersion`` → ``Table``
+    The ``has_open_*`` flags indicate whether the table allows dynamic
+    extension along the column, row, or sheet axis.
+
+    Source tables: ``ModuleVersionComposition`` - ``TableVersion`` - ``Table``
     """
 
     __tablename__ = "Table"
@@ -176,5 +181,42 @@ class Table(DPMLite):
     id: Mapped[int] = mapped_column(primary_key=True)
     code: Mapped[str]
     name: Mapped[str]
+    description: Mapped[str | None]
     template_id: Mapped[int] = mapped_column(ForeignKey("Template.id"))
-    order: Mapped[int | None]
+    has_open_rows: Mapped[bool]
+    has_open_sheets: Mapped[bool]
+    has_open_columns: Mapped[bool]
+
+
+# ---------------------------------------------------------------------------
+# Cell - data point within a table
+# ---------------------------------------------------------------------------
+
+
+class Cell(DPMLite):
+    """A cell within a concrete reporting table.
+
+    Each cell represents a data point at a specific position in a table,
+    defined by its column, row, and optional sheet coordinates (header
+    codes from the X, Y, and Z axes respectively).
+
+    The ``code`` field is the cell's display name (e.g.
+    ``{C_01.00, r0010, c0010}``), taken from ``cell_code`` in the
+    source ``TableVersionCell`` assignment.
+
+    Source tables: ``TableVersionCell`` - ``Cell`` - ``Header``
+                   - ``HeaderVersion`` (via ``TableVersionHeader``)
+    """
+
+    __tablename__ = "Cell"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str]
+    table_id: Mapped[int] = mapped_column(ForeignKey("Table.id"))
+    column: Mapped[str]
+    row: Mapped[str | None]
+    sheet: Mapped[str | None]
+    is_excluded: Mapped[bool]
+    is_nullable: Mapped[bool]
+    sign: Mapped[Literal["positive", "negative"] | None]
+    variable_vid: Mapped[int | None]
