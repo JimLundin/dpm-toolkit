@@ -29,6 +29,7 @@ from dpmlite.models import Module as LiteModule
 from dpmlite.models import Table as LiteTable
 from dpmlite.models import TableGroup as LiteTableGroup
 from dpmlite.models import Template as LiteTemplate
+from dpmlite.models import TemplateGroupMembership as LiteMembership
 
 
 def build_database(output: Path) -> None:
@@ -103,7 +104,7 @@ def populate_modules(source: Session, dest: Session) -> None:
 
 
 def populate_tables(source: Session, dest: Session) -> None:
-    """Build TableGroup, Template, and Table rows for every module version.
+    """Build the Module -> TableGroup -> Template -> Table hierarchy.
 
     The hierarchy is reconstructed from several DPM2 sources:
 
@@ -113,9 +114,10 @@ def populate_tables(source: Session, dest: Session) -> None:
     * **Template** - abstract ``Table``/``TableVersion`` rows that appear
       in ``ModuleVersionComposition``, plus synthetic one-to-one
       templates for standalone concrete tables (no abstract parent).
+    * **TemplateGroupMembership** - many-to-many junction linking each
+      template to the group(s) its concrete tables belong to.
     * **Table** - concrete ``TableVersion`` rows from
-      ``ModuleVersionComposition``, each assigned to its group and
-      always to a template (real or synthetic).
+      ``ModuleVersionComposition``, each belonging to a template.
     """
     from dpm2.models import (  # noqa: PLC0415
         ModuleVersionComposition,
@@ -143,28 +145,10 @@ def populate_tables(source: Session, dest: Session) -> None:
         )
         seen_groups = _insert_groups(dest, group_info, mvid, next_id)
         template_map = _insert_templates(dest, mvc_rows, mvid, next_id)
-
-        # -- Insert concrete table rows -----------------------------------
-        group_lookup = {
-            tid: seen_groups[gk]
-            for tid, gk in group_info.items()
-            if gk in seen_groups
-        }
-        for r in mvc_rows:
-            if r.is_abstract:
-                continue
-            group_id = group_lookup.get(r.table_id)
-            if group_id is None:
-                continue
-            dest.add(
-                LiteTable(
-                    id=next_id["table"], code=r.tv_code, name=r.tv_name,
-                    module_id=mvid, group_id=group_id,
-                    template_id=template_map[r.abstract_table_id or r.table_id],
-                    order=r.order,
-                ),
-            )
-            next_id["table"] += 1
+        _insert_memberships(
+            dest, mvc_rows, group_info, seen_groups, template_map,
+        )
+        _insert_concrete_tables(dest, mvc_rows, template_map, next_id)
 
 
 def _fetch_module_tables(
@@ -277,6 +261,61 @@ def _insert_templates(
 
     return template_map
 
+
+def _insert_memberships(
+    dest: Session,
+    mvc_rows: list,
+    group_info: dict[int, tuple[str, str]],
+    seen_groups: dict[tuple[str, str], int],
+    template_map: dict[int, int],
+) -> None:
+    """Insert TemplateGroupMembership rows linking templates to groups.
+
+    The link is inferred from each concrete table's group membership:
+    if a table belongs to group G and template T, then T belongs to G.
+    """
+    seen: set[tuple[int, int]] = set()
+    for r in mvc_rows:
+        if r.is_abstract:
+            continue
+        group_key = group_info.get(r.table_id)
+        if group_key is None:
+            continue
+        tmpl_key = r.abstract_table_id or r.table_id
+        lite_group = seen_groups[group_key]
+        lite_template = template_map[tmpl_key]
+        pair = (lite_group, lite_template)
+        if pair not in seen:
+            seen.add(pair)
+            dest.add(
+                LiteMembership(
+                    group_id=lite_group,
+                    template_id=lite_template,
+                ),
+            )
+
+
+def _insert_concrete_tables(
+    dest: Session,
+    mvc_rows: list,
+    template_map: dict[int, int],
+    next_id: dict[str, int],
+) -> None:
+    """Insert concrete Table rows."""
+    for r in mvc_rows:
+        if r.is_abstract:
+            continue
+        tmpl_key = r.abstract_table_id or r.table_id
+        if tmpl_key not in template_map:
+            continue
+        dest.add(
+            LiteTable(
+                id=next_id["table"], code=r.tv_code, name=r.tv_name,
+                template_id=template_map[tmpl_key],
+                order=r.order,
+            ),
+        )
+        next_id["table"] += 1
 
 
 def main() -> None:
