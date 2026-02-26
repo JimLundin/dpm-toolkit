@@ -132,6 +132,9 @@ def populate_tables(source: Session, dest: Session) -> None:
     ]
 
     next_id = {"group": 1, "template": 1, "table": 1}
+    # dpm2 table_id -> lite id (global, shared across modules)
+    template_map: dict[int, int] = {}
+    table_map: dict[int, int] = {}
 
     for mvid in module_vids:
         mvc_rows = _fetch_module_tables(
@@ -144,11 +147,13 @@ def populate_tables(source: Session, dest: Session) -> None:
             source, mvc_rows, TableGroup, TableGroupComposition,
         )
         seen_groups = _insert_groups(dest, group_info, mvid, next_id)
-        template_map = _insert_templates(dest, mvc_rows, mvid, next_id)
+        _insert_templates(dest, mvc_rows, template_map, next_id)
         _insert_memberships(
             dest, mvc_rows, group_info, seen_groups, template_map,
         )
-        _insert_concrete_tables(dest, mvc_rows, template_map, next_id)
+        _insert_concrete_tables(
+            dest, mvc_rows, template_map, table_map, next_id,
+        )
 
 
 def _fetch_module_tables(
@@ -221,45 +226,34 @@ def _insert_groups(
 def _insert_templates(
     dest: Session,
     mvc_rows: list,
-    mvid: int,
+    template_map: dict[int, int],
     next_id: dict[str, int],
-) -> dict[int, int]:
-    """Insert Template rows, return dpm2 table_id -> lite template id.
+) -> None:
+    """Insert new Template rows into *template_map* (shared across modules).
 
     Creates a template for every abstract table (real templates) and
     for every standalone concrete table that has no abstract parent
-    (synthetic one-to-one templates), so that every table in the
-    hierarchy has a template.
+    (synthetic one-to-one templates).  Already-seen templates (by dpm2
+    table_id) are skipped, so the same template is reused across modules.
     """
-    template_map: dict[int, int] = {}
-
-    # Real templates from abstract tables
     for r in mvc_rows:
-        if r.is_abstract and r.table_id not in template_map:
-            template_map[r.table_id] = next_id["template"]
+        # Determine if this row produces a template key
+        if r.is_abstract:
+            key = r.table_id
+        elif r.abstract_table_id is None:
+            key = r.table_id  # standalone -> synthetic template
+        else:
+            continue  # concrete with abstract parent, no new template
+
+        if key not in template_map:
+            template_map[key] = next_id["template"]
             dest.add(
                 LiteTemplate(
                     id=next_id["template"], code=r.tv_code,
-                    name=r.tv_name, module_id=mvid,
+                    name=r.tv_name,
                 ),
             )
             next_id["template"] += 1
-
-    # Synthetic templates for standalone concrete tables
-    for r in mvc_rows:
-        if r.is_abstract or r.abstract_table_id is not None:
-            continue
-        if r.table_id not in template_map:
-            template_map[r.table_id] = next_id["template"]
-            dest.add(
-                LiteTemplate(
-                    id=next_id["template"], code=r.tv_code,
-                    name=r.tv_name, module_id=mvid,
-                ),
-            )
-            next_id["template"] += 1
-
-    return template_map
 
 
 def _insert_memberships(
@@ -299,15 +293,17 @@ def _insert_concrete_tables(
     dest: Session,
     mvc_rows: list,
     template_map: dict[int, int],
+    table_map: dict[int, int],
     next_id: dict[str, int],
 ) -> None:
-    """Insert concrete Table rows."""
+    """Insert concrete Table rows (deduplicated globally by table_id)."""
     for r in mvc_rows:
-        if r.is_abstract:
+        if r.is_abstract or r.table_id in table_map:
             continue
         tmpl_key = r.abstract_table_id or r.table_id
         if tmpl_key not in template_map:
             continue
+        table_map[r.table_id] = next_id["table"]
         dest.add(
             LiteTable(
                 id=next_id["table"], code=r.tv_code, name=r.tv_name,
