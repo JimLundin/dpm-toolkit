@@ -59,12 +59,13 @@ class Module(DPMLite):
 
 
 class TableGroup(DPMLite):
-    """A template group within a module.
+    """A template group.
 
     Groups organise templates (and therefore tables) into logical sections
-    (e.g. "Credit Risk", "Capital Adequacy").  Each group belongs to one
-    module, and links to templates via the ``TemplateGroupMembership``
-    junction table.
+    (e.g. "Credit Risk", "Capital Adequacy").  A group may be shared
+    across multiple modules and is linked to them via
+    ``ModuleGroupMembership``.  It links to templates via
+    ``TemplateGroupMembership``.
 
     Source tables: ``TableGroup`` + ``TableGroupComposition``
                    (linked to modules via shared ``Table`` rows)
@@ -75,7 +76,28 @@ class TableGroup(DPMLite):
     id: Mapped[int] = mapped_column(primary_key=True)
     code: Mapped[str]
     name: Mapped[str]
-    module_id: Mapped[int] = mapped_column(ForeignKey("Module.id"))
+
+
+# ---------------------------------------------------------------------------
+# ModuleGroupMembership — many-to-many between Module and TableGroup
+# ---------------------------------------------------------------------------
+
+
+class ModuleGroupMembership(DPMLite):
+    """Junction linking template groups to the modules that include them.
+
+    A group may appear in more than one module (e.g. "CoRep - General
+    Information" is shared by COREP_ALM, COREP_LE, COREP_OF, etc.).
+    """
+
+    __tablename__ = "ModuleGroupMembership"
+
+    module_id: Mapped[int] = mapped_column(
+        ForeignKey("Module.id"), primary_key=True,
+    )
+    group_id: Mapped[int] = mapped_column(
+        ForeignKey("TableGroup.id"), primary_key=True,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -119,7 +141,8 @@ class Template(DPMLite):
     in DPM are given a synthetic template with the same code and name.
 
     A template does not belong to a module directly.  Its module is
-    reachable via ``TemplateGroupMembership`` -> ``TableGroup.module_id``.
+    reachable via ``TemplateGroupMembership`` -> ``TableGroup`` ->
+    ``ModuleGroupMembership`` -> ``Module``.
 
     Source tables: ``TableVersion`` / ``Table`` where ``is_abstract = True``,
                    plus synthetic entries for standalone concrete tables.

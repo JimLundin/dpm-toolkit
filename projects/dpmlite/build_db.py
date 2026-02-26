@@ -26,10 +26,11 @@ from sqlalchemy.orm import Session
 
 from dpmlite.models import DPMLite
 from dpmlite.models import Module as LiteModule
+from dpmlite.models import ModuleGroupMembership as LiteModuleGroup
 from dpmlite.models import Table as LiteTable
 from dpmlite.models import TableGroup as LiteTableGroup
 from dpmlite.models import Template as LiteTemplate
-from dpmlite.models import TemplateGroupMembership as LiteMembership
+from dpmlite.models import TemplateGroupMembership as LiteTemplateMembership
 
 
 def build_database(output: Path) -> None:
@@ -132,9 +133,13 @@ def populate_tables(source: Session, dest: Session) -> None:
     ]
 
     next_id = {"group": 1, "template": 1, "table": 1}
-    # dpm2 table_id -> lite id (global, shared across modules)
+    # dpm2 key -> lite id (global, shared across modules)
+    group_map: dict[tuple[str, str], int] = {}
     template_map: dict[int, int] = {}
     table_map: dict[int, int] = {}
+    # dedup sets for junction rows
+    seen_module_groups: set[tuple[int, int]] = set()
+    seen_template_groups: set[tuple[int, int]] = set()
 
     for mvid in module_vids:
         mvc_rows = _fetch_module_tables(
@@ -146,10 +151,14 @@ def populate_tables(source: Session, dest: Session) -> None:
         group_info = _resolve_groups(
             source, mvc_rows, TableGroup, TableGroupComposition,
         )
-        seen_groups = _insert_groups(dest, group_info, mvid, next_id)
+        _insert_groups(dest, group_info, group_map, next_id)
+        _insert_module_group_memberships(
+            dest, mvid, group_info, group_map, seen_module_groups,
+        )
         _insert_templates(dest, mvc_rows, template_map, next_id)
-        _insert_memberships(
-            dest, mvc_rows, group_info, seen_groups, template_map,
+        _link_templates_to_groups(
+            dest, mvc_rows, group_info, group_map,
+            template_map, seen_template_groups,
         )
         _insert_concrete_tables(
             dest, mvc_rows, template_map, table_map, next_id,
@@ -204,23 +213,36 @@ def _resolve_groups(
 def _insert_groups(
     dest: Session,
     group_info: dict[int, tuple[str, str]],
-    mvid: int,
+    group_map: dict[tuple[str, str], int],
     next_id: dict[str, int],
-) -> dict[tuple[str, str], int]:
-    """Insert unique TableGroup rows, return (code, name) -> lite id map."""
-    seen: dict[tuple[str, str], int] = {}
+) -> None:
+    """Insert new TableGroup rows into *group_map* (shared across modules)."""
     for code, name in group_info.values():
         key = (code, name)
-        if key not in seen:
-            seen[key] = next_id["group"]
+        if key not in group_map:
+            group_map[key] = next_id["group"]
             dest.add(
                 LiteTableGroup(
                     id=next_id["group"], code=code, name=name,
-                    module_id=mvid,
                 ),
             )
             next_id["group"] += 1
-    return seen
+
+
+def _insert_module_group_memberships(
+    dest: Session,
+    mvid: int,
+    group_info: dict[int, tuple[str, str]],
+    group_map: dict[tuple[str, str], int],
+    seen: set[tuple[int, int]],
+) -> None:
+    """Insert ModuleGroupMembership rows for this module version."""
+    for group_key in set(group_info.values()):
+        lite_group = group_map[group_key]
+        pair = (mvid, lite_group)
+        if pair not in seen:
+            seen.add(pair)
+            dest.add(LiteModuleGroup(module_id=mvid, group_id=lite_group))
 
 
 def _insert_templates(
@@ -256,19 +278,19 @@ def _insert_templates(
             next_id["template"] += 1
 
 
-def _insert_memberships(
+def _link_templates_to_groups(  # noqa: PLR0913
     dest: Session,
     mvc_rows: list,
     group_info: dict[int, tuple[str, str]],
-    seen_groups: dict[tuple[str, str], int],
+    group_map: dict[tuple[str, str], int],
     template_map: dict[int, int],
+    seen: set[tuple[int, int]],
 ) -> None:
     """Insert TemplateGroupMembership rows linking templates to groups.
 
     The link is inferred from each concrete table's group membership:
     if a table belongs to group G and template T, then T belongs to G.
     """
-    seen: set[tuple[int, int]] = set()
     for r in mvc_rows:
         if r.is_abstract:
             continue
@@ -276,13 +298,13 @@ def _insert_memberships(
         if group_key is None:
             continue
         tmpl_key = r.abstract_table_id or r.table_id
-        lite_group = seen_groups[group_key]
+        lite_group = group_map[group_key]
         lite_template = template_map[tmpl_key]
         pair = (lite_group, lite_template)
         if pair not in seen:
             seen.add(pair)
             dest.add(
-                LiteMembership(
+                LiteTemplateMembership(
                     group_id=lite_group,
                     template_id=lite_template,
                 ),
