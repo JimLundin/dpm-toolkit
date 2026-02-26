@@ -36,14 +36,16 @@ class Module(DPMLite):
     consumers don't need to join through the full DPM hierarchy.
 
     Source tables: ``ModuleVersion`` → ``Module`` → ``Framework``
+                   → ``Concept`` → ``Organisation``
     """
 
     __tablename__ = "Module"
 
-    module_vid: Mapped[int] = mapped_column(primary_key=True)
+    id: Mapped[int] = mapped_column(primary_key=True)
     code: Mapped[str]
     name: Mapped[str]
     description: Mapped[str | None]
     version_number: Mapped[str]
     framework_code: Mapped[str]
     framework_name: Mapped[str]
+    organisation: Mapped[str]
