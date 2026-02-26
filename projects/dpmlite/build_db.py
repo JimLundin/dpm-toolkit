@@ -55,8 +55,13 @@ def populate(source: Session, dest: Session) -> None:
 
 
 def populate_modules(source: Session, dest: Session) -> None:
-    """Flatten ModuleVersion + Module + Framework into dpmlite Module."""
-    from dpm2.models import Framework, ModuleVersion  # noqa: PLC0415
+    """Flatten ModuleVersion/Module/Framework/Concept/Organisation."""
+    from dpm2.models import (  # noqa: PLC0415
+        Concept,
+        Framework,
+        ModuleVersion,
+        Organisation,
+    )
     from dpm2.models import Module as DpmModule  # noqa: PLC0415
 
     rows = source.execute(
@@ -68,21 +73,25 @@ def populate_modules(source: Session, dest: Session) -> None:
             ModuleVersion.version_number,
             Framework.code.label("framework_code"),
             Framework.name.label("framework_name"),
+            Organisation.acronym.label("organisation"),
         )
         .join(DpmModule, ModuleVersion.module_id == DpmModule.module_id)
-        .join(Framework, DpmModule.framework_id == Framework.framework_id),
+        .join(Framework, DpmModule.framework_id == Framework.framework_id)
+        .join(Concept, Framework.row_guid == Concept.concept_guid)
+        .join(Organisation, Concept.owner_id == Organisation.org_id),
     )
 
     for row in rows:
         dest.add(
             LiteModule(
-                module_vid=row.module_vid,
+                id=row.module_vid,
                 code=row.code,
                 name=row.name,
                 description=row.description,
                 version_number=row.version_number,
                 framework_code=row.framework_code,
                 framework_name=row.framework_name,
+                organisation=row.organisation,
             ),
         )
 
