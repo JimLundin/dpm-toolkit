@@ -84,14 +84,19 @@ class TableGroup(DPMLite):
 
 
 class Template(DPMLite):
-    """An abstract table that acts as a template for a set of concrete tables.
+    """A template that defines the shared shape for one or more concrete tables.
 
-    Templates represent the DPM concept of an *abstract* table — a table
-    whose structure (rows/columns) is shared by several concrete tables
-    that differ only in the reporting population or sheet variant
-    (e.g. ``F_32.02`` → ``F_32.02.a``, ``F_32.02.b``).
+    In DPM, an *abstract* table (``is_abstract = True``) groups several
+    concrete tables that share the same row/column structure but differ
+    by reporting population or sheet variant (e.g. ``F_32.02`` spawns
+    ``F_32.02.a``, ``F_32.02.b``).
 
-    Source tables: ``TableVersion`` / ``Table`` where ``is_abstract = True``
+    To keep the hierarchy strict (every table belongs to exactly one
+    template), standalone concrete tables that have no abstract parent
+    in DPM are given a synthetic template with the same code and name.
+
+    Source tables: ``TableVersion`` / ``Table`` where ``is_abstract = True``,
+                   plus synthetic entries for standalone concrete tables.
     """
 
     __tablename__ = "Template"
@@ -111,8 +116,9 @@ class Table(DPMLite):
     """A concrete reporting table within a module.
 
     Each row is a specific version of a table assigned to a module version.
-    Tables belong to a ``TableGroup`` and optionally derive their shape
-    from a ``Template`` (abstract table).
+    Tables belong to a ``TableGroup`` and always belong to a ``Template``
+    (either a real abstract table or a synthetic one-to-one template for
+    standalone tables).
 
     Source tables: ``ModuleVersionComposition`` → ``TableVersion`` → ``Table``
                    + ``TableGroupComposition`` for group membership
@@ -125,5 +131,5 @@ class Table(DPMLite):
     name: Mapped[str]
     module_id: Mapped[int] = mapped_column(ForeignKey("Module.id"))
     group_id: Mapped[int] = mapped_column(ForeignKey("TableGroup.id"))
-    template_id: Mapped[int | None] = mapped_column(ForeignKey("Template.id"))
+    template_id: Mapped[int] = mapped_column(ForeignKey("Template.id"))
     order: Mapped[int | None]
