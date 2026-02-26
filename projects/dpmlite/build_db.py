@@ -20,8 +20,26 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import Any
 
-from sqlalchemy import create_engine, select
+from dpm2 import get_db
+from dpm2.models import Cell as DpmCell
+from dpm2.models import (
+    Concept,
+    Framework,
+    HeaderVersion,
+    ModuleVersion,
+    ModuleVersionComposition,
+    Organisation,
+    TableGroupComposition,
+    TableVersion,
+    TableVersionCell,
+    TableVersionHeader,
+)
+from dpm2.models import Module as DpmModule
+from dpm2.models import Table as DpmTable
+from dpm2.models import TableGroup as DpmTableGroup
+from sqlalchemy import Row, create_engine, select
 from sqlalchemy.orm import Session
 
 from dpmlite.models import Cell as LiteCell
@@ -36,8 +54,6 @@ from dpmlite.models import TemplateGroupMembership as LiteTemplateMembership
 
 def build_database(output: Path) -> None:
     """Build the dpmlite SQLite database at *output*."""
-    from dpm2 import get_db  # noqa: PLC0415
-
     source_engine = get_db()
     dest_engine = create_engine(f"sqlite:///{output}")
 
@@ -64,14 +80,6 @@ def populate(source: Session, dest: Session) -> None:
 
 def populate_modules(source: Session, dest: Session) -> None:
     """Flatten ModuleVersion/Module/Framework/Concept/Organisation."""
-    from dpm2.models import (  # noqa: PLC0415
-        Concept,
-        Framework,
-        ModuleVersion,
-        Organisation,
-    )
-    from dpm2.models import Module as DpmModule  # noqa: PLC0415
-
     rows = source.execute(
         select(
             ModuleVersion.module_vid,
@@ -128,14 +136,6 @@ def populate_tables(
     * **Table** - concrete ``TableVersion`` rows from
       ``ModuleVersionComposition``, each belonging to a template.
     """
-    from dpm2.models import (  # noqa: PLC0415
-        ModuleVersionComposition,
-        Table,
-        TableGroup,
-        TableGroupComposition,
-        TableVersion,
-    )
-
     module_vids = [
         row[0] for row in dest.execute(select(LiteModule.id)).all()
     ]
@@ -151,15 +151,11 @@ def populate_tables(
     seen_template_groups: set[tuple[int, int]] = set()
 
     for mvid in module_vids:
-        mvc_rows = _fetch_module_tables(
-            source, ModuleVersionComposition, TableVersion, Table, mvid,
-        )
+        mvc_rows = _fetch_module_tables(source, mvid)
         if not mvc_rows:
             continue
 
-        group_info = _resolve_groups(
-            source, mvc_rows, TableGroup, TableGroupComposition,
-        )
+        group_info = _resolve_groups(source, mvc_rows)
         group_orders, tg_orders = _compute_orders(mvc_rows, group_info)
         _insert_groups(dest, group_info, group_map, next_id)
         _insert_module_group_memberships(
@@ -190,21 +186,12 @@ def populate_cells(
     ``TableVersionHeader`` -> ``HeaderVersion`` for the specific
     table version that was selected during deduplication.
     """
-    from dpm2.models import (  # noqa: PLC0415
-        Cell,
-        HeaderVersion,
-        TableVersionCell,
-        TableVersionHeader,
-    )
-
     next_cell_id = 1
 
     for dpm2_table_id, lite_table_id in table_map.items():
         table_vid = table_vid_map[dpm2_table_id]
 
-        header_codes = _build_header_lookup(
-            source, TableVersionHeader, HeaderVersion, table_vid,
-        )
+        header_codes = _build_header_lookup(source, table_vid)
 
         for row in source.execute(
             select(
@@ -213,11 +200,11 @@ def populate_cells(
                 TableVersionCell.is_nullable,
                 TableVersionCell.sign,
                 TableVersionCell.variable_vid,
-                Cell.column_id,
-                Cell.row_id,
-                Cell.sheet_id,
+                DpmCell.column_id,
+                DpmCell.row_id,
+                DpmCell.sheet_id,
             )
-            .join(Cell, TableVersionCell.cell_id == Cell.cell_id)
+            .join(DpmCell, TableVersionCell.cell_id == DpmCell.cell_id)
             .where(TableVersionCell.table_vid == table_vid),
         ):
             dest.add(
@@ -241,23 +228,21 @@ def populate_cells(
 
 def _build_header_lookup(
     source: Session,
-    TVH: type,  # noqa: N803
-    HV: type,  # noqa: N803
     table_vid: int,
 ) -> dict[int, str]:
     """Build a header_id -> header_code mapping for a table version."""
     result: dict[int, str] = {}
     for row in source.execute(
-        select(TVH.header_id, HV.code)
-        .join(HV, TVH.header_vid == HV.header_vid)
-        .where(TVH.table_vid == table_vid),
+        select(TableVersionHeader.header_id, HeaderVersion.code)
+        .join(HeaderVersion, TableVersionHeader.header_vid == HeaderVersion.header_vid)
+        .where(TableVersionHeader.table_vid == table_vid),
     ):
         result[row.header_id] = row.code
     return result
 
 
 def _compute_orders(
-    mvc_rows: list,
+    mvc_rows: list[Row[Any]],
     group_info: dict[int, tuple[str, str]],
 ) -> tuple[dict[tuple[str, str], int], dict[tuple[tuple[str, str], int], int]]:
     """Derive rendering orders for group and template junctions.
@@ -293,36 +278,36 @@ def _compute_orders(
 
 def _fetch_module_tables(
     source: Session,
-    MVC: type,  # noqa: N803
-    TV: type,  # noqa: N803
-    T: type,  # noqa: N803
     mvid: int,
-) -> list:
+) -> list[Row[Any]]:
     """Fetch all table entries for a single module version."""
     return source.execute(
         select(
-            MVC.table_id, MVC.table_vid, MVC.order,
-            TV.code.label("tv_code"),
-            TV.name.label("tv_name"),
-            TV.description.label("tv_description"),
-            TV.abstract_table_id,
-            T.is_abstract,
-            T.has_open_rows,
-            T.has_open_sheets,
-            T.has_open_columns,
+            ModuleVersionComposition.table_id,
+            ModuleVersionComposition.table_vid,
+            ModuleVersionComposition.order,
+            TableVersion.code.label("tv_code"),
+            TableVersion.name.label("tv_name"),
+            TableVersion.description.label("tv_description"),
+            TableVersion.abstract_table_id,
+            DpmTable.is_abstract,
+            DpmTable.has_open_rows,
+            DpmTable.has_open_sheets,
+            DpmTable.has_open_columns,
         )
-        .select_from(MVC)
-        .join(TV, MVC.table_vid == TV.table_vid)
-        .join(T, MVC.table_id == T.table_id)
-        .where(MVC.module_vid == mvid),
+        .select_from(ModuleVersionComposition)
+        .join(
+            TableVersion,
+            ModuleVersionComposition.table_vid == TableVersion.table_vid,
+        )
+        .join(DpmTable, ModuleVersionComposition.table_id == DpmTable.table_id)
+        .where(ModuleVersionComposition.module_vid == mvid),
     ).all()
 
 
 def _resolve_groups(
     source: Session,
-    mvc_rows: list,
-    TG: type,  # noqa: N803
-    TGC: type,  # noqa: N803
+    mvc_rows: list[Row[Any]],
 ) -> dict[int, tuple[str, str]]:
     """Map each concrete table_id to its (group_code, group_name)."""
     concrete_ids = [r.table_id for r in mvc_rows if not r.is_abstract]
@@ -331,9 +316,12 @@ def _resolve_groups(
 
     result: dict[int, tuple[str, str]] = {}
     for row in source.execute(
-        select(TGC.table_id, TG.code, TG.name)
-        .join(TG, TGC.table_group_id == TG.table_group_id)
-        .where(TGC.table_id.in_(concrete_ids)),
+        select(TableGroupComposition.table_id, DpmTableGroup.code, DpmTableGroup.name)
+        .join(
+            DpmTableGroup,
+            TableGroupComposition.table_group_id == DpmTableGroup.table_group_id,
+        )
+        .where(TableGroupComposition.table_id.in_(concrete_ids)),
     ):
         result[row.table_id] = (row.code, row.name)
     return result
@@ -383,7 +371,7 @@ def _insert_module_group_memberships(  # noqa: PLR0913
 
 def _insert_templates(
     dest: Session,
-    mvc_rows: list,
+    mvc_rows: list[Row[Any]],
     template_map: dict[int, int],
     next_id: dict[str, int],
 ) -> None:
@@ -446,7 +434,7 @@ def _link_templates_to_groups(
 
 def _insert_concrete_tables(  # noqa: PLR0913
     dest: Session,
-    mvc_rows: list,
+    mvc_rows: list[Row[Any]],
     template_map: dict[int, int],
     table_map: dict[int, int],
     table_vid_map: dict[int, int],
