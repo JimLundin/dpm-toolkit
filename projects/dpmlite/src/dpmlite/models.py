@@ -19,7 +19,7 @@ from __future__ import annotations
 from typing import Literal
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 class DPMLite(DeclarativeBase):
@@ -54,6 +54,10 @@ class Module(DPMLite):
     organisation_code: Mapped[str]
     organisation_name: Mapped[str]
 
+    group_memberships: Mapped[list[ModuleGroupMembership]] = relationship(
+        back_populates="module", order_by="ModuleGroupMembership.order",
+    )
+
 
 # ---------------------------------------------------------------------------
 # TableGroup — grouping of tables within a module
@@ -79,6 +83,13 @@ class TableGroup(DPMLite):
     code: Mapped[str]
     name: Mapped[str]
 
+    module_memberships: Mapped[list[ModuleGroupMembership]] = relationship(
+        back_populates="group",
+    )
+    template_memberships: Mapped[list[TemplateGroupMembership]] = relationship(
+        back_populates="group", order_by="TemplateGroupMembership.order",
+    )
+
 
 # ---------------------------------------------------------------------------
 # ModuleGroupMembership — many-to-many between Module and TableGroup
@@ -99,6 +110,12 @@ class ModuleGroupMembership(DPMLite):
     )
     group_id: Mapped[int] = mapped_column(
         ForeignKey("TableGroup.id"), primary_key=True,
+    )
+    order: Mapped[int]
+
+    module: Mapped[Module] = relationship(back_populates="group_memberships")
+    group: Mapped[TableGroup] = relationship(
+        back_populates="module_memberships",
     )
 
 
@@ -122,6 +139,14 @@ class TemplateGroupMembership(DPMLite):
     )
     template_id: Mapped[int] = mapped_column(
         ForeignKey("Template.id"), primary_key=True,
+    )
+    order: Mapped[int]
+
+    group: Mapped[TableGroup] = relationship(
+        back_populates="template_memberships",
+    )
+    template: Mapped[Template] = relationship(
+        back_populates="group_memberships",
     )
 
 
@@ -156,6 +181,11 @@ class Template(DPMLite):
     code: Mapped[str]
     name: Mapped[str]
 
+    group_memberships: Mapped[list[TemplateGroupMembership]] = relationship(
+        back_populates="template",
+    )
+    tables: Mapped[list[Table]] = relationship(back_populates="template")
+
 
 # ---------------------------------------------------------------------------
 # Table — concrete reporting table
@@ -186,6 +216,9 @@ class Table(DPMLite):
     has_open_rows: Mapped[bool]
     has_open_sheets: Mapped[bool]
     has_open_columns: Mapped[bool]
+
+    template: Mapped[Template] = relationship(back_populates="tables")
+    cells: Mapped[list[Cell]] = relationship(back_populates="table")
 
 
 # ---------------------------------------------------------------------------
@@ -220,3 +253,5 @@ class Cell(DPMLite):
     is_nullable: Mapped[bool]
     sign: Mapped[Literal["positive", "negative"] | None]
     variable_vid: Mapped[int | None]
+
+    table: Mapped[Table] = relationship(back_populates="cells")
