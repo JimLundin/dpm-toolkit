@@ -111,10 +111,11 @@ def populate_tables(source: Session, dest: Session) -> None:
       which groups contain that module's concrete tables (via
       ``TableGroupComposition`` and ``ModuleVersionComposition``).
     * **Template** - abstract ``Table``/``TableVersion`` rows that appear
-      in ``ModuleVersionComposition``.
+      in ``ModuleVersionComposition``, plus synthetic one-to-one
+      templates for standalone concrete tables (no abstract parent).
     * **Table** - concrete ``TableVersion`` rows from
       ``ModuleVersionComposition``, each assigned to its group and
-      optionally to a template via ``TableVersion.abstract_table_id``.
+      always to a template (real or synthetic).
     """
     from dpm2.models import (  # noqa: PLC0415
         ModuleVersionComposition,
@@ -159,7 +160,7 @@ def populate_tables(source: Session, dest: Session) -> None:
                 LiteTable(
                     id=next_id["table"], code=r.tv_code, name=r.tv_name,
                     module_id=mvid, group_id=group_id,
-                    template_id=template_map.get(r.abstract_table_id),
+                    template_id=template_map[r.abstract_table_id or r.table_id],
                     order=r.order,
                 ),
             )
@@ -239,8 +240,16 @@ def _insert_templates(
     mvid: int,
     next_id: dict[str, int],
 ) -> dict[int, int]:
-    """Insert Template rows for abstract tables, return dpm2 table_id -> lite id."""
+    """Insert Template rows, return dpm2 table_id -> lite template id.
+
+    Creates a template for every abstract table (real templates) and
+    for every standalone concrete table that has no abstract parent
+    (synthetic one-to-one templates), so that every table in the
+    hierarchy has a template.
+    """
     template_map: dict[int, int] = {}
+
+    # Real templates from abstract tables
     for r in mvc_rows:
         if r.is_abstract and r.table_id not in template_map:
             template_map[r.table_id] = next_id["template"]
@@ -251,6 +260,21 @@ def _insert_templates(
                 ),
             )
             next_id["template"] += 1
+
+    # Synthetic templates for standalone concrete tables
+    for r in mvc_rows:
+        if r.is_abstract or r.abstract_table_id is not None:
+            continue
+        if r.table_id not in template_map:
+            template_map[r.table_id] = next_id["template"]
+            dest.add(
+                LiteTemplate(
+                    id=next_id["template"], code=r.tv_code,
+                    name=r.tv_name, module_id=mvid,
+                ),
+            )
+            next_id["template"] += 1
+
     return template_map
 
 
