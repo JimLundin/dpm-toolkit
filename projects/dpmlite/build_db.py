@@ -24,6 +24,7 @@ from pathlib import Path
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
+from dpmlite.models import Cell as LiteCell
 from dpmlite.models import DPMLite
 from dpmlite.models import Module as LiteModule
 from dpmlite.models import ModuleGroupMembership as LiteModuleGroup
@@ -57,7 +58,8 @@ def populate(source: Session, dest: Session) -> None:
     typed models.
     """
     populate_modules(source, dest)
-    populate_tables(source, dest)
+    table_map, table_vid_map = populate_tables(source, dest)
+    populate_cells(source, dest, table_map, table_vid_map)
 
 
 def populate_modules(source: Session, dest: Session) -> None:
@@ -104,8 +106,14 @@ def populate_modules(source: Session, dest: Session) -> None:
         )
 
 
-def populate_tables(source: Session, dest: Session) -> None:
+def populate_tables(
+    source: Session, dest: Session,
+) -> tuple[dict[int, int], dict[int, int]]:
     """Build the Module -> TableGroup -> Template -> Table hierarchy.
+
+    Returns ``(table_map, table_vid_map)`` so that downstream steps
+    (e.g. cell population) can resolve dpm2 table IDs to lite IDs and
+    know which table version was used.
 
     The hierarchy is reconstructed from several DPM2 sources:
 
@@ -137,6 +145,7 @@ def populate_tables(source: Session, dest: Session) -> None:
     group_map: dict[tuple[str, str], int] = {}
     template_map: dict[int, int] = {}
     table_map: dict[int, int] = {}
+    table_vid_map: dict[int, int] = {}  # dpm2 table_id -> dpm2 table_vid
     # dedup sets for junction rows
     seen_module_groups: set[tuple[int, int]] = set()
     seen_template_groups: set[tuple[int, int]] = set()
@@ -161,8 +170,88 @@ def populate_tables(source: Session, dest: Session) -> None:
             template_map, seen_template_groups,
         )
         _insert_concrete_tables(
-            dest, mvc_rows, template_map, table_map, next_id,
+            dest, mvc_rows, template_map, table_map, table_vid_map, next_id,
         )
+
+    return table_map, table_vid_map
+
+
+def populate_cells(
+    source: Session,
+    dest: Session,
+    table_map: dict[int, int],
+    table_vid_map: dict[int, int],
+) -> None:
+    """Populate Cell rows for every concrete table.
+
+    For each table, the header codes are resolved via
+    ``TableVersionHeader`` -> ``HeaderVersion`` for the specific
+    table version that was selected during deduplication.
+    """
+    from dpm2.models import (  # noqa: PLC0415
+        Cell,
+        HeaderVersion,
+        TableVersionCell,
+        TableVersionHeader,
+    )
+
+    next_cell_id = 1
+
+    for dpm2_table_id, lite_table_id in table_map.items():
+        table_vid = table_vid_map[dpm2_table_id]
+
+        header_codes = _build_header_lookup(
+            source, TableVersionHeader, HeaderVersion, table_vid,
+        )
+
+        for row in source.execute(
+            select(
+                TableVersionCell.cell_code,
+                TableVersionCell.is_excluded,
+                TableVersionCell.is_nullable,
+                TableVersionCell.sign,
+                TableVersionCell.variable_vid,
+                Cell.column_id,
+                Cell.row_id,
+                Cell.sheet_id,
+            )
+            .join(Cell, TableVersionCell.cell_id == Cell.cell_id)
+            .where(TableVersionCell.table_vid == table_vid),
+        ):
+            dest.add(
+                LiteCell(
+                    id=next_cell_id,
+                    code=row.cell_code,
+                    table_id=lite_table_id,
+                    column=header_codes[row.column_id],
+                    row=header_codes.get(row.row_id) if row.row_id else None,
+                    sheet=header_codes.get(row.sheet_id) if row.sheet_id else None,
+                    is_excluded=row.is_excluded,
+                    is_nullable=row.is_nullable,
+                    sign=row.sign,
+                    variable_vid=row.variable_vid,
+                ),
+            )
+            next_cell_id += 1
+
+    print(f"  {next_cell_id - 1} cells")
+
+
+def _build_header_lookup(
+    source: Session,
+    TVH: type,  # noqa: N803
+    HV: type,  # noqa: N803
+    table_vid: int,
+) -> dict[int, str]:
+    """Build a header_id -> header_code mapping for a table version."""
+    result: dict[int, str] = {}
+    for row in source.execute(
+        select(TVH.header_id, HV.code)
+        .join(HV, TVH.header_vid == HV.header_vid)
+        .where(TVH.table_vid == table_vid),
+    ):
+        result[row.header_id] = row.code
+    return result
 
 
 def _fetch_module_tables(
@@ -175,17 +264,20 @@ def _fetch_module_tables(
     """Fetch all table entries for a single module version."""
     return source.execute(
         select(
-            MVC.table_id, MVC.table_vid, MVC.order,
+            MVC.table_id, MVC.table_vid,
             TV.code.label("tv_code"),
             TV.name.label("tv_name"),
+            TV.description.label("tv_description"),
             TV.abstract_table_id,
             T.is_abstract,
+            T.has_open_rows,
+            T.has_open_sheets,
+            T.has_open_columns,
         )
         .select_from(MVC)
         .join(TV, MVC.table_vid == TV.table_vid)
         .join(T, MVC.table_id == T.table_id)
-        .where(MVC.module_vid == mvid)
-        .order_by(MVC.order),
+        .where(MVC.module_vid == mvid),
     ).all()
 
 
@@ -311,11 +403,12 @@ def _link_templates_to_groups(  # noqa: PLR0913
             )
 
 
-def _insert_concrete_tables(
+def _insert_concrete_tables(  # noqa: PLR0913
     dest: Session,
     mvc_rows: list,
     template_map: dict[int, int],
     table_map: dict[int, int],
+    table_vid_map: dict[int, int],
     next_id: dict[str, int],
 ) -> None:
     """Insert concrete Table rows (deduplicated globally by table_id)."""
@@ -326,11 +419,15 @@ def _insert_concrete_tables(
         if tmpl_key not in template_map:
             continue
         table_map[r.table_id] = next_id["table"]
+        table_vid_map[r.table_id] = r.table_vid
         dest.add(
             LiteTable(
                 id=next_id["table"], code=r.tv_code, name=r.tv_name,
+                description=r.tv_description,
                 template_id=template_map[tmpl_key],
-                order=r.order,
+                has_open_rows=r.has_open_rows,
+                has_open_sheets=r.has_open_sheets,
+                has_open_columns=r.has_open_columns,
             ),
         )
         next_id["table"] += 1

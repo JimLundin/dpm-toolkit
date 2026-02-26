@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+import datetime  # noqa: TC003 - needed at runtime for SQLAlchemy annotation resolution
+import decimal  # noqa: TC003 - needed at runtime for SQLAlchemy annotation resolution
+from typing import Literal
 
 from sqlalchemy import (
     Boolean,
@@ -19,10 +21,6 @@ from sqlalchemy.orm import (
     registry,
     relationship,
 )
-
-if TYPE_CHECKING:
-    import datetime
-    import decimal
 
 _registry = registry()
 
