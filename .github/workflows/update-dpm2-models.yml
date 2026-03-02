@@ -23,7 +23,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Download generated schema
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ${{ needs.build-database.outputs.schema_artifact_name }}
           path: schema/
