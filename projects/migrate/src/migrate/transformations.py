@@ -4,9 +4,9 @@ from collections import defaultdict
 from collections.abc import Iterator
 from typing import Any
 
+from schema.type_registry import enum_candidate
 from sqlalchemy import Column, ForeignKey, Row, Table
 
-from schema.type_registry import enum_candidate
 from migrate.value_casters import Field, value_caster
 
 type CastedRow = dict[str, Field]

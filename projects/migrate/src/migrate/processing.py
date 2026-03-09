@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from schema.type_registry import column_type
 from sqlalchemy import (
     Engine,
     Inspector,
@@ -20,7 +21,6 @@ from migrate.transformations import (
     add_foreign_keys_to_table,
     parse_rows,
 )
-from schema.type_registry import column_type
 
 type TableWithRows = tuple[Table, CastedRows]
 type TablesWithRows = list[TableWithRows]
