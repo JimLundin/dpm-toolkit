@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Database migration tools for converting Access to SQLite"
 authors = [{ name = "Jim Lundin", email = "jimeriklundin@gmail.com" }]
 requires-python = ">=3.12"
-dependencies = ["sqlalchemy>=2.0.37", "sqlalchemy-access>=2.0.3"]
+dependencies = ["sqlalchemy>=2.0.37", "sqlalchemy-access>=2.0.3", "schema"]
 
 [tool.ruff]
 unsafe-fixes = true

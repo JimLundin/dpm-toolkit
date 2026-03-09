@@ -11,15 +11,24 @@ from sqlalchemy.schema import Column, Table
 
 from schema.enum_detection import detect_enum_for_column
 from schema.type_conversion import sql_to_data_type
+from schema.type_registry import column_type
 from schema.types import ColumnSchema, DatabaseSchema, ForeignKeySchema, TableSchema
 
 
-def detect_enum(inspector: Inspector, table: Table, column: ReflectedColumn) -> None:
-    """Event handler to detect enum types during reflection."""
-    # Check for enum constraints for this column
+def detect_types(inspector: Inspector, table: Table, column: ReflectedColumn) -> None:
+    """Event handler to detect column types during reflection.
+
+    Applies name-based type detection first, then checks for enum constraints.
+    Name-based rules recover type information lost by SQLite (UUID, Date, Boolean).
+    """
+    # Name-based type detection (recovers types lost by SQLite)
+    if detected := column_type(column):
+        column["type"] = detected
+        return
+
+    # Constraint-based enum detection
     for constraint in inspector.get_check_constraints(table.name):
         if values := detect_enum_for_column(constraint["sqltext"], column["name"]):
-            # Replace the column type with our enum type representation
             column["type"] = Enum(*values)
             break
 
@@ -82,7 +91,7 @@ def _table_from_sqla(table: Table) -> TableSchema:
 def reflect_tables(sqlite_database: Engine) -> list[Table]:
     """Reflect database schema from SQLite database using metadata reflection."""
     metadata = MetaData()
-    event.listen(metadata, "column_reflect", detect_enum)
+    event.listen(metadata, "column_reflect", detect_types)
     metadata.reflect(bind=sqlite_database)
     with catch_warnings():
         filterwarnings("ignore", category=SAWarning)

@@ -13,6 +13,7 @@ from sqlalchemy.types import (
     Numeric,
     String,
     TypeEngine,
+    Uuid,
 )
 
 from schema.types import (
@@ -26,6 +27,7 @@ from schema.types import (
     NumericType,
     RealType,
     TextType,
+    UuidType,
 )
 
 
@@ -37,7 +39,7 @@ class TypeInfo(NamedTuple):
     expression: str
 
 
-def sql_to_data_type(sql_type: TypeEngine[Any]) -> DataType:
+def sql_to_data_type(sql_type: TypeEngine[Any]) -> DataType:  # noqa: C901
     """Parse a SQLAlchemy TypeEngine into a structured ColumnType.
 
     This approach is much more robust than string parsing as it leverages
@@ -59,6 +61,8 @@ def sql_to_data_type(sql_type: TypeEngine[Any]) -> DataType:
             data_type = EnumType(type="enum", values=values)
         case Integer():
             data_type = IntegerType(type="integer")
+        case Uuid():
+            data_type = UuidType(type="uuid")
         case String():
             data_type = TextType(type="text", length=sql_type.length)
         case Float():
@@ -83,7 +87,7 @@ def sql_to_data_type(sql_type: TypeEngine[Any]) -> DataType:
     return data_type
 
 
-def data_type_to_sql(data_type: DataType) -> TypeEngine[Any]:
+def data_type_to_sql(data_type: DataType) -> TypeEngine[Any]:  # noqa: C901
     """Convert a ColumnType back to a SQLAlchemy TypeEngine.
 
     This leverages SQLAlchemy's type system knowledge and validation.
@@ -108,6 +112,8 @@ def data_type_to_sql(data_type: DataType) -> TypeEngine[Any]:
         sql_type = DateTime()
     elif data_type["type"] == "enum":
         sql_type = Enum(*data_type["values"])
+    elif data_type["type"] == "uuid":
+        sql_type = Uuid()
     else:
         sql_type = String()
 
