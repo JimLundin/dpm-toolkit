@@ -2,7 +2,7 @@ name: Update DPM2 Models
 
 on:
   push:
-    branches: [main]
+    branches-ignore: [main]
   workflow_dispatch:
 
 jobs:
