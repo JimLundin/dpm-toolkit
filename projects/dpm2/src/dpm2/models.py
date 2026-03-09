@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import datetime
 import decimal
+import uuid
 from typing import Literal
 
 from sqlalchemy import (
@@ -71,7 +72,7 @@ class Concept(DPM):
     __tablename__ = "Concept"
 
     # We quote the references to avoid circular dependencies
-    concept_guid: Mapped[str] = mapped_column("ConceptGUID", primary_key=True)
+    concept_guid: Mapped[uuid.UUID] = mapped_column("ConceptGUID", primary_key=True)
     class_id: Mapped[int] = mapped_column("ClassID", ForeignKey("DPMClass.ClassID"))
     owner_id: Mapped[int] = mapped_column("OwnerID", ForeignKey("Organisation.OrgID"))
 
@@ -176,7 +177,10 @@ class Organisation(DPM):
     name: Mapped[str] = mapped_column("Name")
     acronym: Mapped[str] = mapped_column("Acronym")
     id_prefix: Mapped[int] = mapped_column("IDPrefix")
-    row_guid: Mapped[str] = mapped_column("RowGUID", ForeignKey(Concept.concept_guid))
+    row_guid: Mapped[uuid.UUID] = mapped_column(
+        "RowGUID",
+        ForeignKey(Concept.concept_guid),
+    )
 
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
 
@@ -249,7 +253,7 @@ class CompoundKey(DPM):
 
     key_id: Mapped[int] = mapped_column("KeyID", primary_key=True)
     signature: Mapped[str] = mapped_column("Signature")
-    row_guid: Mapped[str | None] = mapped_column(
+    row_guid: Mapped[uuid.UUID | None] = mapped_column(
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
@@ -267,7 +271,10 @@ class ConceptRelation(DPM):
         primary_key=True,
     )
     type: Mapped[Literal["header_attributeHeader"]] = mapped_column("Type")
-    row_guid: Mapped[str] = mapped_column("RowGUID", ForeignKey(Concept.concept_guid))
+    row_guid: Mapped[uuid.UUID] = mapped_column(
+        "RowGUID",
+        ForeignKey(Concept.concept_guid),
+    )
 
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
 
@@ -279,7 +286,7 @@ class Context(DPM):
 
     context_id: Mapped[int] = mapped_column("ContextID", primary_key=True)
     signature: Mapped[str] = mapped_column("Signature")
-    row_guid: Mapped[str | None] = mapped_column(
+    row_guid: Mapped[uuid.UUID | None] = mapped_column(
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
@@ -310,7 +317,10 @@ class Document(DPM):
     code: Mapped[str] = mapped_column("Code")
     type: Mapped[str] = mapped_column("Type")
     org_id: Mapped[int] = mapped_column("OrgID", ForeignKey(Organisation.org_id))
-    row_guid: Mapped[str] = mapped_column("RowGUID", ForeignKey(Concept.concept_guid))
+    row_guid: Mapped[uuid.UUID] = mapped_column(
+        "RowGUID",
+        ForeignKey(Concept.concept_guid),
+    )
 
     org: Mapped[Organisation] = relationship(foreign_keys=org_id)
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
@@ -325,7 +335,10 @@ class Framework(DPM):
     code: Mapped[str] = mapped_column("Code")
     name: Mapped[str] = mapped_column("Name")
     description: Mapped[str | None] = mapped_column("Description")
-    row_guid: Mapped[str] = mapped_column("RowGUID", ForeignKey(Concept.concept_guid))
+    row_guid: Mapped[uuid.UUID] = mapped_column(
+        "RowGUID",
+        ForeignKey(Concept.concept_guid),
+    )
 
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
 
@@ -340,7 +353,7 @@ class Item(DPM):
     description: Mapped[str | None] = mapped_column("Description")
     is_property: Mapped[bool] = mapped_column("IsProperty")
     is_active: Mapped[bool] = mapped_column("IsActive")
-    row_guid: Mapped[str | None] = mapped_column(
+    row_guid: Mapped[uuid.UUID | None] = mapped_column(
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
@@ -367,7 +380,10 @@ class Operation(DPM):
         ]
     ] = mapped_column("Source")
     group_oper_id: Mapped[int | None] = mapped_column("GroupOperID")
-    row_guid: Mapped[str] = mapped_column("RowGUID", ForeignKey(Concept.concept_guid))
+    row_guid: Mapped[uuid.UUID] = mapped_column(
+        "RowGUID",
+        ForeignKey(Concept.concept_guid),
+    )
 
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
 
@@ -400,7 +416,10 @@ class Release(DPM):
     description: Mapped[str | None] = mapped_column("Description")
     status: Mapped[Literal["released", "validation"]] = mapped_column("Status")
     is_current: Mapped[bool] = mapped_column("IsCurrent")
-    row_guid: Mapped[str] = mapped_column("RowGUID", ForeignKey(Concept.concept_guid))
+    row_guid: Mapped[uuid.UUID] = mapped_column(
+        "RowGUID",
+        ForeignKey(Concept.concept_guid),
+    )
     latest_variable_gen_time: Mapped[datetime.datetime | None] = mapped_column(
         "LatestVariableGenTime",
     )
@@ -420,7 +439,10 @@ class Table(DPM):
     has_open_sheets: Mapped[bool] = mapped_column("HasOpenSheets")
     is_normalised: Mapped[bool] = mapped_column("IsNormalised")
     is_flat: Mapped[bool] = mapped_column("IsFlat")
-    row_guid: Mapped[str] = mapped_column("RowGUID", ForeignKey(Concept.concept_guid))
+    row_guid: Mapped[uuid.UUID] = mapped_column(
+        "RowGUID",
+        ForeignKey(Concept.concept_guid),
+    )
 
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
 
@@ -444,7 +466,7 @@ class Variable(DPM):
 
     variable_id: Mapped[int] = mapped_column("VariableID", primary_key=True)
     type: Mapped[Literal["fact", "filingindicator", "key"]] = mapped_column("Type")
-    row_guid: Mapped[str | None] = mapped_column(
+    row_guid: Mapped[uuid.UUID | None] = mapped_column(
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
@@ -465,7 +487,10 @@ class Category(DPM):
     is_active: Mapped[bool] = mapped_column("IsActive")
     is_external_ref_data: Mapped[bool] = mapped_column("IsExternalRefData")
     ref_data_source: Mapped[str | None] = mapped_column("RefDataSource")
-    row_guid: Mapped[str] = mapped_column("RowGUID", ForeignKey(Concept.concept_guid))
+    row_guid: Mapped[uuid.UUID] = mapped_column(
+        "RowGUID",
+        ForeignKey(Concept.concept_guid),
+    )
     created_release: Mapped[int] = mapped_column(
         "CreatedRelease",
         ForeignKey(Release.release_id),
@@ -480,7 +505,7 @@ class ChangeLog(DPM):
 
     __tablename__ = "ChangeLog"
 
-    row_guid: Mapped[str] = mapped_column(
+    row_guid: Mapped[uuid.UUID] = mapped_column(
         "RowGUID",
         ForeignKey(Concept.concept_guid),
         primary_key=True,
@@ -530,7 +555,10 @@ class CompoundItemContext(DPM):
         "EndReleaseID",
         ForeignKey(Release.release_id),
     )
-    row_guid: Mapped[str] = mapped_column("RowGUID", ForeignKey(Concept.concept_guid))
+    row_guid: Mapped[uuid.UUID] = mapped_column(
+        "RowGUID",
+        ForeignKey(Concept.concept_guid),
+    )
 
     item: Mapped[Item] = relationship(foreign_keys=item_id)
     start_release: Mapped[Release] = relationship(foreign_keys=start_release_id)
@@ -552,7 +580,10 @@ class DocumentVersion(DPM):
     code: Mapped[str] = mapped_column("Code")
     version: Mapped[str] = mapped_column("Version")
     publication_date: Mapped[datetime.date] = mapped_column("PublicationDate")
-    row_guid: Mapped[str] = mapped_column("RowGUID", ForeignKey(Concept.concept_guid))
+    row_guid: Mapped[uuid.UUID] = mapped_column(
+        "RowGUID",
+        ForeignKey(Concept.concept_guid),
+    )
 
     document: Mapped[Document] = relationship(foreign_keys=document_id)
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
@@ -567,7 +598,10 @@ class Header(DPM):
     table_id: Mapped[int] = mapped_column("TableID", ForeignKey(Table.table_id))
     direction: Mapped[Literal["X", "Y", "Z"]] = mapped_column("Direction")
     is_key: Mapped[bool] = mapped_column("IsKey")
-    row_guid: Mapped[str] = mapped_column("RowGUID", ForeignKey(Concept.concept_guid))
+    row_guid: Mapped[uuid.UUID] = mapped_column(
+        "RowGUID",
+        ForeignKey(Concept.concept_guid),
+    )
     is_attribute: Mapped[bool] = mapped_column("IsAttribute")
 
     table: Mapped[Table] = relationship(foreign_keys=table_id)
@@ -584,7 +618,7 @@ class Module(DPM):
         "FrameworkID",
         ForeignKey(Framework.framework_id),
     )
-    row_guid: Mapped[str | None] = mapped_column(
+    row_guid: Mapped[uuid.UUID | None] = mapped_column(
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
@@ -637,7 +671,10 @@ class OperationVersion(DPM):
     )
     expression: Mapped[str] = mapped_column("Expression")
     description: Mapped[str | None] = mapped_column("Description")
-    row_guid: Mapped[str] = mapped_column("RowGUID", ForeignKey(Concept.concept_guid))
+    row_guid: Mapped[uuid.UUID] = mapped_column(
+        "RowGUID",
+        ForeignKey(Concept.concept_guid),
+    )
     endorsement: Mapped[Literal["approved", "rejected"] | None] = mapped_column(
         "Endorsement",
     )
@@ -669,7 +706,10 @@ class Property(DPM):
     period_type: Mapped[
         Literal["Flow", "Stock", "flow", "no_period", "stock"] | None
     ] = mapped_column("PeriodType")
-    row_guid: Mapped[str] = mapped_column("RowGUID", ForeignKey(Concept.concept_guid))
+    row_guid: Mapped[uuid.UUID] = mapped_column(
+        "RowGUID",
+        ForeignKey(Concept.concept_guid),
+    )
 
     item: Mapped[Item] = relationship(foreign_keys=property_id)
     data_type: Mapped[DataType] = relationship(foreign_keys=data_type_id)
@@ -681,7 +721,7 @@ class RelatedConcept(DPM):
 
     __tablename__ = "RelatedConcept"
 
-    concept_guid: Mapped[str] = mapped_column(
+    concept_guid: Mapped[uuid.UUID] = mapped_column(
         "ConceptGUID",
         ForeignKey(Concept.concept_guid),
         primary_key=True,
@@ -692,7 +732,7 @@ class RelatedConcept(DPM):
         primary_key=True,
     )
     is_related_concept: Mapped[bool] = mapped_column("IsRelatedConcept")
-    row_guid: Mapped[str | None] = mapped_column(
+    row_guid: Mapped[uuid.UUID | None] = mapped_column(
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
@@ -714,7 +754,10 @@ class TableGroup(DPM):
     name: Mapped[str] = mapped_column("Name")
     description: Mapped[str | None] = mapped_column("Description")
     type: Mapped[Literal["templateGroup"]] = mapped_column("Type")
-    row_guid: Mapped[str] = mapped_column("RowGUID", ForeignKey(Concept.concept_guid))
+    row_guid: Mapped[uuid.UUID] = mapped_column(
+        "RowGUID",
+        ForeignKey(Concept.concept_guid),
+    )
     start_release_id: Mapped[int] = mapped_column(
         "StartReleaseID",
         ForeignKey(Release.release_id),
@@ -735,7 +778,7 @@ class Translation(DPM):
 
     __tablename__ = "Translation"
 
-    concept_guid: Mapped[str] = mapped_column(
+    concept_guid: Mapped[uuid.UUID] = mapped_column(
         "ConceptGUID",
         ForeignKey(Concept.concept_guid),
         primary_key=True,
@@ -756,7 +799,10 @@ class Translation(DPM):
         primary_key=True,
     )
     translation: Mapped[str] = mapped_column("Translation")
-    row_guid: Mapped[str] = mapped_column("RowGUID", ForeignKey(Concept.concept_guid))
+    row_guid: Mapped[uuid.UUID] = mapped_column(
+        "RowGUID",
+        ForeignKey(Concept.concept_guid),
+    )
 
     concept: Mapped[Concept] = relationship(foreign_keys=concept_guid)
     attribute: Mapped[DPMAttribute] = relationship(foreign_keys=attribute_id)
@@ -816,7 +862,10 @@ class Cell(DPM):
         "SheetID",
         ForeignKey(Header.header_id),
     )
-    row_guid: Mapped[str] = mapped_column("RowGUID", ForeignKey(Concept.concept_guid))
+    row_guid: Mapped[uuid.UUID] = mapped_column(
+        "RowGUID",
+        ForeignKey(Concept.concept_guid),
+    )
 
     table: Mapped[Table] = relationship(foreign_keys=table_id)
     column: Mapped[Header] = relationship(foreign_keys=column_id)
@@ -841,7 +890,7 @@ class ContextComposition(DPM):
         primary_key=True,
     )
     item_id: Mapped[int] = mapped_column("ItemID", ForeignKey(Item.item_id))
-    row_guid: Mapped[str | None] = mapped_column(
+    row_guid: Mapped[uuid.UUID | None] = mapped_column(
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
@@ -878,7 +927,7 @@ class ItemCategory(DPM):
         "EndReleaseID",
         ForeignKey(Release.release_id),
     )
-    row_guid: Mapped[str | None] = mapped_column(
+    row_guid: Mapped[uuid.UUID | None] = mapped_column(
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
@@ -939,7 +988,7 @@ class ModuleVersion(DPM):
     ] = mapped_column("VersionNumber")
     from_reference_date: Mapped[datetime.date] = mapped_column("FromReferenceDate")
     to_reference_date: Mapped[datetime.date | None] = mapped_column("ToReferenceDate")
-    row_guid: Mapped[str | None] = mapped_column(
+    row_guid: Mapped[uuid.UUID | None] = mapped_column(
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
@@ -1009,7 +1058,10 @@ class OperationScope(DPM):
     from_submission_date: Mapped[datetime.date | None] = mapped_column(
         "FromSubmissionDate",
     )
-    row_guid: Mapped[str] = mapped_column("RowGUID", ForeignKey(Concept.concept_guid))
+    row_guid: Mapped[uuid.UUID] = mapped_column(
+        "RowGUID",
+        ForeignKey(Concept.concept_guid),
+    )
 
     operation_version: Mapped[OperationVersion] = relationship(
         foreign_keys=operation_vid,
@@ -1083,7 +1135,7 @@ class PropertyCategory(DPM):
         "EndReleaseID",
         ForeignKey(Release.release_id),
     )
-    row_guid: Mapped[str | None] = mapped_column(
+    row_guid: Mapped[uuid.UUID | None] = mapped_column(
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
@@ -1108,7 +1160,10 @@ class SubCategory(DPM):
     code: Mapped[str] = mapped_column("Code")
     name: Mapped[str | None] = mapped_column("Name")
     description: Mapped[str | None] = mapped_column("Description")
-    row_guid: Mapped[str] = mapped_column("RowGUID", ForeignKey(Concept.concept_guid))
+    row_guid: Mapped[uuid.UUID] = mapped_column(
+        "RowGUID",
+        ForeignKey(Concept.concept_guid),
+    )
 
     category: Mapped[Category] = relationship(foreign_keys=category_id)
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
@@ -1132,7 +1187,10 @@ class Subdivision(DPM):
     parent_subdivision_id: Mapped[int] = mapped_column("ParentSubdivisionID")
     structure_path: Mapped[str] = mapped_column("StructurePath")
     text_excerpt: Mapped[str] = mapped_column("TextExcerpt")
-    row_guid: Mapped[str] = mapped_column("RowGUID", ForeignKey(Concept.concept_guid))
+    row_guid: Mapped[uuid.UUID] = mapped_column(
+        "RowGUID",
+        ForeignKey(Concept.concept_guid),
+    )
 
     document_version: Mapped[DocumentVersion] = relationship(foreign_keys=document_vid)
     subdivision_type: Mapped[SubdivisionType] = relationship(
@@ -1165,7 +1223,10 @@ class SuperCategoryComposition(DPM):
         "EndReleaseID",
         ForeignKey(Release.release_id),
     )
-    row_guid: Mapped[str] = mapped_column("RowGUID", ForeignKey(Concept.concept_guid))
+    row_guid: Mapped[uuid.UUID] = mapped_column(
+        "RowGUID",
+        ForeignKey(Concept.concept_guid),
+    )
 
     super_category: Mapped[Category] = relationship(foreign_keys=super_category_id)
     category: Mapped[Category] = relationship(foreign_keys=category_id)
@@ -1198,7 +1259,7 @@ class TableGroupComposition(DPM):
         "EndReleaseID",
         ForeignKey(Release.release_id),
     )
-    row_guid: Mapped[str | None] = mapped_column(
+    row_guid: Mapped[uuid.UUID | None] = mapped_column(
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
@@ -1241,7 +1302,10 @@ class TableVersion(DPM):
         "EndReleaseID",
         ForeignKey(Release.release_id),
     )
-    row_guid: Mapped[str] = mapped_column("RowGUID", ForeignKey(Concept.concept_guid))
+    row_guid: Mapped[uuid.UUID] = mapped_column(
+        "RowGUID",
+        ForeignKey(Concept.concept_guid),
+    )
 
     table: Mapped[Table] = relationship(foreign_keys=table_id)
     abstract_table: Mapped[Table | None] = relationship(foreign_keys=abstract_table_id)
@@ -1275,7 +1339,10 @@ class VariableCalculation(DPM):
     )
     from_reference_date: Mapped[datetime.date] = mapped_column("FromReferenceDate")
     to_reference_date: Mapped[datetime.date] = mapped_column("ToReferenceDate")
-    row_guid: Mapped[str] = mapped_column("RowGUID", ForeignKey(Concept.concept_guid))
+    row_guid: Mapped[uuid.UUID] = mapped_column(
+        "RowGUID",
+        ForeignKey(Concept.concept_guid),
+    )
 
     module: Mapped[Module] = relationship(foreign_keys=module_id)
     variable: Mapped[Variable] = relationship(foreign_keys=variable_id)
@@ -1305,7 +1372,7 @@ class ModuleVersionComposition(DPM):
         ForeignKey(TableVersion.table_vid),
     )
     order: Mapped[int | None] = mapped_column("Order")
-    row_guid: Mapped[str | None] = mapped_column(
+    row_guid: Mapped[uuid.UUID | None] = mapped_column(
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
@@ -1379,7 +1446,10 @@ class OperationScopeComposition(DPM):
         ForeignKey(ModuleVersion.module_vid),
         primary_key=True,
     )
-    row_guid: Mapped[str] = mapped_column("RowGUID", ForeignKey(Concept.concept_guid))
+    row_guid: Mapped[uuid.UUID] = mapped_column(
+        "RowGUID",
+        ForeignKey(Concept.concept_guid),
+    )
 
     operation_scope: Mapped[OperationScope] = relationship(
         foreign_keys=operation_scope_id,
@@ -1398,12 +1468,15 @@ class Reference(DPM):
         ForeignKey(Subdivision.subdivision_id),
         primary_key=True,
     )
-    concept_guid: Mapped[str] = mapped_column(
+    concept_guid: Mapped[uuid.UUID] = mapped_column(
         "ConceptGUID",
         ForeignKey(Concept.concept_guid),
         primary_key=True,
     )
-    row_guid: Mapped[str] = mapped_column("RowGUID", ForeignKey(Concept.concept_guid))
+    row_guid: Mapped[uuid.UUID] = mapped_column(
+        "RowGUID",
+        ForeignKey(Concept.concept_guid),
+    )
 
     subdivision: Mapped[Subdivision] = relationship(foreign_keys=subdivision_id)
     concept: Mapped[Concept] = relationship(foreign_keys=concept_guid)
@@ -1428,7 +1501,10 @@ class SubCategoryVersion(DPM):
         "EndReleaseID",
         ForeignKey(Release.release_id),
     )
-    row_guid: Mapped[str] = mapped_column("RowGUID", ForeignKey(Concept.concept_guid))
+    row_guid: Mapped[uuid.UUID] = mapped_column(
+        "RowGUID",
+        ForeignKey(Concept.concept_guid),
+    )
 
     sub_category: Mapped[SubCategory] = relationship(foreign_keys=sub_category_id)
     start_release: Mapped[Release] = relationship(foreign_keys=start_release_id)
@@ -1464,7 +1540,10 @@ class TableAssociation(DPM):
     child_cardinality_and_optionality: Mapped[Literal["0_n"]] = mapped_column(
         "ChildCardinalityAndOptionality",
     )
-    row_guid: Mapped[str] = mapped_column("RowGUID", ForeignKey(Concept.concept_guid))
+    row_guid: Mapped[uuid.UUID] = mapped_column(
+        "RowGUID",
+        ForeignKey(Concept.concept_guid),
+    )
 
     child_table_version: Mapped[TableVersion] = relationship(
         foreign_keys=child_table_vid,
@@ -1512,7 +1591,10 @@ class KeyHeaderMapping(DPM):
         "PrimaryKeyHeaderID",
         ForeignKey(Header.header_id),
     )
-    row_guid: Mapped[str] = mapped_column("RowGUID", ForeignKey(Concept.concept_guid))
+    row_guid: Mapped[uuid.UUID] = mapped_column(
+        "RowGUID",
+        ForeignKey(Concept.concept_guid),
+    )
 
     association: Mapped[TableAssociation] = relationship(foreign_keys=association_id)
     foreign_key_header: Mapped[Header] = relationship(
@@ -1575,7 +1657,7 @@ class SubCategoryItem(DPM):
         "ArithmeticOperatorID",
         ForeignKey(Operator.operator_id),
     )
-    row_guid: Mapped[str | None] = mapped_column(
+    row_guid: Mapped[uuid.UUID | None] = mapped_column(
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
@@ -1628,7 +1710,7 @@ class VariableVersion(DPM):
         "EndReleaseID",
         ForeignKey(Release.release_id),
     )
-    row_guid: Mapped[str | None] = mapped_column(
+    row_guid: Mapped[uuid.UUID | None] = mapped_column(
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
@@ -1678,7 +1760,10 @@ class HeaderVersion(DPM):
         "EndReleaseID",
         ForeignKey(Release.release_id),
     )
-    row_guid: Mapped[str] = mapped_column("RowGUID", ForeignKey(Concept.concept_guid))
+    row_guid: Mapped[uuid.UUID] = mapped_column(
+        "RowGUID",
+        ForeignKey(Concept.concept_guid),
+    )
 
     header: Mapped[Header] = relationship(foreign_keys=header_id)
     property: Mapped[Property | None] = relationship(foreign_keys=property_id)
@@ -1709,7 +1794,7 @@ class KeyComposition(DPM):
         ForeignKey(VariableVersion.variable_vid),
         primary_key=True,
     )
-    row_guid: Mapped[str | None] = mapped_column(
+    row_guid: Mapped[uuid.UUID | None] = mapped_column(
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
@@ -1734,7 +1819,7 @@ class ModuleParameters(DPM):
         ForeignKey(VariableVersion.variable_vid),
         primary_key=True,
     )
-    row_guid: Mapped[str | None] = mapped_column(
+    row_guid: Mapped[uuid.UUID | None] = mapped_column(
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
@@ -1768,7 +1853,10 @@ class TableVersionCell(DPM):
         "VariableVID",
         ForeignKey(VariableVersion.variable_vid),
     )
-    row_guid: Mapped[str] = mapped_column("RowGUID", ForeignKey(Concept.concept_guid))
+    row_guid: Mapped[uuid.UUID] = mapped_column(
+        "RowGUID",
+        ForeignKey(Concept.concept_guid),
+    )
 
     table_version: Mapped[TableVersion] = relationship(foreign_keys=table_vid)
     cell: Mapped[Cell] = relationship(foreign_keys=cell_id)
@@ -1805,7 +1893,10 @@ class TableVersionHeader(DPM):
     order: Mapped[int] = mapped_column("Order")
     is_abstract: Mapped[bool] = mapped_column("IsAbstract")
     is_unique: Mapped[bool] = mapped_column("IsUnique")
-    row_guid: Mapped[str] = mapped_column("RowGUID", ForeignKey(Concept.concept_guid))
+    row_guid: Mapped[uuid.UUID] = mapped_column(
+        "RowGUID",
+        ForeignKey(Concept.concept_guid),
+    )
 
     table_version: Mapped[TableVersion] = relationship(foreign_keys=table_vid)
     header: Mapped[Header] = relationship(foreign_keys=header_id)
