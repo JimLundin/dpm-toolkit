@@ -1,18 +1,24 @@
-"""Name-based column type detection for DPM databases.
+"""Name-based type inference for DPM databases.
 
 DPM databases follow naming conventions that encode type information:
 - Columns ending with "GUID" contain UUIDs
 - Columns ending with "Date" contain dates
 - Columns starting with "Is"/"Has" contain booleans
 - Specific columns like "StartDate"/"EndDate" are datetimes
+- String columns ending with "Type"/"Status"/etc. are enum candidates
 
 These conventions are lost when storing in SQLite (which has no UUID, Date,
 or Boolean types), so we recover them by inspecting column names.
+
+This module is the single source of truth for all name-based type rules.
+It is used by both:
+- **schema** during reflection to infer rich types for code generation
+- **migrate** during normalization to cast values and collect enum data
 """
 
 from typing import Any
 
-from sqlalchemy import Boolean, Date, DateTime, Uuid
+from sqlalchemy import Boolean, Column, Date, DateTime, String, Uuid
 from sqlalchemy.engine.interfaces import ReflectedColumn
 from sqlalchemy.types import TypeEngine
 
@@ -51,3 +57,26 @@ def column_type(column: ReflectedColumn) -> TypeEngine[Any] | None:
         data_type = Date()
 
     return data_type
+
+
+def enum_candidate(column: Column[Any]) -> bool:
+    """Identify if a reflected column is an enum candidate by name.
+
+    Only String columns are considered — columns already detected as
+    UUID, Date, or Boolean by ``column_type`` are excluded.
+    """
+    return isinstance(column.type, String) and column.name.lower().endswith(
+        (
+            "type",
+            "status",
+            "sign",
+            "optionality",
+            "direction",
+            "number",
+            "endorsement",
+            "source",
+            "severity",
+            "errorcode",
+            "operandreference",
+        ),
+    )

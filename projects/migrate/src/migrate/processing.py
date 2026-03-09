@@ -20,7 +20,7 @@ from migrate.transformations import (
     add_foreign_keys_to_table,
     parse_rows,
 )
-from migrate.type_registry import column_type
+from schema.type_registry import column_type
 
 type TableWithRows = tuple[Table, CastedRows]
 type TablesWithRows = list[TableWithRows]
