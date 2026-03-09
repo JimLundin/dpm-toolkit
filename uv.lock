@@ -384,12 +384,14 @@ name = "migrate"
 version = "0.1.0"
 source = { editable = "projects/migrate" }
 dependencies = [
+    { name = "schema" },
     { name = "sqlalchemy" },
     { name = "sqlalchemy-access" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "schema", editable = "projects/schema" },
     { name = "sqlalchemy", specifier = ">=2.0.37" },
     { name = "sqlalchemy-access", specifier = ">=2.0.3" },
 ]

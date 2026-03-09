@@ -65,6 +65,12 @@ class EnumType(TypedDict):
     values: list[str]
 
 
+class UuidType(TypedDict):
+    """UUID column type."""
+
+    type: Literal["uuid"]
+
+
 # Union type for all column types
 type DataType = (
     IntegerType
@@ -76,6 +82,7 @@ type DataType = (
     | DateType
     | DateTimeType
     | EnumType
+    | UuidType
 )
 
 
