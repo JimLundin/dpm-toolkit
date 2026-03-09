@@ -1,7 +1,10 @@
+"""SQLAlchemy models generated from DPM by the DPM Toolkit project."""
+
+# ruff: noqa: TC003
 from __future__ import annotations
 
-import datetime  # noqa: TC003 - needed at runtime for SQLAlchemy annotation resolution
-import decimal  # noqa: TC003 - needed at runtime for SQLAlchemy annotation resolution
+import datetime
+import decimal
 from typing import Literal
 
 from sqlalchemy import (
