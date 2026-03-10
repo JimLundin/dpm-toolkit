@@ -7,10 +7,8 @@ from typing import Any
 from schema.type_registry import enum_candidate
 from sqlalchemy import Column, ForeignKey, Row, Table
 
-from migrate.value_casters import Field, value_caster
-
-type CastedRow = dict[str, Field]
-type CastedRows = list[CastedRow]
+type Row_ = dict[str, Any]
+type Rows = list[Row_]
 type Columns = set[Column[Any]]
 type EnumByColumn = dict[Column[Any], set[str]]
 
@@ -18,38 +16,32 @@ type EnumByColumn = dict[Column[Any], set[str]]
 def parse_rows(
     table: Table,
     rows: Iterator[Row[Any]],
-) -> tuple[CastedRows, EnumByColumn, Columns]:
-    """Transform row values using TypeRegistry and collect analysis data."""
-    casted_rows: CastedRows = []
+) -> tuple[Rows, EnumByColumn, Columns]:
+    """Analyze rows for enum values and nullable columns.
+
+    Values are passed through without casting — type recovery is handled
+    downstream by the schema module using column naming conventions.
+    """
+    parsed_rows: Rows = []
     enum_by_column: EnumByColumn = defaultdict(set)
     nullable_columns: Columns = set()
 
-    # Pre-compute column types and casters for performance (don't lookup per row)
-    caster_by_column = {column: value_caster(column.type) for column in table.columns}
-
     for row in rows:
-        casted_row = row._asdict()  # pyright: ignore[reportPrivateUsage]
+        row_dict = row._asdict()  # pyright: ignore[reportPrivateUsage]
 
-        for column_name, raw_value in casted_row.items():
+        for column_name, value in row_dict.items():
             table_column = table.columns[column_name]
 
-            if raw_value is None:
+            if value is None:
                 nullable_columns.add(table_column)
                 continue
 
-            # Get pre-computed type for this column
-            if enum_candidate(table_column):
-                # This is an enum candidate - collect raw values for later analysis
-                if isinstance(raw_value, str):
-                    enum_by_column[table_column].add(raw_value)
-                continue
+            if enum_candidate(table_column) and isinstance(value, str):
+                enum_by_column[table_column].add(value)
 
-            # Cast using pre-computed caster function
-            casted_row[column_name] = caster_by_column[table_column](raw_value)
+        parsed_rows.append(row_dict)
 
-        casted_rows.append(casted_row)
-
-    return casted_rows, enum_by_column, nullable_columns
+    return parsed_rows, enum_by_column, nullable_columns
 
 
 def add_foreign_key_to_table(
