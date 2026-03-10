@@ -1,0 +1,479 @@
+{
+  "per_version": {
+    "3.2-sample": {
+      "Release.Date": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 1
+        },
+        "total_date_values": 1
+      },
+      "ModuleVersion.FromReferenceDate": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 37
+        },
+        "total_date_values": 37
+      },
+      "OperationScope.FromSubmissionDate": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 7945
+        },
+        "total_date_values": 7945
+      }
+    },
+    "3.5-sample": {
+      "Release.Date": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 2
+        },
+        "total_date_values": 2
+      },
+      "ModuleVersion.FromReferenceDate": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 42
+        },
+        "total_date_values": 42
+      },
+      "ModuleVersion.ToReferenceDate": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 4
+        },
+        "total_date_values": 4
+      },
+      "OperationScope.FromSubmissionDate": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 7723
+        },
+        "total_date_values": 7723
+      }
+    },
+    "4.0-draft": {
+      "Release.Date": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 3
+        },
+        "total_date_values": 3
+      },
+      "VariableGeneration.StartDate": {
+        "type": "DATETIME",
+        "formats": {
+          "YYYY-MM-DD HH:MM:SS.f": 134
+        },
+        "total_date_values": 134
+      },
+      "VariableGeneration.EndDate": {
+        "type": "DATETIME",
+        "formats": {
+          "YYYY-MM-DD HH:MM:SS.f": 133
+        },
+        "total_date_values": 133
+      },
+      "ModuleVersion.FromReferenceDate": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 81
+        },
+        "total_date_values": 81
+      },
+      "ModuleVersion.ToReferenceDate": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 40
+        },
+        "total_date_values": 40
+      },
+      "OperationScope.FromSubmissionDate": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 15262
+        },
+        "total_date_values": 15262
+      }
+    },
+    "4.0-release": {
+      "Release.Date": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 3
+        },
+        "total_date_values": 3
+      },
+      "VariableGeneration.StartDate": {
+        "type": "DATETIME",
+        "formats": {
+          "YYYY-MM-DD HH:MM:SS.f": 169
+        },
+        "total_date_values": 169
+      },
+      "VariableGeneration.EndDate": {
+        "type": "DATETIME",
+        "formats": {
+          "YYYY-MM-DD HH:MM:SS.f": 168
+        },
+        "total_date_values": 168
+      },
+      "ModuleVersion.FromReferenceDate": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 84
+        },
+        "total_date_values": 84
+      },
+      "ModuleVersion.ToReferenceDate": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 40
+        },
+        "total_date_values": 40
+      },
+      "OperationScope.FromSubmissionDate": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 15371
+        },
+        "total_date_values": 15371
+      }
+    },
+    "4.0-errata-4": {
+      "Release.Date": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 3
+        },
+        "total_date_values": 3
+      },
+      "VariableGeneration.StartDate": {
+        "type": "DATETIME",
+        "formats": {
+          "YYYY-MM-DD HH:MM:SS.f": 169
+        },
+        "total_date_values": 169
+      },
+      "VariableGeneration.EndDate": {
+        "type": "DATETIME",
+        "formats": {
+          "YYYY-MM-DD HH:MM:SS.f": 168
+        },
+        "total_date_values": 168
+      },
+      "ModuleVersion.FromReferenceDate": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 84
+        },
+        "total_date_values": 84
+      },
+      "ModuleVersion.ToReferenceDate": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 40
+        },
+        "total_date_values": 40
+      },
+      "OperationScope.FromSubmissionDate": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 15371
+        },
+        "total_date_values": 15371
+      }
+    },
+    "4.0-errata-5": {
+      "Release.Date": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 3
+        },
+        "total_date_values": 3
+      },
+      "VariableGeneration.StartDate": {
+        "type": "DATETIME",
+        "formats": {
+          "YYYY-MM-DD HH:MM:SS.f": 169
+        },
+        "total_date_values": 169
+      },
+      "VariableGeneration.EndDate": {
+        "type": "DATETIME",
+        "formats": {
+          "YYYY-MM-DD HH:MM:SS.f": 168
+        },
+        "total_date_values": 168
+      },
+      "ModuleVersion.FromReferenceDate": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 84
+        },
+        "total_date_values": 84
+      },
+      "ModuleVersion.ToReferenceDate": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 40
+        },
+        "total_date_values": 40
+      },
+      "OperationScope.FromSubmissionDate": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 15371
+        },
+        "total_date_values": 15371
+      }
+    },
+    "4.1-draft": {
+      "Release.Date": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 4
+        },
+        "total_date_values": 4
+      },
+      "VariableGeneration.StartDate": {
+        "type": "DATETIME",
+        "formats": {
+          "YYYY-MM-DD HH:MM:SS.f": 258
+        },
+        "total_date_values": 258
+      },
+      "VariableGeneration.EndDate": {
+        "type": "DATETIME",
+        "formats": {
+          "YYYY-MM-DD HH:MM:SS.f": 256
+        },
+        "total_date_values": 256
+      },
+      "ModuleVersion.FromReferenceDate": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 96
+        },
+        "total_date_values": 96
+      },
+      "ModuleVersion.ToReferenceDate": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 39
+        },
+        "total_date_values": 39
+      },
+      "OperationScope.FromSubmissionDate": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 16712
+        },
+        "total_date_values": 16712
+      }
+    },
+    "4.1-final": {
+      "Release.Date": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 4
+        },
+        "total_date_values": 4
+      },
+      "VariableGeneration.StartDate": {
+        "type": "DATETIME",
+        "formats": {
+          "YYYY-MM-DD HH:MM:SS.f": 288
+        },
+        "total_date_values": 288
+      },
+      "VariableGeneration.EndDate": {
+        "type": "DATETIME",
+        "formats": {
+          "YYYY-MM-DD HH:MM:SS.f": 286
+        },
+        "total_date_values": 286
+      },
+      "ModuleVersion.FromReferenceDate": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 96
+        },
+        "total_date_values": 96
+      },
+      "ModuleVersion.ToReferenceDate": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 46
+        },
+        "total_date_values": 46
+      },
+      "OperationScope.FromSubmissionDate": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 16609
+        },
+        "total_date_values": 16609
+      }
+    },
+    "4.1-errata-1": {
+      "Release.Date": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 4
+        },
+        "total_date_values": 4
+      },
+      "VariableGeneration.StartDate": {
+        "type": "DATETIME",
+        "formats": {
+          "YYYY-MM-DD HH:MM:SS.f": 288
+        },
+        "total_date_values": 288
+      },
+      "VariableGeneration.EndDate": {
+        "type": "DATETIME",
+        "formats": {
+          "YYYY-MM-DD HH:MM:SS.f": 286
+        },
+        "total_date_values": 286
+      },
+      "ModuleVersion.FromReferenceDate": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 96
+        },
+        "total_date_values": 96
+      },
+      "ModuleVersion.ToReferenceDate": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 46
+        },
+        "total_date_values": 46
+      },
+      "OperationScope.FromSubmissionDate": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 16609
+        },
+        "total_date_values": 16609
+      }
+    },
+    "4.2-draft": {
+      "Release.Date": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 5
+        },
+        "total_date_values": 5
+      },
+      "VariableGeneration.StartDate": {
+        "type": "DATETIME",
+        "formats": {
+          "YYYY-MM-DD HH:MM:SS.f": 323
+        },
+        "total_date_values": 323
+      },
+      "VariableGeneration.EndDate": {
+        "type": "DATETIME",
+        "formats": {
+          "YYYY-MM-DD HH:MM:SS.f": 321
+        },
+        "total_date_values": 321
+      },
+      "ModuleVersion.FromReferenceDate": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 147
+        },
+        "total_date_values": 147
+      },
+      "ModuleVersion.ToReferenceDate": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 92
+        },
+        "total_date_values": 92
+      },
+      "OperationScope.FromSubmissionDate": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 24876
+        },
+        "total_date_values": 24876
+      }
+    },
+    "4.2-release": {
+      "Release.Date": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 5
+        },
+        "total_date_values": 5
+      },
+      "VariableGeneration.StartDate": {
+        "type": "DATETIME",
+        "formats": {
+          "YYYY-MM-DD HH:MM:SS.f": 356
+        },
+        "total_date_values": 356
+      },
+      "VariableGeneration.EndDate": {
+        "type": "DATETIME",
+        "formats": {
+          "YYYY-MM-DD HH:MM:SS.f": 354
+        },
+        "total_date_values": 354
+      },
+      "ModuleVersion.FromReferenceDate": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 147
+        },
+        "total_date_values": 147
+      },
+      "ModuleVersion.ToReferenceDate": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 94
+        },
+        "total_date_values": 94
+      },
+      "OperationScope.FromSubmissionDate": {
+        "type": "DATE",
+        "formats": {
+          "YYYY-MM-DD": 26769
+        },
+        "total_date_values": 26769
+      }
+    }
+  },
+  "aggregate": {
+    "format_distribution": {
+      "YYYY-MM-DD": 180130,
+      "YYYY-MM-DD HH:MM:SS.f": 4294
+    },
+    "by_column": {
+      "FromReferenceDate": {
+        "YYYY-MM-DD": 994
+      },
+      "FromSubmissionDate": {
+        "YYYY-MM-DD": 178618
+      },
+      "Date": {
+        "YYYY-MM-DD": 37
+      },
+      "ToReferenceDate": {
+        "YYYY-MM-DD": 481
+      },
+      "EndDate": {
+        "YYYY-MM-DD HH:MM:SS.f": 2140
+      },
+      "StartDate": {
+        "YYYY-MM-DD HH:MM:SS.f": 2154
+      }
+    }
+  }
+}
