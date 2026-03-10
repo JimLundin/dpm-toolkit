@@ -65,21 +65,22 @@ def add_foreign_key_to_table(
 
 
 def add_self_referential_foreign_keys(table: Table) -> None:
-    """Detect and add self-referential foreign keys for Parent* columns.
+    """Detect and add self-referential foreign keys.
 
-    For columns named ``Parent<X>`` where ``<X>`` matches a primary-key
-    column in the same table, add a self-referential FK constraint.
+    If a column name ends with the table's own single-column primary key
+    name, treat it as a self-referential FK (e.g. ``ParentNodeID`` →
+    ``NodeID``, ``OwnerClassID`` → ``ClassID``).
     """
-    pk_columns = {col.name for col in table.primary_key.columns}
+    pk_cols = list(table.primary_key.columns)
+    if len(pk_cols) != 1:
+        return
+    pk_name = pk_cols[0].name
     for column in table.columns:
-        if not column.name.startswith("Parent") or column.foreign_keys:
-            continue
-        target_name = column.name.removeprefix("Parent")
-        if target_name in pk_columns:
+        if column.name != pk_name and column.name.endswith(pk_name):
             add_foreign_key_to_table(
                 table,
                 column.name,
-                f"{table.name}.{target_name}",
+                f"{table.name}.{pk_name}",
             )
 
 
@@ -89,13 +90,6 @@ def add_foreign_keys_to_table(table: Table) -> None:
     add_foreign_key_to_table(table, "ParentItemID", "Item.ItemID")
     add_self_referential_foreign_keys(table)
 
-    # Self-referential FKs that don't follow the Parent* naming convention.
-    # These are defined in the Access DB but not reflected by the ODBC driver.
-    add_foreign_key_to_table(table, "OwnerClassID", "DPMClass.ClassID")
+    # GroupOperID uses a truncated name (OperID ≠ OperationID), so the
+    # ends-with-PK heuristic above cannot detect it automatically.
     add_foreign_key_to_table(table, "GroupOperID", "Operation.OperationID")
-    add_foreign_key_to_table(
-        table, "PreconditionOperationVID", "OperationVersion.OperationVID",
-    )
-    add_foreign_key_to_table(
-        table, "SeverityOperationVID", "OperationVersion.OperationVID",
-    )
