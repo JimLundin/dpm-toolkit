@@ -100,8 +100,15 @@ class DataType(DPM):
     data_type_id: Mapped[int] = mapped_column("DataTypeID", primary_key=True)
     code: Mapped[str] = mapped_column("Code")
     name: Mapped[str] = mapped_column("Name")
-    parent_data_type_id: Mapped[int | None] = mapped_column("ParentDataTypeID")
+    parent_data_type_id: Mapped[int | None] = mapped_column(
+        "ParentDataTypeID",
+        ForeignKey("DataType.DataTypeID"),
+    )
     is_active: Mapped[bool] = mapped_column("IsActive")
+
+    parent_data_type: Mapped[DataType | None] = relationship(
+        foreign_keys=parent_data_type_id,
+    )
 
 
 class Language(DPM):
@@ -766,11 +773,17 @@ class TableGroup(DPM):
         "EndReleaseID",
         ForeignKey(Release.release_id),
     )
-    parent_table_group_id: Mapped[int | None] = mapped_column("ParentTableGroupID")
+    parent_table_group_id: Mapped[int | None] = mapped_column(
+        "ParentTableGroupID",
+        ForeignKey("TableGroup.TableGroupID"),
+    )
 
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
     start_release: Mapped[Release] = relationship(foreign_keys=start_release_id)
     end_release: Mapped[Release | None] = relationship(foreign_keys=end_release_id)
+    parent_table_group: Mapped[TableGroup | None] = relationship(
+        foreign_keys=parent_table_group_id,
+    )
 
 
 class Translation(DPM):
@@ -1012,7 +1025,10 @@ class OperationNode(DPM):
         "OperationVID",
         ForeignKey(OperationVersion.operation_vid),
     )
-    parent_node_id: Mapped[int | None] = mapped_column("ParentNodeID")
+    parent_node_id: Mapped[int | None] = mapped_column(
+        "ParentNodeID",
+        ForeignKey("OperationNode.NodeID"),
+    )
     operator_id: Mapped[int | None] = mapped_column(
         "OperatorID",
         ForeignKey(Operator.operator_id),
@@ -1035,6 +1051,9 @@ class OperationNode(DPM):
 
     operation_version: Mapped[OperationVersion] = relationship(
         foreign_keys=operation_vid,
+    )
+    parent_node: Mapped[OperationNode | None] = relationship(
+        foreign_keys=parent_node_id,
     )
     operator: Mapped[Operator | None] = relationship(foreign_keys=operator_id)
     argument: Mapped[OperatorArgument | None] = relationship(foreign_keys=argument_id)
@@ -1184,7 +1203,10 @@ class Subdivision(DPM):
         ForeignKey(SubdivisionType.subdivision_type_id),
     )
     number: Mapped[str] = mapped_column("Number")
-    parent_subdivision_id: Mapped[int] = mapped_column("ParentSubdivisionID")
+    parent_subdivision_id: Mapped[int] = mapped_column(
+        "ParentSubdivisionID",
+        ForeignKey("Subdivision.SubdivisionID"),
+    )
     structure_path: Mapped[str] = mapped_column("StructurePath")
     text_excerpt: Mapped[str] = mapped_column("TextExcerpt")
     row_guid: Mapped[uuid.UUID] = mapped_column(
@@ -1195,6 +1217,9 @@ class Subdivision(DPM):
     document_version: Mapped[DocumentVersion] = relationship(foreign_keys=document_vid)
     subdivision_type: Mapped[SubdivisionType] = relationship(
         foreign_keys=subdivision_type_id,
+    )
+    parent_subdivision: Mapped[Subdivision] = relationship(
+        foreign_keys=parent_subdivision_id,
     )
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
 
