@@ -198,3 +198,29 @@ class TestSchemaToSqlalchemySelfRef:
         assert 'ForeignKey("Category.CategoryID")' in code
         # Should NOT contain an unquoted self-ref like ForeignKey(Category.category_i_d)
         assert "ForeignKey(Category." not in code
+
+    def test_self_referential_generates_relationship(self) -> None:
+        """A self-referential FK should produce a relationship definition."""
+        pk_col = _make_column("DataTypeID", "DataType", primary_key=True)
+        fk_target = _make_column("DataTypeID", "DataType", primary_key=True)
+        parent_col = ColumnSchema(
+            name="ParentDataTypeID",
+            table_name="DataType",
+            type=IntegerType(type="integer"),
+            nullable=True,
+            primary_key=False,
+            foreign_keys=[fk_target],
+        )
+
+        table = TableSchema(
+            name="DataType",
+            columns=[pk_col, parent_col],
+            primary_keys=["DataTypeID"],
+            foreign_keys=[{"source": parent_col, "target": fk_target}],
+        )
+        db = DatabaseSchema(name="test", tables=[table])
+
+        code = schema_to_sqlalchemy(db)
+
+        assert 'ForeignKey("DataType.DataTypeID")' in code
+        assert "parent_data_type: Mapped[DataType | None] = relationship(" in code

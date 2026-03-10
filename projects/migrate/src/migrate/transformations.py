@@ -64,7 +64,25 @@ def add_foreign_key_to_table(
     column.append_foreign_key(ForeignKey(target_relationship))
 
 
+def add_self_referential_foreign_keys(table: Table) -> None:
+    """Detect and add self-referential foreign keys for Parent* columns.
+
+    For columns named ``Parent<X>`` where ``<X>`` matches a primary-key
+    column in the same table, add a self-referential FK constraint.
+    """
+    pk_columns = {col.name for col in table.primary_key.columns}
+    for column in table.columns:
+        if not column.name.startswith("Parent") or column.foreign_keys:
+            continue
+        target_name = column.name.removeprefix("Parent")
+        if target_name in pk_columns:
+            add_foreign_key_to_table(
+                table, column.name, f"{table.name}.{target_name}"
+            )
+
+
 def add_foreign_keys_to_table(table: Table) -> None:
     """Set missing foreign keys."""
     add_foreign_key_to_table(table, "RowGUID", "Concept.ConceptGUID")
     add_foreign_key_to_table(table, "ParentItemID", "Item.ItemID")
+    add_self_referential_foreign_keys(table)
