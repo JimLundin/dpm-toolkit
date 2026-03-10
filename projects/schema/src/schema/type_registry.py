@@ -59,6 +59,16 @@ def column_type(column: ReflectedColumn) -> TypeEngine[Any] | None:
     return data_type
 
 
+def date_column(column: Column[Any]) -> type[Date] | type[DateTime] | None:
+    """Identify if a column stores date or datetime values by name."""
+    name = column.name
+    if name in ("StartDate", "EndDate"):
+        return DateTime
+    if name.lower().endswith("date"):
+        return Date
+    return None
+
+
 def enum_candidate(column: Column[Any]) -> bool:
     """Identify if a reflected column is an enum candidate by name.
 
