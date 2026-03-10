@@ -2,7 +2,6 @@
 
 from pathlib import Path
 
-from schema.type_registry import column_type
 from sqlalchemy import (
     Engine,
     Inspector,
@@ -17,12 +16,12 @@ from sqlalchemy.engine.interfaces import ReflectedColumn
 from sqlalchemy.schema import CheckConstraint
 
 from migrate.transformations import (
-    CastedRows,
+    Rows,
     add_foreign_keys_to_table,
     parse_rows,
 )
 
-type TableWithRows = tuple[Table, CastedRows]
+type TableWithRows = tuple[Table, Rows]
 type TablesWithRows = list[TableWithRows]
 
 
@@ -34,8 +33,8 @@ def access(access_location: Path) -> Engine:
 
 
 def genericize(_inspector: Inspector, _table: Table, column: ReflectedColumn) -> None:
-    """Genericize for SQLAlchemy compatibility only."""
-    column["type"] = column_type(column) or column["type"].as_generic()
+    """Convert Access-specific types to generic SQLAlchemy types."""
+    column["type"] = column["type"].as_generic()
 
 
 def reflect_schema(source_database: Engine) -> MetaData:
@@ -67,8 +66,8 @@ def schema_and_data(access_database: Engine) -> tuple[MetaData, TablesWithRows]:
         for table in schema.tables.values():
             rows = connection.execute(select(table))
 
-            # Process rows with registry-based logic
-            casted_rows, enum_by_column, nullable_columns = parse_rows(table, rows)
+            # Analyze rows for enum values and nullable columns
+            rows_list, enum_by_column, nullable_columns = parse_rows(table, rows)
 
             # Clear indexes to avoid name collisions and save space
             table.indexes.clear()
@@ -86,8 +85,8 @@ def schema_and_data(access_database: Engine) -> tuple[MetaData, TablesWithRows]:
 
             add_foreign_keys_to_table(table)
 
-            if casted_rows:
-                tables_with_rows.append((table, casted_rows))
+            if rows_list:
+                tables_with_rows.append((table, rows_list))
 
     return schema, tables_with_rows
 
