@@ -132,3 +132,13 @@ semver = "4.2.1"
 date = 2026-01-13
 revision = 1
 original = { url = "https://www.eba.europa.eu/sites/default/files/2026-01/e668e399-7c0e-418a-bd3b-bfa573fa2b2a/DPM2%20Database_v%204_2_hotfix.zip", checksum = "sha256:66b0ce493f2239b6db4fe5069980280aaf0e48d47add15704f94fe472ae80699" }
+
+[[versions]]
+id = "4.2-errata-2"
+previous = "4.2-hotfix"
+version = "4.2"
+type = "errata"
+semver = "4.2.2"
+date = 2026-02-27
+revision = 2
+original = { url = "https://www.eba.europa.eu/sites/default/files/2026-02/ad0d2577-a1eb-4826-a249-a1f7701c6796/DPM2%20Database_v_4_2_1.zip", checksum = "sha256:0d1c0e608c98f01dc338a98e8e5f700c0fa2a2437cbef724fb8fc52618b4b74d" }
