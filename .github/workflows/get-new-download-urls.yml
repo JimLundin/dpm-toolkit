@@ -59,7 +59,7 @@ jobs:
         run: |
           git checkout -B "${{ env.BRANCH_NAME }}"
           git commit --allow-empty -m "Trigger PR for new download URLs" || true
-          git push -u origin "${{ env.BRANCH_NAME }}"
+          git push -u origin "${{ env.BRANCH_NAME }}" --force
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
