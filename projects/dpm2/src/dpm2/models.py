@@ -88,8 +88,13 @@ class DPMClass(DPM):
     class_id: Mapped[int] = mapped_column("ClassID", primary_key=True)
     name: Mapped[str] = mapped_column("Name")
     type: Mapped[str | None] = mapped_column("Type")
-    owner_class_id: Mapped[int | None] = mapped_column("OwnerClassID")
+    owner_class_id: Mapped[int | None] = mapped_column(
+        "OwnerClassID",
+        ForeignKey("DPMClass.ClassID"),
+    )
     has_references: Mapped[bool] = mapped_column("HasReferences")
+
+    owner_class: Mapped[DPMClass | None] = relationship(foreign_keys=owner_class_id)
 
 
 class DataType(DPM):
@@ -386,12 +391,16 @@ class Operation(DPM):
             "variant",
         ]
     ] = mapped_column("Source")
-    group_oper_id: Mapped[int | None] = mapped_column("GroupOperID")
+    group_oper_id: Mapped[int | None] = mapped_column(
+        "GroupOperID",
+        ForeignKey("Operation.OperationID"),
+    )
     row_guid: Mapped[uuid.UUID] = mapped_column(
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
 
+    group_oper: Mapped[Operation | None] = relationship(foreign_keys=group_oper_id)
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
 
 
@@ -666,8 +675,12 @@ class OperationVersion(DPM):
     )
     precondition_operation_vid: Mapped[int | None] = mapped_column(
         "PreconditionOperationVID",
+        ForeignKey("OperationVersion.OperationVID"),
     )
-    severity_operation_vid: Mapped[int | None] = mapped_column("SeverityOperationVID")
+    severity_operation_vid: Mapped[int | None] = mapped_column(
+        "SeverityOperationVID",
+        ForeignKey("OperationVersion.OperationVID"),
+    )
     start_release_id: Mapped[int] = mapped_column(
         "StartReleaseID",
         ForeignKey(Release.release_id),
@@ -688,6 +701,12 @@ class OperationVersion(DPM):
     is_variant_approved: Mapped[bool | None] = mapped_column("IsVariantApproved")
 
     operation: Mapped[Operation] = relationship(foreign_keys=operation_id)
+    precondition_operation_version: Mapped[OperationVersion | None] = relationship(
+        foreign_keys=precondition_operation_vid,
+    )
+    severity_operation_version: Mapped[OperationVersion | None] = relationship(
+        foreign_keys=severity_operation_vid,
+    )
     start_release: Mapped[Release] = relationship(foreign_keys=start_release_id)
     end_release: Mapped[Release | None] = relationship(foreign_keys=end_release_id)
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)

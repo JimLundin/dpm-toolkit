@@ -88,3 +88,14 @@ def add_foreign_keys_to_table(table: Table) -> None:
     add_foreign_key_to_table(table, "RowGUID", "Concept.ConceptGUID")
     add_foreign_key_to_table(table, "ParentItemID", "Item.ItemID")
     add_self_referential_foreign_keys(table)
+
+    # Self-referential FKs that don't follow the Parent* naming convention.
+    # These are defined in the Access DB but not reflected by the ODBC driver.
+    add_foreign_key_to_table(table, "OwnerClassID", "DPMClass.ClassID")
+    add_foreign_key_to_table(table, "GroupOperID", "Operation.OperationID")
+    add_foreign_key_to_table(
+        table, "PreconditionOperationVID", "OperationVersion.OperationVID",
+    )
+    add_foreign_key_to_table(
+        table, "SeverityOperationVID", "OperationVersion.OperationVID",
+    )
