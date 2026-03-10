@@ -77,7 +77,9 @@ def add_self_referential_foreign_keys(table: Table) -> None:
         target_name = column.name.removeprefix("Parent")
         if target_name in pk_columns:
             add_foreign_key_to_table(
-                table, column.name, f"{table.name}.{target_name}",
+                table,
+                column.name,
+                f"{table.name}.{target_name}",
             )
 
 
