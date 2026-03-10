@@ -16,7 +16,13 @@ from schema.sqlalchemy_export import (
     render_foreign_key,
     schema_to_sqlalchemy,
 )
-from schema.types import ColumnSchema, DatabaseSchema, IntegerType, TableSchema, TextType
+from schema.types import (
+    ColumnSchema,
+    DatabaseSchema,
+    IntegerType,
+    TableSchema,
+    TextType,
+)
 
 
 def _make_column(
@@ -165,7 +171,7 @@ class TestSchemaToSqlalchemySelfRef:
         """A table with a self-referential FK should use quoted string refs."""
         pk_col = _make_column("CategoryID", "Category", primary_key=True)
         parent_fk_target = _make_column(
-            "CategoryID", "Category", primary_key=True
+            "CategoryID", "Category", primary_key=True,
         )
         parent_col = ColumnSchema(
             name="ParentCategoryID",
