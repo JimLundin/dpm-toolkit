@@ -6,11 +6,12 @@ from __future__ import annotations
 import datetime
 import decimal
 import uuid
-from typing import Literal
+from typing import ClassVar, Literal
 
 from sqlalchemy import (
     Boolean,
     Column,
+    Date,
     ForeignKey,
     Integer,
     String,
@@ -35,6 +36,23 @@ class DPM(metaclass=DeclarativeMeta):
     __abstract__ = True
     registry = _registry
     metadata = _registry.metadata
+
+
+ATTT2Hierarchies = AlchemyTable(
+    "ATTT2Hierarchies",
+    DPM.metadata,
+    Column("DomainLabel", String(255), nullable=False),
+    Column("HierarchyCode", String(255), nullable=False),
+    Column("Name", String(255), nullable=False),
+    Column("Level", Integer, nullable=True),
+    Column("Description", String(255), nullable=True),
+    Column("Structure", String(255), nullable=True),
+    Column("FromReportingDate", Date, nullable=False),
+    Column("ToReportingDate", Date, nullable=True),
+    Column("DomainCode", String(255), nullable=False),
+    Column("MemberCode", String(255), nullable=False),
+    Column("taxonomycode", String(255), nullable=True),
+)
 
 
 class AuxCellMapping(DPM):
@@ -85,7 +103,6 @@ class DPMClass(DPM):
 
     __tablename__ = "DPMClass"
 
-    class_id: Mapped[int] = mapped_column("ClassID", primary_key=True)
     name: Mapped[str] = mapped_column("Name")
     type: Mapped[str | None] = mapped_column("Type")
     owner_class_id: Mapped[int | None] = mapped_column(
@@ -93,6 +110,7 @@ class DPMClass(DPM):
         ForeignKey("DPMClass.ClassID"),
     )
     has_references: Mapped[bool] = mapped_column("HasReferences")
+    class_id: Mapped[int] = mapped_column("ClassID", primary_key=True)
 
     owner_class: Mapped[DPMClass | None] = relationship(foreign_keys=owner_class_id)
 
@@ -102,7 +120,6 @@ class DataType(DPM):
 
     __tablename__ = "DataType"
 
-    data_type_id: Mapped[int] = mapped_column("DataTypeID", primary_key=True)
     code: Mapped[str] = mapped_column("Code")
     name: Mapped[str] = mapped_column("Name")
     parent_data_type_id: Mapped[int | None] = mapped_column(
@@ -110,6 +127,7 @@ class DataType(DPM):
         ForeignKey("DataType.DataTypeID"),
     )
     is_active: Mapped[bool] = mapped_column("IsActive")
+    data_type_id: Mapped[int] = mapped_column("DataTypeID", primary_key=True)
 
     parent_data_type: Mapped[DataType | None] = relationship(
         foreign_keys=parent_data_type_id,
@@ -121,8 +139,8 @@ class Language(DPM):
 
     __tablename__ = "Language"
 
-    language_code: Mapped[int] = mapped_column("LanguageCode", primary_key=True)
     name: Mapped[str] = mapped_column("Name")
+    language_code: Mapped[int] = mapped_column("LanguageCode", primary_key=True)
 
 
 ModelViolations = AlchemyTable(
@@ -131,30 +149,30 @@ ModelViolations = AlchemyTable(
     Column("ViolationCode", String(255), nullable=False),
     Column("Violation", String(255), nullable=False),
     Column("isBlocking", Boolean, nullable=False),
-    Column("TableVID", Integer, nullable=True),
-    Column("OldTableVID", Integer, nullable=True),
-    Column("TableCode", String(255), nullable=True),
-    Column("HeaderID", Integer, nullable=True),
-    Column("HeaderCode", String(255), nullable=True),
-    Column("HeaderVID", Integer, nullable=True),
-    Column("OldHeaderVID", Integer, nullable=True),
-    Column("KeyHeader", Integer, nullable=True),
-    Column("HeaderDirection", String(255), nullable=True),
-    Column("HeaderPropertyID", Integer, nullable=True),
-    Column("HeaderPropertyCode", String(255), nullable=True),
-    Column("HeaderSubcategoryID", Integer, nullable=True),
-    Column("HeaderSubcategoryName", String(255), nullable=True),
-    Column("HeaderContextID", Integer, nullable=True),
-    Column("CategoryID", Integer, nullable=True),
-    Column("CategoryCode", String(255), nullable=True),
-    Column("ItemID", Integer, nullable=True),
-    Column("ItemCode", String(255), nullable=True),
-    Column("CellID", Integer, nullable=True),
-    Column("CellCode", String(255), nullable=True),
-    Column("Cell2ID", Integer, nullable=True),
-    Column("Cell2Code", String(255), nullable=True),
-    Column("VVEndReleaseID", Integer, nullable=True),
-    Column("NewAspect", String(255), nullable=True),
+    Column("TableVID", Integer, nullable=False),
+    Column("OldTableVID", Integer, nullable=False),
+    Column("TableCode", String(255), nullable=False),
+    Column("HeaderID", Integer, nullable=False),
+    Column("HeaderCode", String(255), nullable=False),
+    Column("HeaderVID", Integer, nullable=False),
+    Column("OldHeaderVID", Integer, nullable=False),
+    Column("KeyHeader", Integer, nullable=False),
+    Column("HeaderDirection", String(255), nullable=False),
+    Column("HeaderPropertyID", Integer, nullable=False),
+    Column("HeaderPropertyCode", String(255), nullable=False),
+    Column("HeaderSubcategoryID", Integer, nullable=False),
+    Column("HeaderSubcategoryName", String(255), nullable=False),
+    Column("HeaderContextID", Integer, nullable=False),
+    Column("CategoryID", Integer, nullable=False),
+    Column("CategoryCode", String(255), nullable=False),
+    Column("ItemID", Integer, nullable=False),
+    Column("ItemCode", String(255), nullable=False),
+    Column("CellID", Integer, nullable=False),
+    Column("CellCode", String(255), nullable=False),
+    Column("Cell2ID", Integer, nullable=False),
+    Column("Cell2Code", String(255), nullable=False),
+    Column("VVEndReleaseID", Integer, nullable=False),
+    Column("NewAspect", String(255), nullable=False),
 )
 
 
@@ -163,7 +181,6 @@ class Operator(DPM):
 
     __tablename__ = "Operator"
 
-    operator_id: Mapped[int] = mapped_column("OperatorID", primary_key=True)
     name: Mapped[str] = mapped_column("Name")
     symbol: Mapped[str] = mapped_column("Symbol")
     type: Mapped[
@@ -178,6 +195,7 @@ class Operator(DPM):
             "Time",
         ]
     ] = mapped_column("Type")
+    operator_id: Mapped[int] = mapped_column("OperatorID", primary_key=True)
 
 
 class Organisation(DPM):
@@ -185,7 +203,6 @@ class Organisation(DPM):
 
     __tablename__ = "Organisation"
 
-    org_id: Mapped[int] = mapped_column("OrgID", primary_key=True)
     name: Mapped[str] = mapped_column("Name")
     acronym: Mapped[str] = mapped_column("Acronym")
     id_prefix: Mapped[int] = mapped_column("IDPrefix")
@@ -193,6 +210,7 @@ class Organisation(DPM):
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
+    org_id: Mapped[int] = mapped_column("OrgID", primary_key=True)
 
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
 
@@ -202,8 +220,8 @@ class Role(DPM):
 
     __tablename__ = "Role"
 
-    role_id: Mapped[int] = mapped_column("RoleID", primary_key=True)
     name: Mapped[str] = mapped_column("Name")
+    role_id: Mapped[int] = mapped_column("RoleID", primary_key=True)
 
 
 class SubdivisionType(DPM):
@@ -211,12 +229,12 @@ class SubdivisionType(DPM):
 
     __tablename__ = "SubdivisionType"
 
+    name: Mapped[str] = mapped_column("Name")
+    description: Mapped[str] = mapped_column("Description")
     subdivision_type_id: Mapped[int] = mapped_column(
         "SubdivisionTypeID",
         primary_key=True,
     )
-    name: Mapped[str] = mapped_column("Name")
-    description: Mapped[str] = mapped_column("Description")
 
 
 VarGenerationDetail = AlchemyTable(
@@ -263,14 +281,16 @@ class CompoundKey(DPM):
 
     __tablename__ = "CompoundKey"
 
-    key_id: Mapped[int] = mapped_column("KeyID", primary_key=True)
     signature: Mapped[str] = mapped_column("Signature")
     row_guid: Mapped[uuid.UUID | None] = mapped_column(
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
+    owner_id: Mapped[int] = mapped_column("OwnerID", ForeignKey(Organisation.org_id))
+    key_id: Mapped[int] = mapped_column("KeyID", primary_key=True)
 
     unique_concept: Mapped[Concept | None] = relationship(foreign_keys=row_guid)
+    owner: Mapped[Organisation] = relationship(foreign_keys=owner_id)
 
 
 class ConceptRelation(DPM):
@@ -278,14 +298,14 @@ class ConceptRelation(DPM):
 
     __tablename__ = "ConceptRelation"
 
-    concept_relation_id: Mapped[int] = mapped_column(
-        "ConceptRelationID",
-        primary_key=True,
-    )
     type: Mapped[Literal["header_attributeHeader"]] = mapped_column("Type")
     row_guid: Mapped[uuid.UUID] = mapped_column(
         "RowGUID",
         ForeignKey(Concept.concept_guid),
+    )
+    concept_relation_id: Mapped[int] = mapped_column(
+        "ConceptRelationID",
+        primary_key=True,
     )
 
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
@@ -296,14 +316,16 @@ class Context(DPM):
 
     __tablename__ = "Context"
 
-    context_id: Mapped[int] = mapped_column("ContextID", primary_key=True)
     signature: Mapped[str] = mapped_column("Signature")
     row_guid: Mapped[uuid.UUID | None] = mapped_column(
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
+    owner_id: Mapped[int] = mapped_column("OwnerID", ForeignKey(Organisation.org_id))
+    context_id: Mapped[int] = mapped_column("ContextID", primary_key=True)
 
     unique_concept: Mapped[Concept | None] = relationship(foreign_keys=row_guid)
+    owner: Mapped[Organisation] = relationship(foreign_keys=owner_id)
 
 
 class DPMAttribute(DPM):
@@ -311,10 +333,10 @@ class DPMAttribute(DPM):
 
     __tablename__ = "DPMAttribute"
 
-    attribute_id: Mapped[int] = mapped_column("AttributeID", primary_key=True)
     class_id: Mapped[int] = mapped_column("ClassID", ForeignKey(DPMClass.class_id))
     name: Mapped[str] = mapped_column("Name")
     has_translations: Mapped[bool] = mapped_column("HasTranslations")
+    attribute_id: Mapped[int] = mapped_column("AttributeID", primary_key=True)
 
     class_: Mapped[DPMClass] = relationship(foreign_keys=class_id)
 
@@ -324,7 +346,6 @@ class Document(DPM):
 
     __tablename__ = "Document"
 
-    document_id: Mapped[int] = mapped_column("DocumentID", primary_key=True)
     name: Mapped[str] = mapped_column("Name")
     code: Mapped[str] = mapped_column("Code")
     type: Mapped[str] = mapped_column("Type")
@@ -333,6 +354,7 @@ class Document(DPM):
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
+    document_id: Mapped[int] = mapped_column("DocumentID", primary_key=True)
 
     org: Mapped[Organisation] = relationship(foreign_keys=org_id)
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
@@ -343,7 +365,6 @@ class Framework(DPM):
 
     __tablename__ = "Framework"
 
-    framework_id: Mapped[int] = mapped_column("FrameworkID", primary_key=True)
     code: Mapped[str] = mapped_column("Code")
     name: Mapped[str] = mapped_column("Name")
     description: Mapped[str | None] = mapped_column("Description")
@@ -351,8 +372,11 @@ class Framework(DPM):
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
+    owner_id: Mapped[int] = mapped_column("OwnerID", ForeignKey(Organisation.org_id))
+    framework_id: Mapped[int] = mapped_column("FrameworkID", primary_key=True)
 
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
+    owner: Mapped[Organisation] = relationship(foreign_keys=owner_id)
 
 
 class Item(DPM):
@@ -360,7 +384,6 @@ class Item(DPM):
 
     __tablename__ = "Item"
 
-    item_id: Mapped[int] = mapped_column("ItemID", primary_key=True)
     name: Mapped[str] = mapped_column("Name")
     description: Mapped[str | None] = mapped_column("Description")
     is_property: Mapped[bool] = mapped_column("IsProperty")
@@ -369,8 +392,11 @@ class Item(DPM):
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
+    owner_id: Mapped[int] = mapped_column("OwnerID", ForeignKey(Organisation.org_id))
+    item_id: Mapped[int] = mapped_column("ItemID", primary_key=True)
 
     unique_concept: Mapped[Concept | None] = relationship(foreign_keys=row_guid)
+    owner: Mapped[Organisation] = relationship(foreign_keys=owner_id)
 
 
 class Operation(DPM):
@@ -378,7 +404,6 @@ class Operation(DPM):
 
     __tablename__ = "Operation"
 
-    operation_id: Mapped[int] = mapped_column("OperationID", primary_key=True)
     code: Mapped[str] = mapped_column("Code")
     type: Mapped[Literal["precondition", "validation"]] = mapped_column("Type")
     source: Mapped[
@@ -399,9 +424,12 @@ class Operation(DPM):
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
+    owner_id: Mapped[int] = mapped_column("OwnerID", ForeignKey(Organisation.org_id))
+    operation_id: Mapped[int] = mapped_column("OperationID", primary_key=True)
 
     group_oper: Mapped[Operation | None] = relationship(foreign_keys=group_oper_id)
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
+    owner: Mapped[Organisation] = relationship(foreign_keys=owner_id)
 
 
 class OperatorArgument(DPM):
@@ -409,7 +437,6 @@ class OperatorArgument(DPM):
 
     __tablename__ = "OperatorArgument"
 
-    argument_id: Mapped[int] = mapped_column("ArgumentID", primary_key=True)
     operator_id: Mapped[int] = mapped_column(
         "OperatorID",
         ForeignKey(Operator.operator_id),
@@ -417,8 +444,50 @@ class OperatorArgument(DPM):
     order: Mapped[int] = mapped_column("Order")
     is_mandatory: Mapped[bool] = mapped_column("IsMandatory")
     name: Mapped[str] = mapped_column("Name")
+    argument_id: Mapped[int] = mapped_column("ArgumentID", primary_key=True)
 
     operator: Mapped[Operator] = relationship(foreign_keys=operator_id)
+
+
+class PSCurrentItemCategory(DPM):
+    """Auto-generated model for the PSCurrentItemCategory table."""
+
+    __tablename__ = "PSCurrentItemCategory"
+
+    item_id: Mapped[int] = mapped_column("ItemID")
+    start_release_id: Mapped[int] = mapped_column("StartReleaseID")
+    category_id: Mapped[int] = mapped_column("CategoryID")
+    code: Mapped[str] = mapped_column("Code")
+    is_default_item: Mapped[bool] = mapped_column("IsDefaultItem")
+    signature: Mapped[str] = mapped_column("Signature")
+    end_release_id: Mapped[int | None] = mapped_column("EndReleaseID")
+    row_guid: Mapped[uuid.UUID | None] = mapped_column(
+        "RowGUID",
+        ForeignKey(Concept.concept_guid),
+    )
+
+    __mapper_args__: ClassVar = {"primary_key": (row_guid,)}
+
+    unique_concept: Mapped[Concept | None] = relationship(foreign_keys=row_guid)
+
+
+class PSCurrentPropertyCategory(DPM):
+    """Auto-generated model for the PSCurrentPropertyCategory table."""
+
+    __tablename__ = "PSCurrentPropertyCategory"
+
+    property_id: Mapped[int] = mapped_column("PropertyID")
+    start_release_id: Mapped[int] = mapped_column("StartReleaseID")
+    category_id: Mapped[int] = mapped_column("CategoryID")
+    end_release_id: Mapped[int | None] = mapped_column("EndReleaseID")
+    row_guid: Mapped[uuid.UUID | None] = mapped_column(
+        "RowGUID",
+        ForeignKey(Concept.concept_guid),
+    )
+
+    __mapper_args__: ClassVar = {"primary_key": (row_guid,)}
+
+    unique_concept: Mapped[Concept | None] = relationship(foreign_keys=row_guid)
 
 
 class Release(DPM):
@@ -426,7 +495,6 @@ class Release(DPM):
 
     __tablename__ = "Release"
 
-    release_id: Mapped[int] = mapped_column("ReleaseID", primary_key=True)
     code: Mapped[str] = mapped_column("Code")
     date: Mapped[datetime.date] = mapped_column("Date")
     description: Mapped[str | None] = mapped_column("Description")
@@ -436,11 +504,14 @@ class Release(DPM):
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
-    latest_variable_gen_time: Mapped[datetime.datetime | None] = mapped_column(
-        "LatestVariableGenTime",
-    )
+    error_date: Mapped[datetime.date | None] = mapped_column("ErrorDate")
+    type: Mapped[Literal["module"]] = mapped_column("Type")
+    error: Mapped[str | None] = mapped_column("Error")
+    owner_id: Mapped[int] = mapped_column("OwnerID", ForeignKey(Organisation.org_id))
+    release_id: Mapped[int] = mapped_column("ReleaseID", primary_key=True)
 
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
+    owner: Mapped[Organisation] = relationship(foreign_keys=owner_id)
 
 
 class Table(DPM):
@@ -448,7 +519,6 @@ class Table(DPM):
 
     __tablename__ = "Table"
 
-    table_id: Mapped[int] = mapped_column("TableID", primary_key=True)
     is_abstract: Mapped[bool] = mapped_column("IsAbstract")
     has_open_columns: Mapped[bool] = mapped_column("HasOpenColumns")
     has_open_rows: Mapped[bool] = mapped_column("HasOpenRows")
@@ -459,8 +529,11 @@ class Table(DPM):
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
+    owner_id: Mapped[int] = mapped_column("OwnerID", ForeignKey(Organisation.org_id))
+    table_id: Mapped[int] = mapped_column("TableID", primary_key=True)
 
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
+    owner: Mapped[Organisation] = relationship(foreign_keys=owner_id)
 
 
 class User(DPM):
@@ -468,9 +541,9 @@ class User(DPM):
 
     __tablename__ = "User"
 
-    user_id: Mapped[int] = mapped_column("UserID", primary_key=True)
     org_id: Mapped[int] = mapped_column("OrgID", ForeignKey(Organisation.org_id))
     name: Mapped[str] = mapped_column("Name")
+    user_id: Mapped[int] = mapped_column("UserID", primary_key=True)
 
     org: Mapped[Organisation] = relationship(foreign_keys=org_id)
 
@@ -480,14 +553,16 @@ class Variable(DPM):
 
     __tablename__ = "Variable"
 
-    variable_id: Mapped[int] = mapped_column("VariableID", primary_key=True)
     type: Mapped[Literal["fact", "filingindicator", "key"]] = mapped_column("Type")
     row_guid: Mapped[uuid.UUID | None] = mapped_column(
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
+    owner_id: Mapped[int] = mapped_column("OwnerID", ForeignKey(Organisation.org_id))
+    variable_id: Mapped[int] = mapped_column("VariableID", primary_key=True)
 
     unique_concept: Mapped[Concept | None] = relationship(foreign_keys=row_guid)
+    owner: Mapped[Organisation] = relationship(foreign_keys=owner_id)
 
 
 class Category(DPM):
@@ -495,7 +570,6 @@ class Category(DPM):
 
     __tablename__ = "Category"
 
-    category_id: Mapped[int] = mapped_column("CategoryID", primary_key=True)
     code: Mapped[str] = mapped_column("Code")
     name: Mapped[str] = mapped_column("Name")
     description: Mapped[str | None] = mapped_column("Description")
@@ -511,9 +585,12 @@ class Category(DPM):
         "CreatedRelease",
         ForeignKey(Release.release_id),
     )
+    owner_id: Mapped[int] = mapped_column("OwnerID", ForeignKey(Organisation.org_id))
+    category_id: Mapped[int] = mapped_column("CategoryID", primary_key=True)
 
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
     release: Mapped[Release] = relationship(foreign_keys=created_release)
+    owner: Mapped[Organisation] = relationship(foreign_keys=owner_id)
 
 
 class ChangeLog(DPM):
@@ -524,30 +601,19 @@ class ChangeLog(DPM):
     row_guid: Mapped[uuid.UUID] = mapped_column(
         "RowGUID",
         ForeignKey(Concept.concept_guid),
-        primary_key=True,
     )
-    class_id: Mapped[int] = mapped_column(
-        "ClassID",
-        ForeignKey(DPMClass.class_id),
-        primary_key=True,
-    )
-    attribute_id: Mapped[int] = mapped_column(
-        "AttributeID",
-        ForeignKey(DPMAttribute.attribute_id),
-        primary_key=True,
-    )
-    timestamp: Mapped[int] = mapped_column("Timestamp", primary_key=True)
-    old_value: Mapped[str] = mapped_column("OldValue")
-    new_value: Mapped[str] = mapped_column("NewValue")
+    class_id: Mapped[int] = mapped_column("ClassID", ForeignKey(DPMClass.class_id))
+    timestamp: Mapped[decimal.Decimal] = mapped_column("Timestamp")
     change_type: Mapped[str] = mapped_column("ChangeType")
     status: Mapped[str] = mapped_column("Status")
-    user_id: Mapped[int] = mapped_column("UserID", ForeignKey(User.user_id))
+    user_email: Mapped[str] = mapped_column("UserEmail")
     release_id: Mapped[int] = mapped_column("ReleaseID", ForeignKey(Release.release_id))
+    entity_id: Mapped[int] = mapped_column("EntityID")
+    entity_code: Mapped[str] = mapped_column("EntityCode")
+    action_id: Mapped[int] = mapped_column("ActionID", primary_key=True)
 
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
     class_: Mapped[DPMClass] = relationship(foreign_keys=class_id)
-    attribute: Mapped[DPMAttribute] = relationship(foreign_keys=attribute_id)
-    user: Mapped[User] = relationship(foreign_keys=user_id)
     release: Mapped[Release] = relationship(foreign_keys=release_id)
 
 
@@ -588,7 +654,6 @@ class DocumentVersion(DPM):
 
     __tablename__ = "DocumentVersion"
 
-    document_vid: Mapped[int] = mapped_column("DocumentVID", primary_key=True)
     document_id: Mapped[int] = mapped_column(
         "DocumentID",
         ForeignKey(Document.document_id),
@@ -600,6 +665,7 @@ class DocumentVersion(DPM):
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
+    document_vid: Mapped[int] = mapped_column("DocumentVID", primary_key=True)
 
     document: Mapped[Document] = relationship(foreign_keys=document_id)
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
@@ -610,7 +676,6 @@ class Header(DPM):
 
     __tablename__ = "Header"
 
-    header_id: Mapped[int] = mapped_column("HeaderID", primary_key=True)
     table_id: Mapped[int] = mapped_column("TableID", ForeignKey(Table.table_id))
     direction: Mapped[Literal["X", "Y", "Z"]] = mapped_column("Direction")
     is_key: Mapped[bool] = mapped_column("IsKey")
@@ -619,9 +684,12 @@ class Header(DPM):
         ForeignKey(Concept.concept_guid),
     )
     is_attribute: Mapped[bool] = mapped_column("IsAttribute")
+    owner_id: Mapped[int] = mapped_column("OwnerID", ForeignKey(Organisation.org_id))
+    header_id: Mapped[int] = mapped_column("HeaderID", primary_key=True)
 
     table: Mapped[Table] = relationship(foreign_keys=table_id)
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
+    owner: Mapped[Organisation] = relationship(foreign_keys=owner_id)
 
 
 class Module(DPM):
@@ -629,7 +697,6 @@ class Module(DPM):
 
     __tablename__ = "Module"
 
-    module_id: Mapped[int] = mapped_column("ModuleID", primary_key=True)
     framework_id: Mapped[int] = mapped_column(
         "FrameworkID",
         ForeignKey(Framework.framework_id),
@@ -639,9 +706,12 @@ class Module(DPM):
         ForeignKey(Concept.concept_guid),
     )
     is_document_module: Mapped[bool] = mapped_column("isDocumentModule")
+    owner_id: Mapped[int] = mapped_column("OwnerID", ForeignKey(Organisation.org_id))
+    module_id: Mapped[int] = mapped_column("ModuleID", primary_key=True)
 
     framework: Mapped[Framework] = relationship(foreign_keys=framework_id)
     unique_concept: Mapped[Concept | None] = relationship(foreign_keys=row_guid)
+    owner: Mapped[Organisation] = relationship(foreign_keys=owner_id)
 
 
 class OperationCodePrefix(DPM):
@@ -649,15 +719,15 @@ class OperationCodePrefix(DPM):
 
     __tablename__ = "OperationCodePrefix"
 
-    operation_code_prefix_id: Mapped[int] = mapped_column(
-        "OperationCodePrefixID",
-        primary_key=True,
-    )
     code: Mapped[str] = mapped_column("Code")
     list_name: Mapped[str] = mapped_column("ListName")
     framework_id: Mapped[int] = mapped_column(
         "FrameworkID",
         ForeignKey(Framework.framework_id),
+    )
+    operation_code_prefix_id: Mapped[int] = mapped_column(
+        "OperationCodePrefixID",
+        primary_key=True,
     )
 
     framework: Mapped[Framework] = relationship(foreign_keys=framework_id)
@@ -736,10 +806,12 @@ class Property(DPM):
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
+    owner_id: Mapped[int] = mapped_column("OwnerID", ForeignKey(Organisation.org_id))
 
     item: Mapped[Item] = relationship(foreign_keys=property_id)
     data_type: Mapped[DataType] = relationship(foreign_keys=data_type_id)
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
+    owner: Mapped[Organisation] = relationship(foreign_keys=owner_id)
 
 
 class RelatedConcept(DPM):
@@ -775,7 +847,6 @@ class TableGroup(DPM):
 
     __tablename__ = "TableGroup"
 
-    table_group_id: Mapped[int] = mapped_column("TableGroupID", primary_key=True)
     code: Mapped[str] = mapped_column("Code")
     name: Mapped[str] = mapped_column("Name")
     description: Mapped[str | None] = mapped_column("Description")
@@ -796,6 +867,8 @@ class TableGroup(DPM):
         "ParentTableGroupID",
         ForeignKey("TableGroup.TableGroupID"),
     )
+    owner_id: Mapped[int] = mapped_column("OwnerID", ForeignKey(Organisation.org_id))
+    table_group_id: Mapped[int] = mapped_column("TableGroupID", primary_key=True)
 
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
     start_release: Mapped[Release] = relationship(foreign_keys=start_release_id)
@@ -803,6 +876,7 @@ class TableGroup(DPM):
     parent_table_group: Mapped[TableGroup | None] = relationship(
         foreign_keys=parent_table_group_id,
     )
+    owner: Mapped[Organisation] = relationship(foreign_keys=owner_id)
 
 
 class Translation(DPM):
@@ -868,15 +942,15 @@ class VariableGeneration(DPM):
 
     __tablename__ = "VariableGeneration"
 
-    variable_generation_id: Mapped[int] = mapped_column(
-        "VariableGenerationID",
-        primary_key=True,
-    )
     start_date: Mapped[datetime.datetime] = mapped_column("StartDate")
     end_date: Mapped[datetime.datetime | None] = mapped_column("EndDate")
     status: Mapped[Literal["failed", "success"]] = mapped_column("Status")
     release_id: Mapped[int] = mapped_column("ReleaseID", ForeignKey(Release.release_id))
     error: Mapped[str | None] = mapped_column("Error")
+    variable_generation_id: Mapped[int] = mapped_column(
+        "VariableGenerationID",
+        primary_key=True,
+    )
 
     release: Mapped[Release] = relationship(foreign_keys=release_id)
 
@@ -886,7 +960,6 @@ class Cell(DPM):
 
     __tablename__ = "Cell"
 
-    cell_id: Mapped[int] = mapped_column("CellID", primary_key=True)
     table_id: Mapped[int] = mapped_column("TableID", ForeignKey(Table.table_id))
     column_id: Mapped[int] = mapped_column("ColumnID", ForeignKey(Header.header_id))
     row_id: Mapped[int | None] = mapped_column("RowID", ForeignKey(Header.header_id))
@@ -898,12 +971,36 @@ class Cell(DPM):
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
+    owner_id: Mapped[int] = mapped_column("OwnerID", ForeignKey(Organisation.org_id))
+    cell_id: Mapped[int] = mapped_column("CellID", primary_key=True)
 
     table: Mapped[Table] = relationship(foreign_keys=table_id)
     column: Mapped[Header] = relationship(foreign_keys=column_id)
     row: Mapped[Header | None] = relationship(foreign_keys=row_id)
     sheet: Mapped[Header | None] = relationship(foreign_keys=sheet_id)
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
+    owner: Mapped[Organisation] = relationship(foreign_keys=owner_id)
+
+
+class ChangeLogAttribute(DPM):
+    """Auto-generated model for the ChangeLogAttribute table."""
+
+    __tablename__ = "ChangeLogAttribute"
+
+    action_id: Mapped[int] = mapped_column("ActionID", ForeignKey(ChangeLog.action_id))
+    attribute_id: Mapped[int] = mapped_column(
+        "AttributeID",
+        ForeignKey(DPMAttribute.attribute_id),
+    )
+    old_value: Mapped[str] = mapped_column("OldValue")
+    new_value: Mapped[str] = mapped_column("NewValue")
+    change_log_attribute_id: Mapped[int] = mapped_column(
+        "ChangeLogAttributeID",
+        primary_key=True,
+    )
+
+    action: Mapped[ChangeLog] = relationship(foreign_keys=action_id)
+    attribute: Mapped[DPMAttribute] = relationship(foreign_keys=attribute_id)
 
 
 class ContextComposition(DPM):
@@ -976,7 +1073,6 @@ class ModuleVersion(DPM):
 
     __tablename__ = "ModuleVersion"
 
-    module_vid: Mapped[int] = mapped_column("ModuleVID", primary_key=True)
     module_id: Mapped[int] = mapped_column("ModuleID", ForeignKey(Module.module_id))
     global_key_id: Mapped[int | None] = mapped_column(
         "GlobalKeyID",
@@ -1026,6 +1122,7 @@ class ModuleVersion(DPM):
     )
     is_reported: Mapped[bool] = mapped_column("IsReported")
     is_calculated: Mapped[bool] = mapped_column("IsCalculated")
+    module_vid: Mapped[int] = mapped_column("ModuleVID", primary_key=True)
 
     module: Mapped[Module] = relationship(foreign_keys=module_id)
     global_key: Mapped[CompoundKey | None] = relationship(foreign_keys=global_key_id)
@@ -1039,7 +1136,6 @@ class OperationNode(DPM):
 
     __tablename__ = "OperationNode"
 
-    node_id: Mapped[int] = mapped_column("NodeID", primary_key=True)
     operation_vid: Mapped[int] = mapped_column(
         "OperationVID",
         ForeignKey(OperationVersion.operation_vid),
@@ -1067,6 +1163,7 @@ class OperationNode(DPM):
     operand_type: Mapped[str | None] = mapped_column("OperandType")
     is_leaf: Mapped[bool] = mapped_column("IsLeaf")
     scalar: Mapped[str | None] = mapped_column("Scalar")
+    node_id: Mapped[int] = mapped_column("NodeID", primary_key=True)
 
     operation_version: Mapped[OperationVersion] = relationship(
         foreign_keys=operation_vid,
@@ -1083,10 +1180,6 @@ class OperationScope(DPM):
 
     __tablename__ = "OperationScope"
 
-    operation_scope_id: Mapped[int] = mapped_column(
-        "OperationScopeID",
-        primary_key=True,
-    )
     operation_vid: Mapped[int] = mapped_column(
         "OperationVID",
         ForeignKey(OperationVersion.operation_vid),
@@ -1099,6 +1192,10 @@ class OperationScope(DPM):
     row_guid: Mapped[uuid.UUID] = mapped_column(
         "RowGUID",
         ForeignKey(Concept.concept_guid),
+    )
+    operation_scope_id: Mapped[int] = mapped_column(
+        "OperationScopeID",
+        primary_key=True,
     )
 
     operation_version: Mapped[OperationVersion] = relationship(
@@ -1136,6 +1233,8 @@ class OperationVersionData(DPM):
             "4-6-0-2",
             "4-6-1-2",
             "5-0-1",
+            "7-3",
+            "7-4",
             "Other",
         ]
         | None
@@ -1190,7 +1289,6 @@ class SubCategory(DPM):
 
     __tablename__ = "SubCategory"
 
-    sub_category_id: Mapped[int] = mapped_column("SubCategoryID", primary_key=True)
     category_id: Mapped[int] = mapped_column(
         "CategoryID",
         ForeignKey(Category.category_id),
@@ -1202,9 +1300,12 @@ class SubCategory(DPM):
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
+    owner_id: Mapped[int] = mapped_column("OwnerID", ForeignKey(Organisation.org_id))
+    sub_category_id: Mapped[int] = mapped_column("SubCategoryID", primary_key=True)
 
     category: Mapped[Category] = relationship(foreign_keys=category_id)
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
+    owner: Mapped[Organisation] = relationship(foreign_keys=owner_id)
 
 
 class Subdivision(DPM):
@@ -1212,7 +1313,6 @@ class Subdivision(DPM):
 
     __tablename__ = "Subdivision"
 
-    subdivision_id: Mapped[int] = mapped_column("SubdivisionID", primary_key=True)
     document_vid: Mapped[int] = mapped_column(
         "DocumentVID",
         ForeignKey(DocumentVersion.document_vid),
@@ -1232,6 +1332,8 @@ class Subdivision(DPM):
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
+    owner_id: Mapped[int] = mapped_column("OwnerID", ForeignKey(Organisation.org_id))
+    subdivision_id: Mapped[int] = mapped_column("SubdivisionID", primary_key=True)
 
     document_version: Mapped[DocumentVersion] = relationship(foreign_keys=document_vid)
     subdivision_type: Mapped[SubdivisionType] = relationship(
@@ -1241,6 +1343,7 @@ class Subdivision(DPM):
         foreign_keys=parent_subdivision_id,
     )
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
+    owner: Mapped[Organisation] = relationship(foreign_keys=owner_id)
 
 
 class SuperCategoryComposition(DPM):
@@ -1320,7 +1423,6 @@ class TableVersion(DPM):
 
     __tablename__ = "TableVersion"
 
-    table_vid: Mapped[int] = mapped_column("TableVID", primary_key=True)
     code: Mapped[str] = mapped_column("Code")
     name: Mapped[str] = mapped_column("Name")
     description: Mapped[str | None] = mapped_column("Description")
@@ -1350,6 +1452,7 @@ class TableVersion(DPM):
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
+    table_vid: Mapped[int] = mapped_column("TableVID", primary_key=True)
 
     table: Mapped[Table] = relationship(foreign_keys=table_id)
     abstract_table: Mapped[Table | None] = relationship(foreign_keys=abstract_table_id)
@@ -1432,10 +1535,6 @@ class OperandReference(DPM):
 
     __tablename__ = "OperandReference"
 
-    operand_reference_id: Mapped[int] = mapped_column(
-        "OperandReferenceID",
-        primary_key=True,
-    )
     node_id: Mapped[int] = mapped_column("NodeID", ForeignKey(OperationNode.node_id))
     x: Mapped[int | None] = mapped_column("x")
     y: Mapped[int | None] = mapped_column("y")
@@ -1464,6 +1563,10 @@ class OperandReference(DPM):
     sub_category_id: Mapped[int | None] = mapped_column(
         "SubCategoryID",
         ForeignKey(SubCategory.sub_category_id),
+    )
+    operand_reference_id: Mapped[int] = mapped_column(
+        "OperandReferenceID",
+        primary_key=True,
     )
 
     node: Mapped[OperationNode] = relationship(foreign_keys=node_id)
@@ -1532,7 +1635,6 @@ class SubCategoryVersion(DPM):
 
     __tablename__ = "SubCategoryVersion"
 
-    sub_category_vid: Mapped[int] = mapped_column("SubCategoryVID", primary_key=True)
     sub_category_id: Mapped[int] = mapped_column(
         "SubCategoryID",
         ForeignKey(SubCategory.sub_category_id),
@@ -1549,6 +1651,7 @@ class SubCategoryVersion(DPM):
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
+    sub_category_vid: Mapped[int] = mapped_column("SubCategoryVID", primary_key=True)
 
     sub_category: Mapped[SubCategory] = relationship(foreign_keys=sub_category_id)
     start_release: Mapped[Release] = relationship(foreign_keys=start_release_id)
@@ -1561,7 +1664,6 @@ class TableAssociation(DPM):
 
     __tablename__ = "TableAssociation"
 
-    association_id: Mapped[int] = mapped_column("AssociationID", primary_key=True)
     child_table_vid: Mapped[int] = mapped_column(
         "ChildTableVID",
         ForeignKey(TableVersion.table_vid),
@@ -1588,6 +1690,8 @@ class TableAssociation(DPM):
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
+    owner_id: Mapped[int] = mapped_column("OwnerID", ForeignKey(Organisation.org_id))
+    association_id: Mapped[int] = mapped_column("AssociationID", primary_key=True)
 
     child_table_version: Mapped[TableVersion] = relationship(
         foreign_keys=child_table_vid,
@@ -1599,21 +1703,7 @@ class TableAssociation(DPM):
         foreign_keys=subtype_discriminator,
     )
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
-
-
-class TableLock(DPM):
-    """Auto-generated model for the TableLock table."""
-
-    __tablename__ = "TableLock"
-
-    table_lock_id: Mapped[int] = mapped_column("TableLockID", primary_key=True)
-    table_vid: Mapped[int] = mapped_column(
-        "TableVID",
-        ForeignKey(TableVersion.table_vid),
-    )
-    user_email: Mapped[str] = mapped_column("UserEmail")
-
-    table_version: Mapped[TableVersion] = relationship(foreign_keys=table_vid)
+    owner: Mapped[Organisation] = relationship(foreign_keys=owner_id)
 
 
 class KeyHeaderMapping(DPM):
@@ -1725,7 +1815,6 @@ class VariableVersion(DPM):
 
     __tablename__ = "VariableVersion"
 
-    variable_vid: Mapped[int] = mapped_column("VariableVID", primary_key=True)
     variable_id: Mapped[int] = mapped_column(
         "VariableID",
         ForeignKey(Variable.variable_id),
@@ -1758,6 +1847,7 @@ class VariableVersion(DPM):
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
+    variable_vid: Mapped[int] = mapped_column("VariableVID", primary_key=True)
 
     variable: Mapped[Variable] = relationship(foreign_keys=variable_id)
     property: Mapped[Property] = relationship(foreign_keys=property_id)
@@ -1776,7 +1866,6 @@ class HeaderVersion(DPM):
 
     __tablename__ = "HeaderVersion"
 
-    header_vid: Mapped[int] = mapped_column("HeaderVID", primary_key=True)
     header_id: Mapped[int] = mapped_column("HeaderID", ForeignKey(Header.header_id))
     code: Mapped[str] = mapped_column("Code")
     label: Mapped[str] = mapped_column("Label")
@@ -1808,6 +1897,7 @@ class HeaderVersion(DPM):
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
+    header_vid: Mapped[int] = mapped_column("HeaderVID", primary_key=True)
 
     header: Mapped[Header] = relationship(foreign_keys=header_id)
     property: Mapped[Property | None] = relationship(foreign_keys=property_id)
