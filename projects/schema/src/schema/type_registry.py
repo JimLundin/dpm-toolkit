@@ -61,10 +61,10 @@ class DPMDate(Date):
     both at read time so the migration can store raw values.
     """
 
-    def result_processor(
+    def result_processor(  # pyright: ignore[reportIncompatibleMethodOverride]
         self,
-        _dialect: Dialect,
-        _coltype: object,
+        dialect: Dialect,  # noqa: ARG002
+        coltype: object,  # noqa: ARG002
     ) -> Callable[[date | str], date]:
         """Parse date strings with ISO fast path and European fallback."""
         return _process_date
@@ -73,10 +73,10 @@ class DPMDate(Date):
 class DPMDateTime(DateTime):
     """DateTime type with European format fallback for DPM databases."""
 
-    def result_processor(
+    def result_processor(  # pyright: ignore[reportIncompatibleMethodOverride]
         self,
-        _dialect: Dialect,
-        _coltype: object,
+        dialect: Dialect,  # noqa: ARG002
+        coltype: object,  # noqa: ARG002
     ) -> Callable[[datetime | date | str], datetime]:
         """Parse datetime strings with ISO fast path and European fallback."""
         return _process_datetime
