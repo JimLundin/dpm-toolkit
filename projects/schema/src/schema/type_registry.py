@@ -16,70 +16,11 @@ It is used by both:
 - **migrate** during normalization to collect enum data
 """
 
-from collections.abc import Callable
-from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import Boolean, Column, String, Uuid
-from sqlalchemy.engine.interfaces import Dialect, ReflectedColumn
-from sqlalchemy.types import Date, DateTime, TypeEngine
-
-
-def _process_date(value: date | str) -> date:
-    """Parse a date value with ISO fast path and European fallback."""
-    if isinstance(value, datetime):
-        return value.date()
-    if isinstance(value, date):
-        return value
-    try:
-        return date.fromisoformat(value)
-    except ValueError:
-        return datetime.strptime(value, "%d/%m/%Y").date()  # noqa: DTZ007
-
-
-def _process_datetime(value: datetime | date | str) -> datetime:
-    """Parse a datetime value with ISO fast path and European fallback."""
-    if isinstance(value, datetime):
-        return value
-    if isinstance(value, date):
-        return datetime.combine(value, datetime.min.time())
-    try:
-        return datetime.fromisoformat(value)
-    except ValueError:
-        pass
-    try:
-        return datetime.strptime(value, "%d/%m/%Y %H:%M:%S")  # noqa: DTZ007
-    except ValueError:
-        return datetime.strptime(value, "%d/%m/%Y")  # noqa: DTZ007
-
-
-class DPMDate(Date):
-    """Date type with European format fallback for DPM databases.
-
-    The source Access databases store dates as strings in ISO format
-    (YYYY-MM-DD) or European format (DD/MM/YYYY). This type handles
-    both at read time so the migration can store raw values.
-    """
-
-    def result_processor(  # pyright: ignore[reportIncompatibleMethodOverride]
-        self,
-        dialect: Dialect,  # noqa: ARG002
-        coltype: object,  # noqa: ARG002
-    ) -> Callable[[date | str], date]:
-        """Parse date strings with ISO fast path and European fallback."""
-        return _process_date
-
-
-class DPMDateTime(DateTime):
-    """DateTime type with European format fallback for DPM databases."""
-
-    def result_processor(  # pyright: ignore[reportIncompatibleMethodOverride]
-        self,
-        dialect: Dialect,  # noqa: ARG002
-        coltype: object,  # noqa: ARG002
-    ) -> Callable[[datetime | date | str], datetime]:
-        """Parse datetime strings with ISO fast path and European fallback."""
-        return _process_datetime
+from sqlalchemy import Boolean, Column, Date, DateTime, String, Uuid
+from sqlalchemy.engine.interfaces import ReflectedColumn
+from sqlalchemy.types import TypeEngine
 
 
 def column_type(column: ReflectedColumn) -> TypeEngine[Any] | None:
@@ -103,7 +44,7 @@ def column_type(column: ReflectedColumn) -> TypeEngine[Any] | None:
     if name in ("ParentFirst", "UseIntervalArithmetics"):
         data_type = Boolean()
     elif name in ("StartDate", "EndDate"):
-        data_type = DPMDateTime()
+        data_type = DateTime()
 
     # Prefix patterns
     elif name_lower.startswith(("is", "has")):
@@ -113,7 +54,7 @@ def column_type(column: ReflectedColumn) -> TypeEngine[Any] | None:
     elif name_lower.endswith("guid"):
         data_type = Uuid()
     elif name_lower.endswith("date"):
-        data_type = DPMDate()
+        data_type = Date()
 
     return data_type
 
