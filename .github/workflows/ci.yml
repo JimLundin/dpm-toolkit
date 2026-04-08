@@ -47,6 +47,10 @@ jobs:
             path: projects/scrape
             extras: --extra scrape
             os: ubuntu-latest
+          - name: DPM2 Module
+            path: projects/dpm2
+            extras: ""
+            os: ubuntu-latest
           - name: Analysis Module
             path: projects/analysis
             extras: --extra analysis

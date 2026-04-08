@@ -69,6 +69,9 @@ jobs:
           echo "Final dpm2 package contents:"
           ls -la projects/dpm2/src/dpm2/
 
+      - name: Test dpm2 package
+        run: uv run --package dpm2 pytest projects/dpm2/tests/ -v --tb=short
+
       - name: Build dpm2 package
         run: uv build
         working-directory: projects/dpm2
