@@ -56,17 +56,16 @@ jobs:
         run: |
           set -x
           SQLITE_FILE=$(find . -name "*.sqlite" -type f | head -1)
-          echo "Schema file: ${{ inputs.sqlite_artifact_name }}.py"
-          echo "SQLite file: $SQLITE_FILE"
-          ls -la "${{ inputs.sqlite_artifact_name }}.py" "$SQLITE_FILE"
           cp "${{ inputs.sqlite_artifact_name }}.py" projects/dpm2/src/dpm2/models.py
           cp "$SQLITE_FILE" projects/dpm2/src/dpm2/dpm.sqlite
-          ls -la projects/dpm2/src/dpm2/
           find projects/dpm2 -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
-          uv run python -c "from dpm2.models import DPM; print(f'Models loaded: {len(DPM.metadata.tables)} tables')"
-          uv run pytest projects/dpm2/tests/ -v --tb=long 2>&1 || true
-          echo "Exit code from pytest: $?"
-          uv run pytest projects/dpm2/tests/ -v --tb=long
+          uv run pytest projects/dpm2/tests/ -v --tb=long 2>&1 | tee test-output.txt
+      - name: Upload test output on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-output-${{ inputs.sqlite_artifact_name }}
+          path: test-output.txt
 
       - name: Generate HTML diagram
         run: |
