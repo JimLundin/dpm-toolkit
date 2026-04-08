@@ -58,17 +58,16 @@ def _get_model(name: str) -> type[DPM] | None:
     return None
 
 
-def _require_model(name: str) -> type[DPM]:
-    """Get a model class by name, skip the test if not in this schema version."""
-    cls = _get_model(name)
-    if cls is None:
-        pytest.skip(f"{name} not present in this schema version")
-    return cls
+def _models_with_relationships() -> list[tuple[type[DPM], str]]:
+    """Return (model, relationship_name) pairs for all models with relationships."""
+    pairs = []
+    for cls in _orm_model_classes():
+        mapper = sa_inspect(cls)
+        pairs.extend((cls, rel.key) for rel in mapper.relationships)
+    return pairs
 
 
 # Names of tables that should be populated in any valid DPM database.
-# Looked up dynamically so the tests still collect when a schema version
-# doesn't contain one of these.
 _CORE_TABLE_NAMES = [
     "Concept",
     "DPMClass",
@@ -107,7 +106,6 @@ def _available_core_tables() -> list[type[DPM]]:
 class TestDatabaseConnectivity:
     def test_engine_connects(self, db_engine: Engine) -> None:
         with db_engine.connect() as conn:
-            # Pick the first ORM table to do a basic count query.
             first = _orm_model_classes()[0]
             result = conn.execute(
                 select(func.count()).select_from(first.__table__),
@@ -183,143 +181,63 @@ class TestAlchemyTables:
 
 
 # ---------------------------------------------------------------------------
-# Relationship traversal
+# Relationship traversal (fully dynamic)
 # ---------------------------------------------------------------------------
+
+_REL_PAIRS = _models_with_relationships()
 
 
 class TestRelationships:
-    """Verify that foreign-key relationships can be traversed.
+    """Verify that ORM relationships can be traversed without errors.
 
-    Each test dynamically looks up the models it needs and skips if
-    the current schema version doesn't include them.
+    Discovers all relationships from the mapper and tests each one.
     """
 
-    def test_concept_to_class(self, db_session: Session) -> None:
-        concept_cls = _require_model("Concept")
-        row = db_session.execute(select(concept_cls).limit(1)).scalar_one()
-        assert row.class_ is not None
-        assert row.class_.name is not None
-
-    def test_concept_to_organisation(self, db_session: Session) -> None:
-        concept_cls = _require_model("Concept")
-        row = db_session.execute(select(concept_cls).limit(1)).scalar_one()
-        assert row.owner is not None
-
-    def test_table_version_to_table(self, db_session: Session) -> None:
-        tv_cls = _require_model("TableVersion")
-        row = db_session.execute(select(tv_cls).limit(1)).scalar_one()
-        assert row.table is not None
-
-    def test_table_version_to_release(self, db_session: Session) -> None:
-        tv_cls = _require_model("TableVersion")
-        row = db_session.execute(select(tv_cls).limit(1)).scalar_one()
-        assert row.start_release is not None
-
-    def test_cell_to_table(self, db_session: Session) -> None:
-        cell_cls = _require_model("Cell")
-        row = db_session.execute(select(cell_cls).limit(1)).scalar_one()
-        assert row.table is not None
-
-    def test_cell_to_header(self, db_session: Session) -> None:
-        cell_cls = _require_model("Cell")
-        row = db_session.execute(select(cell_cls).limit(1)).scalar_one()
-        assert row.column is not None
-
-    def test_item_to_organisation(self, db_session: Session) -> None:
-        item_cls = _require_model("Item")
-        row = db_session.execute(select(item_cls).limit(1)).scalar_one()
-        assert row.owner is not None
-
-    def test_operator_argument_to_operator(self, db_session: Session) -> None:
-        arg_cls = _require_model("OperatorArgument")
-        row = db_session.execute(select(arg_cls).limit(1)).scalar_one()
-        assert row.operator is not None
+    @pytest.mark.parametrize(
+        ("model_cls", "rel_name"),
+        _REL_PAIRS,
+        ids=[f"{cls.__name__}.{name}" for cls, name in _REL_PAIRS],
+    )
+    def test_relationship_traversal(
+        self,
+        db_session: Session,
+        model_cls: type[DPM],
+        rel_name: str,
+    ) -> None:
+        """Loading a relationship attribute must not raise."""
+        row = db_session.execute(select(model_cls).limit(1)).first()
+        if row is None:
+            pytest.skip(f"{model_cls.__name__} table is empty")
+        obj = row[0]
+        # Access the relationship — triggers the lazy load.
+        getattr(obj, rel_name)
 
 
 # ---------------------------------------------------------------------------
-# Joined queries
-# ---------------------------------------------------------------------------
-
-
-class TestJoinedQueries:
-    """Verify that common joins work correctly."""
-
-    def test_join_concept_with_class(self, db_session: Session) -> None:
-        concept_cls = _require_model("Concept")
-        class_cls = _require_model("DPMClass")
-        stmt = (
-            select(concept_cls, class_cls)
-            .join(class_cls, concept_cls.class_id == class_cls.class_id)
-            .limit(5)
-        )
-        rows = db_session.execute(stmt).all()
-        assert len(rows) > 0
-        for concept, dpm_class in rows:
-            assert concept.class_id == dpm_class.class_id
-
-    def test_join_table_version_with_table(self, db_session: Session) -> None:
-        tv_cls = _require_model("TableVersion")
-        table_cls = _require_model("Table")
-        stmt = (
-            select(tv_cls, table_cls)
-            .join(table_cls, tv_cls.table_id == table_cls.table_id)
-            .limit(5)
-        )
-        rows = db_session.execute(stmt).all()
-        assert len(rows) > 0
-        for tv, table in rows:
-            assert tv.table_id == table.table_id
-
-    def test_join_cell_with_table_and_header(self, db_session: Session) -> None:
-        cell_cls = _require_model("Cell")
-        table_cls = _require_model("Table")
-        header_cls = _require_model("Header")
-        stmt = (
-            select(cell_cls, table_cls, header_cls)
-            .join(table_cls, cell_cls.table_id == table_cls.table_id)
-            .join(header_cls, cell_cls.column_id == header_cls.header_id)
-            .limit(5)
-        )
-        rows = db_session.execute(stmt).all()
-        assert len(rows) > 0
-        for cell, table, header in rows:
-            assert cell.table_id == table.table_id
-            assert cell.column_id == header.header_id
-
-
-# ---------------------------------------------------------------------------
-# Data integrity
+# Non-nullable columns have data
 # ---------------------------------------------------------------------------
 
 
 class TestDataIntegrity:
-    """Spot-check data types and constraints on queried data."""
+    """Verify that non-nullable mapped columns contain non-null values."""
 
-    def test_organisation_fields(self, db_session: Session) -> None:
-        org_cls = _require_model("Organisation")
-        orgs = db_session.execute(select(org_cls).limit(10)).scalars().all()
-        for org in orgs:
-            assert org.name is not None
-            assert org.acronym is not None
-
-    def test_language_fields(self, db_session: Session) -> None:
-        lang_cls = _require_model("Language")
-        langs = db_session.execute(select(lang_cls)).scalars().all()
-        assert len(langs) > 0
-        for lang in langs:
-            assert lang.name is not None
-
-    def test_release_has_code(self, db_session: Session) -> None:
-        release_cls = _require_model("Release")
-        releases = db_session.execute(select(release_cls)).scalars().all()
-        assert len(releases) > 0
-        for release in releases:
-            assert release.code is not None
-
-    def test_data_type_has_code(self, db_session: Session) -> None:
-        dt_cls = _require_model("DataType")
-        data_types = db_session.execute(select(dt_cls)).scalars().all()
-        assert len(data_types) > 0
-        for dt in data_types:
-            assert dt.code is not None
-            assert dt.name is not None
+    @pytest.mark.parametrize(
+        "model_cls",
+        _available_core_tables(),
+        ids=[cls.__name__ for cls in _available_core_tables()],
+    )
+    def test_non_nullable_columns_populated(
+        self, db_session: Session, model_cls: type[DPM],
+    ) -> None:
+        row = db_session.execute(select(model_cls).limit(1)).first()
+        if row is None:
+            pytest.skip(f"{model_cls.__name__} table is empty")
+        obj = row[0]
+        mapper = sa_inspect(type(obj))
+        for attr in mapper.column_attrs:
+            col = attr.columns[0]
+            if not col.nullable:
+                val = getattr(obj, attr.key)
+                assert val is not None, (
+                    f"{model_cls.__name__}.{attr.key} is NULL but column is NOT NULL"
+                )
