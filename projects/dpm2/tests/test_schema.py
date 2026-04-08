@@ -50,12 +50,12 @@ class TestSchemaCreation:
         assert len(table_names) > 0
 
     def test_expected_table_count(self, empty_engine: Engine) -> None:
-        """There should be at least 69 ORM tables plus the raw AlchemyTables."""
+        """Every table in the metadata should be created in the database."""
         inspector = sa_inspect(empty_engine)
-        table_names = inspector.get_table_names()
-        # 69 ORM models + ATTT2Hierarchies, ModelViolations,
-        # VarGeneration_Detail, VarGeneration_Summary
-        assert len(table_names) >= 73
+        db_tables = set(inspector.get_table_names())
+        metadata_tables = set(DPM.metadata.tables.keys())
+        missing = metadata_tables - db_tables
+        assert not missing, f"Tables in metadata but not in database: {missing}"
 
     def test_tables_have_columns(self, empty_engine: Engine) -> None:
         """Every created table should have at least one column."""
