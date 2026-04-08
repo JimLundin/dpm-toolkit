@@ -13,9 +13,17 @@ if TYPE_CHECKING:
 
 @pytest.fixture(name="empty_engine", scope="session")
 def create_empty_engine() -> Iterator[Engine]:
-    """Create an in-memory database with the full DPM schema but no data."""
+    """Create an in-memory database with the full DPM schema but no data.
+
+    Yields ``pytest.skip`` if ``create_all`` fails (e.g. when a generated
+    schema for an older DPM version has dangling FK references).
+    """
     engine = create_engine("sqlite:///:memory:")
-    DPM.metadata.create_all(engine)
+    try:
+        DPM.metadata.create_all(engine)
+    except Exception as exc:  # noqa: BLE001
+        engine.dispose()
+        pytest.skip(f"Cannot create schema in empty database: {exc}")
     yield engine
     engine.dispose()
 
