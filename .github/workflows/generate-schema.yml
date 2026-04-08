@@ -55,10 +55,10 @@ jobs:
       - name: Test generated schema against database
         run: |
           SQLITE_FILE=$(find . -name "*.sqlite" -type f | head -1)
-          SCHEMA_FILE=$(find . -maxdepth 1 -name "*.py" -type f | head -1)
-          cp "$SCHEMA_FILE" projects/dpm2/src/dpm2/models.py
+          cp "${{ inputs.sqlite_artifact_name }}.py" projects/dpm2/src/dpm2/models.py
           cp "$SQLITE_FILE" projects/dpm2/src/dpm2/dpm.sqlite
-          uv run --package dpm2 pytest projects/dpm2/tests/ -v --tb=short
+          find projects/dpm2 -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
+          uv run pytest projects/dpm2/tests/ -v --tb=short
 
       - name: Generate HTML diagram
         run: |
