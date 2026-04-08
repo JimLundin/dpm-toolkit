@@ -62,7 +62,10 @@ def _models_with_relationships() -> list[tuple[type[DPM], str]]:
     """Return (model, relationship_name) pairs for all models with relationships."""
     pairs = []
     for cls in _orm_model_classes():
-        mapper = sa_inspect(cls)
+        try:
+            mapper = sa_inspect(cls)
+        except Exception:  # noqa: BLE001, S112
+            continue
         pairs.extend((cls, rel.key) for rel in mapper.relationships)
     return pairs
 

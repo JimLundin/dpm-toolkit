@@ -53,7 +53,6 @@ jobs:
           uv run ty check *.py --exit-zero
 
       - name: Test generated schema against database
-        continue-on-error: true
         run: |
           SQLITE_FILE=$(find . -name "*.sqlite" -type f | head -1)
           cp "${{ inputs.sqlite_artifact_name }}.py" projects/dpm2/src/dpm2/models.py
