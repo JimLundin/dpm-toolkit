@@ -61,11 +61,7 @@ jobs:
           find projects/dpm2 -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
 
       - name: Test generated schema against database
-        run: |
-          uv run --no-sync python -c "import dpm2; print('dpm2 OK')" || echo "IMPORT FAILED: $?"
-          uv run --no-sync python -c "from dpm2.models import DPM; print(f'DPM OK, tables={len(DPM.metadata.tables)}')" || echo "MODEL IMPORT FAILED: $?"
-          uv run --no-sync python -m pytest projects/dpm2/tests/ -v --tb=short || echo "PYTEST FAILED: $?"
-          uv run --no-sync pytest projects/dpm2/tests/ -v --tb=short
+        run: .venv/bin/python -m pytest projects/dpm2/tests/ -v --tb=short
 
       - name: Generate HTML diagram
         run: |
