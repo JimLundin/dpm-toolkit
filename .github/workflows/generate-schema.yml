@@ -53,15 +53,12 @@ jobs:
         run: |
           uv run ty check *.py --exit-zero
 
-      - name: Stage generated schema for testing
+      - name: Test generated schema against database
         run: |
           SQLITE_FILE=$(find . -name "*.sqlite" -type f | head -1)
           cp "${{ inputs.sqlite_artifact_name }}.py" projects/dpm2/src/dpm2/models.py
           cp "$SQLITE_FILE" projects/dpm2/src/dpm2/dpm.sqlite
           find projects/dpm2 -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
-
-      - name: Test generated schema against database
-        run: |
           uv pip install -e projects/dpm2
           uv run --no-sync pytest projects/dpm2/tests/ -v --tb=short
 
