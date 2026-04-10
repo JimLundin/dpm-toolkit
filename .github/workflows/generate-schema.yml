@@ -61,8 +61,10 @@ jobs:
           find projects/dpm2 -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
 
       - name: Test generated schema against database
+        shell: bash {0}
         run: |
-          .venv/bin/python -m pytest projects/dpm2/tests/ -v --tb=short 2>&1 | tee /tmp/test-out.txt; EXIT=${PIPESTATUS[0]}
+          .venv/bin/python -m pytest projects/dpm2/tests/ -v --tb=short 2>&1 | tee /tmp/test-out.txt
+          EXIT=${PIPESTATUS[0]}
           echo '```' >> $GITHUB_STEP_SUMMARY
           cat /tmp/test-out.txt >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
