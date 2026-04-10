@@ -3,36 +3,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-from dpm2.models import DPM
-from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-
-@pytest.fixture(name="empty_engine", scope="session")
-def create_empty_engine() -> Iterator[Engine]:
-    """Create an in-memory database with the full DPM schema but no data.
-
-    Yields ``pytest.skip`` if ``create_all`` fails (e.g. when a generated
-    schema for an older DPM version has dangling FK references).
-    """
-    engine = create_engine("sqlite:///:memory:")
-    try:
-        DPM.metadata.create_all(engine)
-    except Exception as exc:  # noqa: BLE001
-        engine.dispose()
-        pytest.skip(f"Cannot create schema in empty database: {exc}")
-    yield engine
-    engine.dispose()
-
-
-@pytest.fixture(name="empty_session")
-def create_empty_session(empty_engine: Engine) -> Iterator[Session]:
-    """Session bound to the empty schema database."""
-    with Session(empty_engine) as session:
-        yield session
+    from sqlalchemy import Engine
 
 
 def _bundled_db_available() -> bool:
@@ -41,7 +17,6 @@ def _bundled_db_available() -> bool:
         from dpm2.utils import get_source_db_resource
 
         resource = get_source_db_resource()
-        # Traversable has no .exists(); try to open it instead.
         resource.open("rb").close()
     except Exception:  # noqa: BLE001
         return False

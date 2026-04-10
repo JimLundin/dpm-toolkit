@@ -53,19 +53,12 @@ jobs:
           uv run ty check *.py --exit-zero
 
       - name: Test generated schema against database
-        continue-on-error: true
         run: |
           SQLITE_FILE=$(find . -name "*.sqlite" -type f | head -1)
           cp "${{ inputs.sqlite_artifact_name }}.py" projects/dpm2/src/dpm2/models.py
           cp "$SQLITE_FILE" projects/dpm2/src/dpm2/dpm.sqlite
           find projects/dpm2 -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
-          uv run pytest projects/dpm2/tests/ -v --tb=long 2>&1 | tee test-output.txt
-      - name: Upload test output
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: test-output-${{ inputs.sqlite_artifact_name }}
-          path: test-output.txt
+          uv run pytest projects/dpm2/tests/ -v --tb=short
 
       - name: Generate HTML diagram
         run: |
