@@ -52,12 +52,49 @@ def _cleanup(simple_db: str) -> Generator[None]:
     Path(simple_db).unlink(missing_ok=True)
 
 
+def _ensure_dpm2_stub() -> None:
+    """Inject a stub ``dpm2.types`` module if the real package isn't installed.
+
+    The ``schema`` project is deliberately decoupled from ``dpm2`` — ``dpm2``
+    consumes schema's output, not the other way round. But generated code
+    imports ``from dpm2.types import DPMDate, DPMDateTime`` so that the
+    runtime registry can wrap dates. For the schema tests we only care that
+    the generated code is syntactically/semantically importable, so a stub
+    with the two expected names is sufficient.
+    """
+    if "dpm2.types" in sys.modules:
+        return
+    try:  # pragma: no cover - exercised only when dpm2 is installed
+        import dpm2.types  # noqa: F401, PLC0415
+    except ImportError:
+        from sqlalchemy import String  # noqa: PLC0415
+        from sqlalchemy.types import TypeDecorator  # noqa: PLC0415
+
+        dpm2_pkg = ModuleType("dpm2")
+        dpm2_types = ModuleType("dpm2.types")
+
+        class _StubDPMDate(TypeDecorator):  # type: ignore[type-arg]
+            impl = String
+            cache_ok = True
+
+        class _StubDPMDateTime(TypeDecorator):  # type: ignore[type-arg]
+            impl = String
+            cache_ok = True
+
+        dpm2_types.DPMDate = _StubDPMDate  # type: ignore[attr-defined]
+        dpm2_types.DPMDateTime = _StubDPMDateTime  # type: ignore[attr-defined]
+        sys.modules["dpm2"] = dpm2_pkg
+        sys.modules["dpm2.types"] = dpm2_types
+
+
 def _import_generated_code(code: str, module_name: str) -> ModuleType:
     """Write generated code to a temp file and import it as a real module.
 
     This ensures ``from __future__ import annotations`` resolves correctly
     and SQLAlchemy can find ``Mapped`` in the module's namespace.
     """
+    _ensure_dpm2_stub()
+
     with tempfile.NamedTemporaryFile(
         suffix=".py", delete=False, mode="w"
     ) as tmp:
