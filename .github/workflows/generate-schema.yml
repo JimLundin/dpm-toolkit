@@ -26,7 +26,11 @@ jobs:
         run: uv python install
 
       - name: Install project
-        run: uv sync --extra schema --dev
+        # dpm2 must be installed so mypy can resolve the ``dpm2.types`` import
+        # that the generated schema emits for the DPMDate/DPMDateTime wrappers.
+        run: |
+          uv sync --extra schema --dev
+          uv pip install -e projects/dpm2
 
       - name: Download SQLite database artifact
         uses: actions/download-artifact@v8

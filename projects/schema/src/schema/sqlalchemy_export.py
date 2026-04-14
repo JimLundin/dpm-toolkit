@@ -266,7 +266,9 @@ def generate_base_class(base_name: str, imports: Imports | None = None) -> str:
     annotations on the generated ORM models resolve to our ``TypeDecorator``
     wrappers (which accept Access-style DD/MM/YYYY strings at read time).
     """
-    dpm_types = imports.get(_DPM_TYPES_MODULE, set()) if imports else set()
+    dpm_types: set[str] = (
+        imports.get(_DPM_TYPES_MODULE, set()) if imports else set()
+    )
     entries: list[str] = []
     if "DPMDate" in dpm_types:
         entries.append("datetime.date: DPMDate")
