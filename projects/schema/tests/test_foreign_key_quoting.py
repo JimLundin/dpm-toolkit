@@ -107,7 +107,7 @@ class TestGenerateColumnDefinitionFK:
         )
 
         imports = defaultdict(set)
-        defn = generate_column_definition(column, imports)
+        defn = generate_column_definition(column, imports, set())
 
         # Must be a string ref (quoted) since it's self-referential
         assert 'ForeignKey("Category.CategoryID")' in defn
@@ -123,7 +123,7 @@ class TestGenerateColumnDefinitionFK:
         )
 
         imports = defaultdict(set)
-        defn = generate_column_definition(column, imports)
+        defn = generate_column_definition(column, imports, set())
 
         assert 'ForeignKey("Concept.ConceptID")' in defn
 
@@ -137,7 +137,7 @@ class TestGenerateColumnDefinitionFK:
         )
 
         imports = defaultdict(set)
-        defn = generate_column_definition(column, imports)
+        defn = generate_column_definition(column, imports, set())
 
         # Direct Python attribute reference, not a string
         assert "ForeignKey(Items.item_id)" in defn
@@ -153,7 +153,7 @@ class TestGenerateColumnDefinitionFK:
         )
 
         imports = defaultdict(set)
-        defn = generate_column_definition(column, imports)
+        defn = generate_column_definition(column, imports, set())
 
         # Concept table FKs are always quoted
         assert 'ForeignKey("Domain.DomainID")' in defn

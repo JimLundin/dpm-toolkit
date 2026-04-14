@@ -22,12 +22,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Install UV
-        uses: astral-sh/setup-uv@v7
-
-      - name: Install python
-        run: uv python install
-
       - name: Download generated schema
         uses: actions/download-artifact@v8
         with:
@@ -39,18 +33,6 @@ jobs:
           find schema -name "*.py" -exec cp {} projects/dpm2/src/dpm2/models.py \;
           echo "Updated models.py:"
           wc -l projects/dpm2/src/dpm2/models.py
-
-      - name: Re-format models.py with dpm2's ruff config
-        # The schema workflow formatted the file at the workspace root, where
-        # ruff doesn't know ``dpm2`` is first-party. Re-running ruff from
-        # within ``projects/dpm2`` picks up the project's own isort
-        # classification so ``from dpm2.types import ...`` lands in the
-        # first-party group, matching what ``project-qa`` expects.
-        working-directory: projects/dpm2
-        run: |
-          uvx ruff format src/dpm2/models.py
-          uvx ruff check src/dpm2/models.py --fix-only --select I
-          uvx ruff format src/dpm2/models.py
 
       - name: Commit if changed
         run: |
