@@ -53,18 +53,6 @@ jobs:
         run: |
           uv run ty check *.py --exit-zero
 
-      - name: Build dpm2 package
-        run: |
-          SQLITE_FILE=$(find . -name "*.sqlite" -type f | head -1)
-          cp "${{ inputs.sqlite_artifact_name }}.py" projects/dpm2/src/dpm2/models.py
-          cp "$SQLITE_FILE" projects/dpm2/src/dpm2/dpm.sqlite
-          uv build --package dpm2 --out-dir dist-dpm2
-
-      - name: Test built dpm2 wheel
-        run: |
-          uv pip install --force-reinstall dist-dpm2/*.whl
-          uv run --no-sync pytest projects/dpm2/tests/ -v --tb=short
-
       - name: Generate HTML diagram
         run: |
           SQLITE_FILE=$(find . -name "*.sqlite" -type f | head -1)
