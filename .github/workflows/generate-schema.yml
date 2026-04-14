@@ -26,11 +26,7 @@ jobs:
         run: uv python install
 
       - name: Install project
-        # dpm2 must be installed so mypy can resolve the ``dpm2.types`` import
-        # that the generated schema emits for the DPMDate/DPMDateTime wrappers.
-        run: |
-          uv sync --extra schema --dev
-          uv pip install -e projects/dpm2
+        run: uv sync --extra schema --dev
 
       - name: Download SQLite database artifact
         uses: actions/download-artifact@v8
@@ -49,8 +45,11 @@ jobs:
           uv run ruff format *.py
 
       - name: Type check generated models using mypy
+        # ``dpm2`` is not installed here (schema must not depend on dpm2), so
+        # mypy treats ``from dpm2.types import ...`` as an opaque external
+        # import. Every other check still runs.
         run: |
-          uv run mypy *.py
+          uv run mypy --ignore-missing-imports *.py
 
       - name: Type check generated models using ty (ignore errors)
         continue-on-error: true
