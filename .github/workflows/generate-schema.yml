@@ -49,6 +49,7 @@ jobs:
           uv run mypy *.py
 
       - name: Type check generated models using ty (ignore errors)
+        continue-on-error: true
         run: |
           uv run ty check *.py --exit-zero
 
