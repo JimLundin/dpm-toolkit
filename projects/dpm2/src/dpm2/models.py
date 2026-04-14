@@ -8,6 +8,7 @@ import decimal
 import uuid
 from typing import Literal
 
+from dpm2.types import DPMDate, DPMDateTime
 from sqlalchemy import (
     Boolean,
     Column,
@@ -26,7 +27,9 @@ from sqlalchemy.orm import (
     relationship,
 )
 
-_registry = registry()
+_registry = registry(
+    type_annotation_map={datetime.date: DPMDate, datetime.datetime: DPMDateTime},
+)
 
 
 class DPM(metaclass=DeclarativeMeta):
