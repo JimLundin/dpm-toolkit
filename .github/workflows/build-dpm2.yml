@@ -62,9 +62,15 @@ jobs:
         run: uv build --package dpm2 --out-dir dist-dpm2
 
       - name: Test built dpm2 wheel
+        shell: bash {0}
         run: |
           uv pip install --force-reinstall dist-dpm2/*.whl
-          uv run --no-sync pytest projects/dpm2/tests/ -v --tb=short
+          uv run --no-sync pytest projects/dpm2/tests/ -v --tb=short 2>&1 | tee /tmp/test-out.txt
+          EXIT=${PIPESTATUS[0]}
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat /tmp/test-out.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          exit $EXIT
 
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v7
