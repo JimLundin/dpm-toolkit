@@ -109,6 +109,33 @@ class TestGenerateBaseClass:
         code = generate_base_class("Base")
         assert "class Base(metaclass=DeclarativeMeta):" in code
 
+    def test_no_type_annotation_map_when_no_dates(self) -> None:
+        """Without DPM date types in imports the registry() call stays empty."""
+        code = generate_base_class("DPM", imports={})
+        assert "registry()" in code
+        assert "type_annotation_map" not in code
+
+    def test_emits_type_annotation_map_for_dpm_date(self) -> None:
+        """DPMDate usage should register a date → DPMDate mapping."""
+        imports: dict[str, set[str]] = {"dpm2.types": {"DPMDate"}}
+        code = generate_base_class("DPM", imports=imports)
+        assert "type_annotation_map={datetime.date: DPMDate}" in code
+        # datetime import must be recorded so the generated module can use it.
+        assert "datetime" in imports
+
+    def test_emits_type_annotation_map_for_dpm_datetime(self) -> None:
+        """DPMDateTime usage should register a datetime → DPMDateTime mapping."""
+        imports: dict[str, set[str]] = {"dpm2.types": {"DPMDateTime"}}
+        code = generate_base_class("DPM", imports=imports)
+        assert "datetime.datetime: DPMDateTime" in code
+
+    def test_emits_combined_type_annotation_map(self) -> None:
+        """Both date types can coexist in the same type_annotation_map."""
+        imports: dict[str, set[str]] = {"dpm2.types": {"DPMDate", "DPMDateTime"}}
+        code = generate_base_class("DPM", imports=imports)
+        assert "datetime.date: DPMDate" in code
+        assert "datetime.datetime: DPMDateTime" in code
+
 
 # ---------------------------------------------------------------------------
 # Unit tests – Model._generate_base_class (generation.py)
