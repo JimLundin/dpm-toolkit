@@ -4,10 +4,34 @@ import keyword
 from collections import defaultdict
 from re import sub
 
+from sqlalchemy.types import Date, DateTime
+
 from schema.type_conversion import data_type_to_sql, sql_to_python, sql_to_string
 from schema.types import ColumnSchema, DatabaseSchema, ForeignKeySchema, TableSchema
 
 type Imports = dict[str, set[str]]
+
+
+# Name of the hand-written module in the ``dpm2`` package that supplies
+# the custom SQLAlchemy types used by the generated models.
+_DPM_TYPES_MODULE = "dpm2.types"
+
+
+def _register_dpm_type(sql_type: object, imports: Imports) -> str | None:
+    """If ``sql_type`` has a DPM-custom counterpart, record its import.
+
+    Returns the generated-code name for the custom type (e.g. ``"DPMDate"``)
+    or ``None`` if the type needs no customisation. ``DateTime`` is checked
+    before ``Date`` because ``DateTime`` is not a ``Date`` subclass in
+    SQLAlchemy, but an explicit-first-match style is safer.
+    """
+    if isinstance(sql_type, DateTime):
+        imports[_DPM_TYPES_MODULE].add("DPMDateTime")
+        return "DPMDateTime"
+    if isinstance(sql_type, Date):
+        imports[_DPM_TYPES_MODULE].add("DPMDate")
+        return "DPMDate"
+    return None
 
 
 def pascal_case(name: str) -> str:
@@ -81,6 +105,9 @@ def generate_column_definition(column: ColumnSchema, imports: Imports) -> str:
     """Generate mapped_column definition for a column."""
     # Build Python type annotation
     sql_type = data_type_to_sql(column["type"])
+    # Register DPM-custom types (if any) so the registry's type_annotation_map
+    # can route Mapped[date] / Mapped[datetime] through our TypeDecorators.
+    _register_dpm_type(sql_type, imports)
     type_info = sql_to_python(sql_type)
 
     if type_info.module:
@@ -195,13 +222,19 @@ def generate_table_definition(
     # Add columns
     for column in table["columns"]:
         sql_type = data_type_to_sql(column["type"])
-        sql_str = sql_to_string(sql_type)
+        imports["sqlalchemy"].add("Column")
 
-        # Add SQL type to imports
-        imports["sqlalchemy"].update(("Column", sql_type.__class__.__name__))
+        # Prefer DPM-custom types (e.g. DPMDate) when applicable so DD/MM/YYYY
+        # values parse correctly at read time.
+        dpm_name = _register_dpm_type(sql_type, imports)
+        if dpm_name is not None:
+            type_str = dpm_name
+        else:
+            imports["sqlalchemy"].add(sql_type.__class__.__name__)
+            type_str = sql_to_string(sql_type)
 
         args.append(
-            f'Column("{column["name"]}", {sql_str}, nullable={column["nullable"]})',
+            f'Column("{column["name"]}", {type_str}, nullable={column["nullable"]})',
         )
 
     imports["sqlalchemy"].add("Table as AlchemyTable")
@@ -221,14 +254,33 @@ def generate_imports(imports: Imports) -> str:
     return "\n".join(lines)
 
 
-def generate_base_class(base_name: str) -> str:
+def generate_base_class(base_name: str, imports: Imports | None = None) -> str:
     """Generate the base class definition.
 
     We use DeclarativeMeta instead of DeclarativeBase so that subclasses can
     override __mapper_args__ as a ClassVar without a mypy 'misc' error.
     DeclarativeMeta requires an explicit registry and metadata on the base.
+
+    When DPM-custom date types are in use, the registry is constructed with a
+    ``type_annotation_map`` so that ``Mapped[date]`` / ``Mapped[datetime]``
+    annotations on the generated ORM models resolve to our ``TypeDecorator``
+    wrappers (which accept Access-style DD/MM/YYYY strings at read time).
     """
-    return f"""_registry = registry()
+    dpm_types = imports.get(_DPM_TYPES_MODULE, set()) if imports else set()
+    entries: list[str] = []
+    if "DPMDate" in dpm_types:
+        entries.append("datetime.date: DPMDate")
+    if "DPMDateTime" in dpm_types:
+        entries.append("datetime.datetime: DPMDateTime")
+
+    if entries:
+        if imports is not None:
+            imports.setdefault("datetime", set())
+        registry_args = "type_annotation_map={" + ", ".join(entries) + "}"
+    else:
+        registry_args = ""
+
+    return f"""_registry = registry({registry_args})
 
 class {base_name}(metaclass=DeclarativeMeta):
     \"\"\"Base class for all DPM models.\"\"\"
@@ -255,12 +307,17 @@ def schema_to_sqlalchemy(schema: DatabaseSchema) -> str:
         for table in schema["tables"]
     ]
 
+    # Build the base class first so any side-effect imports it adds
+    # (e.g. ``datetime`` for the type_annotation_map) are captured before
+    # rendering the final import block.
+    base_class_code = generate_base_class(base_class, imports)
+
     # Assemble final file
     parts = (
         '"""SQLAlchemy models generated from DPM by the DPM Toolkit project."""',
         "# ruff: noqa: TC001, TC002, TC003",
         generate_imports(imports),
-        generate_base_class(base_class),
+        base_class_code,
         *models,
     )
 
