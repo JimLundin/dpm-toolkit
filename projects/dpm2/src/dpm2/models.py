@@ -1,12 +1,12 @@
 """SQLAlchemy models generated from DPM by the DPM Toolkit project."""
 
-# ruff: noqa: TC003
+# ruff: noqa: TC002, TC003
 from __future__ import annotations
 
 import datetime
 import decimal
 import uuid
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
 from sqlalchemy import (
     Boolean,
@@ -18,6 +18,7 @@ from sqlalchemy import (
 from sqlalchemy import (
     Table as AlchemyTable,
 )
+from sqlalchemy.engine.interfaces import Dialect
 from sqlalchemy.orm import (
     DeclarativeMeta,
     Mapped,
@@ -26,9 +27,6 @@ from sqlalchemy.orm import (
     relationship,
 )
 from sqlalchemy.types import TypeDecorator
-
-if TYPE_CHECKING:
-    from sqlalchemy.engine.interfaces import Dialect
 
 
 class DPMDate(TypeDecorator[datetime.date]):
