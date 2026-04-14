@@ -45,11 +45,8 @@ jobs:
           uv run ruff format *.py
 
       - name: Type check generated models using mypy
-        # ``dpm2`` is not installed here (schema must not depend on dpm2), so
-        # mypy treats ``from dpm2.types import ...`` as an opaque external
-        # import. Every other check still runs.
         run: |
-          uv run mypy --ignore-missing-imports *.py
+          uv run mypy *.py
 
       - name: Type check generated models using ty (ignore errors)
         continue-on-error: true

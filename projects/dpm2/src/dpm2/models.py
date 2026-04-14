@@ -6,7 +6,7 @@ from __future__ import annotations
 import datetime
 import decimal
 import uuid
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from sqlalchemy import (
     Boolean,
@@ -25,8 +25,76 @@ from sqlalchemy.orm import (
     registry,
     relationship,
 )
+from sqlalchemy.types import TypeDecorator
 
-from dpm2.types import DPMDate, DPMDateTime
+if TYPE_CHECKING:
+    from sqlalchemy.engine.interfaces import Dialect
+
+
+class DPMDate(TypeDecorator[datetime.date]):
+    """Date type accepting ISO (YYYY-MM-DD) and Access DD/MM/YYYY strings."""
+
+    impl = String
+    cache_ok = True
+
+    @property
+    def python_type(self) -> type[datetime.date]:
+        """Expose ``date`` for ``type_annotation_map`` resolution."""
+        return datetime.date
+
+    def process_result_value(
+        self,
+        value: datetime.date | str | None,
+        dialect: Dialect,  # noqa: ARG002
+    ) -> datetime.date | None:
+        """Parse a raw SQLite value into a ``date`` at read time."""
+        if value is None:
+            return None
+        if isinstance(value, datetime.datetime):
+            return value.date()
+        if isinstance(value, datetime.date):
+            return value
+        try:
+            return datetime.date.fromisoformat(value)
+        except ValueError:
+            return datetime.datetime.strptime(value, "%d/%m/%Y").date()  # noqa: DTZ007
+
+
+class DPMDateTime(TypeDecorator[datetime.datetime]):
+    """DateTime type accepting ISO and DD/MM/YYYY[ HH:MM:SS] strings."""
+
+    impl = String
+    cache_ok = True
+
+    @property
+    def python_type(self) -> type[datetime.datetime]:
+        """Expose ``datetime`` for ``type_annotation_map`` resolution."""
+        return datetime.datetime
+
+    def process_result_value(
+        self,
+        value: datetime.datetime | datetime.date | str | None,
+        dialect: Dialect,  # noqa: ARG002
+    ) -> datetime.datetime | None:
+        """Parse a raw SQLite value into a ``datetime`` at read time."""
+        if value is None:
+            return None
+        if isinstance(value, datetime.datetime):
+            return value
+        if isinstance(value, datetime.date):
+            return datetime.datetime.combine(value, datetime.datetime.min.time())
+        try:
+            return datetime.datetime.fromisoformat(value)
+        except ValueError:
+            pass
+        try:
+            return datetime.datetime.strptime(  # noqa: DTZ007
+                value,
+                "%d/%m/%Y %H:%M:%S",
+            )
+        except ValueError:
+            return datetime.datetime.strptime(value, "%d/%m/%Y")  # noqa: DTZ007
+
 
 _registry = registry(
     type_annotation_map={datetime.date: DPMDate, datetime.datetime: DPMDateTime},
