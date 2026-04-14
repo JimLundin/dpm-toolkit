@@ -1,0 +1,73 @@
+name: Build DPM2 Package
+
+on:
+  workflow_call:
+    inputs:
+      sqlite_artifact_name:
+        description: "The name of the artifact containing the SQLite database."
+        required: true
+        type: string
+      schema_artifact_name:
+        description: "The name of the artifact containing the generated schema."
+        required: true
+        type: string
+      version:
+        description: "Optional version to set before building (CalVer). Default: unversioned."
+        required: false
+        type: string
+        default: ""
+    outputs:
+      wheel_artifact_name:
+        description: "The name of the uploaded artifact containing the built wheel."
+        value: ${{ inputs.sqlite_artifact_name }}-wheel
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install python
+        run: uv python install
+
+      - name: Install project
+        run: uv sync --dev
+
+      - name: Download SQLite database artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.sqlite_artifact_name }}
+          path: database/
+
+      - name: Download generated schema artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.schema_artifact_name }}
+          path: schema/
+
+      - name: Assemble dpm2 package sources
+        run: |
+          find database -name "*.sqlite" -exec cp {} projects/dpm2/src/dpm2/dpm.sqlite \;
+          find schema -name "*.py" -exec cp {} projects/dpm2/src/dpm2/models.py \;
+
+      - name: Set package version
+        if: inputs.version != ''
+        run: uv version ${{ inputs.version }} --package dpm2
+
+      - name: Build dpm2 wheel
+        run: uv build --package dpm2 --out-dir dist-dpm2
+
+      - name: Test built dpm2 wheel
+        run: |
+          uv pip install --force-reinstall dist-dpm2/*.whl
+          uv run --no-sync pytest projects/dpm2/tests/ -v --tb=short
+
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.sqlite_artifact_name }}-wheel
+          path: dist-dpm2/*.whl
