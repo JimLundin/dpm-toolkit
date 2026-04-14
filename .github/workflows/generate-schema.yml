@@ -53,13 +53,16 @@ jobs:
         run: |
           uv run ty check *.py --exit-zero
 
-      - name: Test generated schema against database
+      - name: Build dpm2 package
         run: |
           SQLITE_FILE=$(find . -name "*.sqlite" -type f | head -1)
           cp "${{ inputs.sqlite_artifact_name }}.py" projects/dpm2/src/dpm2/models.py
           cp "$SQLITE_FILE" projects/dpm2/src/dpm2/dpm.sqlite
-          find projects/dpm2 -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
-          uv pip install -e projects/dpm2
+          uv build --package dpm2 --out-dir dist-dpm2
+
+      - name: Test built dpm2 wheel
+        run: |
+          uv pip install --force-reinstall dist-dpm2/*.whl
           uv run --no-sync pytest projects/dpm2/tests/ -v --tb=short
 
       - name: Generate HTML diagram
