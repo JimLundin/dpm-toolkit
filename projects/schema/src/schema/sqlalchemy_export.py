@@ -4,125 +4,10 @@ import keyword
 from collections import defaultdict
 from re import sub
 
-from sqlalchemy.types import Date, DateTime
-
 from schema.type_conversion import data_type_to_sql, sql_to_python, sql_to_string
 from schema.types import ColumnSchema, DatabaseSchema, ForeignKeySchema, TableSchema
 
 type Imports = dict[str, set[str]]
-type DpmTypes = set[str]
-
-
-# Inlined SQLAlchemy ``TypeDecorator`` sources emitted verbatim into the
-# generated module when the corresponding column type is in use. They stay
-# inline (rather than being imported from a hand-written ``dpm2`` module) so
-# the generated file is fully self-contained — ``schema`` has no runtime or
-# import-time coupling to ``dpm2``.
-_DPM_TYPE_SOURCES: dict[str, str] = {
-    "DPMDate": '''class DPMDate(TypeDecorator[datetime.date]):
-    """Date type accepting ISO date, ISO datetime, and DD/MM/YYYY strings.
-
-    Reflection sometimes types a column as ``Date`` even though the raw
-    TEXT values are full datetime strings (``2023-10-15 00:00:00.000000``).
-    We try ``date`` / ``datetime`` ISO parsers in turn before falling back
-    to the Access DD/MM/YYYY format.
-    """
-
-    impl = String
-    cache_ok = True
-
-    @property
-    def python_type(self) -> type[datetime.date]:
-        """Expose ``date`` for ``type_annotation_map`` resolution."""
-        return datetime.date
-
-    def process_result_value(
-        self,
-        value: datetime.date | str | None,
-        dialect: Dialect,  # noqa: ARG002
-    ) -> datetime.date | None:
-        """Parse a raw SQLite value into a ``date`` at read time."""
-        if value is None:
-            return None
-        if isinstance(value, datetime.datetime):
-            return value.date()
-        if isinstance(value, datetime.date):
-            return value
-        try:
-            return datetime.date.fromisoformat(value)
-        except ValueError:
-            pass
-        try:
-            return datetime.datetime.fromisoformat(value).date()
-        except ValueError:
-            return datetime.datetime.strptime(value, "%d/%m/%Y").date()  # noqa: DTZ007
-''',
-    "DPMDateTime": '''class DPMDateTime(TypeDecorator[datetime.datetime]):
-    """DateTime type accepting ISO and DD/MM/YYYY[ HH:MM:SS] strings."""
-
-    impl = String
-    cache_ok = True
-
-    @property
-    def python_type(self) -> type[datetime.datetime]:
-        """Expose ``datetime`` for ``type_annotation_map`` resolution."""
-        return datetime.datetime
-
-    def process_result_value(
-        self,
-        value: datetime.datetime | datetime.date | str | None,
-        dialect: Dialect,  # noqa: ARG002
-    ) -> datetime.datetime | None:
-        """Parse a raw SQLite value into a ``datetime`` at read time."""
-        if value is None:
-            return None
-        if isinstance(value, datetime.datetime):
-            return value
-        if isinstance(value, datetime.date):
-            return datetime.datetime.combine(value, datetime.datetime.min.time())
-        try:
-            return datetime.datetime.fromisoformat(value)
-        except ValueError:
-            pass
-        try:
-            return datetime.datetime.strptime(  # noqa: DTZ007
-                value,
-                "%d/%m/%Y %H:%M:%S",
-            )
-        except ValueError:
-            return datetime.datetime.strptime(value, "%d/%m/%Y")  # noqa: DTZ007
-''',
-}
-
-
-def _register_dpm_type(
-    sql_type: object,
-    imports: Imports,
-    dpm_types: DpmTypes,
-) -> str | None:
-    """Record usage of a DPM-custom SQLAlchemy type.
-
-    Returns the generated-code name for the custom type (e.g. ``"DPMDate"``)
-    or ``None`` if the type needs no customisation. When a DPM type is used
-    we also register the supporting imports needed by its inlined class
-    definition (``String``, ``TypeDecorator``, ``Dialect``, ``datetime``).
-    ``DateTime`` is checked before ``Date`` because ``DateTime`` is not a
-    ``Date`` subclass in SQLAlchemy, but an explicit-first-match style is
-    safer.
-    """
-    if isinstance(sql_type, DateTime):
-        name = "DPMDateTime"
-    elif isinstance(sql_type, Date):
-        name = "DPMDate"
-    else:
-        return None
-
-    dpm_types.add(name)
-    imports.setdefault("datetime", set())
-    imports["sqlalchemy"].add("String")
-    imports["sqlalchemy.types"].add("TypeDecorator")
-    imports["sqlalchemy.engine.interfaces"].add("Dialect")
-    return name
 
 
 def pascal_case(name: str) -> str:
@@ -192,17 +77,10 @@ def render_foreign_key(
     return f"ForeignKey({ref})"
 
 
-def generate_column_definition(
-    column: ColumnSchema,
-    imports: Imports,
-    dpm_types: DpmTypes,
-) -> str:
+def generate_column_definition(column: ColumnSchema, imports: Imports) -> str:
     """Generate mapped_column definition for a column."""
     # Build Python type annotation
     sql_type = data_type_to_sql(column["type"])
-    # Register DPM-custom types (if any) so the registry's type_annotation_map
-    # can route Mapped[date] / Mapped[datetime] through our TypeDecorators.
-    _register_dpm_type(sql_type, imports, dpm_types)
     type_info = sql_to_python(sql_type)
 
     if type_info.module:
@@ -262,7 +140,6 @@ def generate_class_definition(
     table: TableSchema,
     base_class: str,
     imports: Imports,
-    dpm_types: DpmTypes,
 ) -> str:
     """Generate complete SQLAlchemy class definition for a table."""
     class_name = pascal_case(table["name"])
@@ -280,8 +157,7 @@ def generate_class_definition(
 
     # Generate columns
     lines.extend(
-        generate_column_definition(column, imports, dpm_types)
-        for column in table["columns"]
+        generate_column_definition(column, imports) for column in table["columns"]
     )
     # Add mapper args for RowGUID tables without primary keys
     if not table["primary_keys"] and has_row_guid(table):
@@ -307,7 +183,6 @@ def generate_table_definition(
     table: TableSchema,
     base_class: str,
     imports: Imports,
-    dpm_types: DpmTypes,
 ) -> str:
     """Generate SQLAlchemy Table definition for tables without primary keys."""
     table_name = pascal_case(table["name"])
@@ -321,15 +196,8 @@ def generate_table_definition(
     for column in table["columns"]:
         sql_type = data_type_to_sql(column["type"])
         imports["sqlalchemy"].add("Column")
-
-        # Prefer DPM-custom types (e.g. DPMDate) when applicable so DD/MM/YYYY
-        # values parse correctly at read time.
-        dpm_name = _register_dpm_type(sql_type, imports, dpm_types)
-        if dpm_name is not None:
-            type_str = dpm_name
-        else:
-            imports["sqlalchemy"].add(sql_type.__class__.__name__)
-            type_str = sql_to_string(sql_type)
+        imports["sqlalchemy"].add(sql_type.__class__.__name__)
+        type_str = sql_to_string(sql_type)
 
         args.append(
             f'Column("{column["name"]}", {type_str}, nullable={column["nullable"]})',
@@ -352,33 +220,18 @@ def generate_imports(imports: Imports) -> str:
     return "\n".join(lines)
 
 
-def generate_base_class(
-    base_name: str,
-    dpm_types: DpmTypes | None = None,
-) -> str:
-    """Generate the base class definition.
+def generate_base_class(base_name: str) -> str:
+    """Generate an inline base class definition.
 
-    We use DeclarativeMeta instead of DeclarativeBase so that subclasses can
-    override __mapper_args__ as a ClassVar without a mypy 'misc' error.
-    DeclarativeMeta requires an explicit registry and metadata on the base.
+    Used when the generator is invoked without ``base_import`` so the
+    output is fully self-contained (no dependency on ``dpm2.base``).
 
-    When DPM-custom date types are in use, the registry is constructed with a
-    ``type_annotation_map`` so that ``Mapped[date]`` / ``Mapped[datetime]``
-    annotations on the generated ORM models resolve to our ``TypeDecorator``
-    wrappers (which accept Access-style DD/MM/YYYY strings at read time).
+    We use ``DeclarativeMeta`` instead of ``DeclarativeBase`` so subclasses
+    can override ``__mapper_args__`` as a ``ClassVar`` without a mypy
+    ``misc`` error. ``DeclarativeMeta`` requires an explicit registry and
+    metadata on the base.
     """
-    used = dpm_types or set()
-    entries: list[str] = []
-    if "DPMDate" in used:
-        entries.append("datetime.date: DPMDate")
-    if "DPMDateTime" in used:
-        entries.append("datetime.datetime: DPMDateTime")
-
-    registry_args = (
-        "type_annotation_map={" + ", ".join(entries) + "}" if entries else ""
-    )
-
-    return f"""_registry = registry({registry_args})
+    return f"""_registry = registry()
 
 class {base_name}(metaclass=DeclarativeMeta):
     \"\"\"Base class for all DPM models.\"\"\"
@@ -387,44 +240,54 @@ class {base_name}(metaclass=DeclarativeMeta):
     metadata = _registry.metadata"""
 
 
-def schema_to_sqlalchemy(schema: DatabaseSchema) -> str:
-    """Generate SQLAlchemy models from schema - clean and direct approach."""
+def schema_to_sqlalchemy(
+    schema: DatabaseSchema,
+    base_import: str | None = "dpm2.base",
+) -> str:
+    """Generate SQLAlchemy models from schema.
+
+    When ``base_import`` is set (the default), the generated file imports
+    the ``DPM`` base class from that module (e.g. ``dpm2.base``), keeping
+    the declarative base — and its ``type_annotation_map`` — out of the
+    generated file. This avoids any coupling from the ``schema`` project
+    back into ``dpm2``.
+
+    When ``base_import`` is ``None``, an inline ``DPM`` base class is
+    emitted so the output is fully self-contained (used by ``schema``'s
+    own tests, which exec the generated code in isolation).
+    """
     imports: Imports = defaultdict(set)
     imports["__future__"].add("annotations")
-    imports["sqlalchemy.orm"].update(("DeclarativeMeta", "registry"))
-    dpm_types: DpmTypes = set()
 
     base_class = "DPM"
 
-    # Generate models (force evaluation to populate imports and dpm_types)
+    # Generate models first so they can populate imports.
     models = [
         (
-            generate_class_definition(table, base_class, imports, dpm_types)
+            generate_class_definition(table, base_class, imports)
             if table["primary_keys"] or has_row_guid(table)
-            else generate_table_definition(table, base_class, imports, dpm_types)
+            else generate_table_definition(table, base_class, imports)
         )
         for table in schema["tables"]
     ]
-
-    base_class_code = generate_base_class(base_class, dpm_types)
-
-    # Emit inlined TypeDecorator class bodies for any DPM-custom types in use
-    # so the generated module has no import-time dependency on ``dpm2``.
-    dpm_type_block = "\n".join(
-        _DPM_TYPE_SOURCES[name]
-        for name in ("DPMDate", "DPMDateTime")
-        if name in dpm_types
-    )
 
     # Assemble final file
     parts = [
         '"""SQLAlchemy models generated from DPM by the DPM Toolkit project."""',
         "# ruff: noqa: TC001, TC002, TC003",
-        generate_imports(imports),
     ]
-    if dpm_type_block:
-        parts.append(dpm_type_block)
-    parts.append(base_class_code)
+
+    if base_import is None:
+        imports["sqlalchemy.orm"].update(("DeclarativeMeta", "registry"))
+        parts.append(generate_imports(imports))
+        parts.append(generate_base_class(base_class))
+    else:
+        parts.append(generate_imports(imports))
+        parts.append(
+            f"from {base_import} import {base_class}"
+            "  # type: ignore[import-not-found, unused-ignore]",
+        )
+
     parts.extend(models)
 
     return "\n".join(parts)
