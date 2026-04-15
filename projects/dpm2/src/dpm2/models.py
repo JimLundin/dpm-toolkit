@@ -21,7 +21,12 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 if TYPE_CHECKING:
-    from sqlalchemy.orm import DeclarativeBase as DPM  # noqa: N814
+    from sqlalchemy.orm import DeclarativeMeta
+
+    class DPM(metaclass=DeclarativeMeta):
+        """Type-checking stub mirroring dpm2.base.DPM."""
+
+        __abstract__ = True
 else:
     from dpm2.base import DPM
 

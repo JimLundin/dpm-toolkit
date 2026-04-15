@@ -46,7 +46,15 @@ jobs:
 
       - name: Type check generated models using mypy
         run: |
-          uv run mypy *.py
+          set -o pipefail
+          {
+            echo '## mypy output'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          uv run mypy *.py 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
+          status=${PIPESTATUS[0]}
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
 
       - name: Type check generated models using ty (ignore errors)
         continue-on-error: true

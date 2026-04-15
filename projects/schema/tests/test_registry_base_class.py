@@ -180,25 +180,27 @@ class TestSchemaToSqlalchemyBaseImport:
         code = schema_to_sqlalchemy(schema)
 
         assert "from dpm2.base import DPM" in code
-        # No inline base class/registry
+        # No inline registry construction — the real registry lives in dpm2.base
         assert "_registry = registry()" not in code
-        assert "class DPM(metaclass=DeclarativeMeta)" not in code
 
     def test_default_emits_type_checking_stub(self, simple_db: str) -> None:
-        """The ``if TYPE_CHECKING`` branch aliases DPM to DeclarativeBase.
+        """The ``if TYPE_CHECKING`` branch declares a local DPM stub.
 
-        This keeps strict mypy happy when the environment type-checking the
-        generated file does not have dpm2 installed: ``class X(DPM)`` resolves
-        to ``class X(DeclarativeBase)`` rather than ``class X(Any)``, which
-        would fail ``disallow_subclassing_any``.
+        We use ``DeclarativeMeta`` (not ``DeclarativeBase``) so subclasses
+        can override ``__mapper_args__`` as a ``ClassVar`` without a mypy
+        ``misc`` error. This keeps strict mypy happy when the environment
+        type-checking the generated file does not have dpm2 installed:
+        ``class X(DPM)`` resolves to a real class rather than to ``Any``.
         """
         engine = create_engine(f"sqlite:///{simple_db}")
         schema = sqlite_to_schema(engine)
         code = schema_to_sqlalchemy(schema)
 
         assert "if TYPE_CHECKING:" in code
-        assert "from sqlalchemy.orm import DeclarativeBase as DPM" in code
+        assert "from sqlalchemy.orm import DeclarativeMeta" in code
+        assert "class DPM(metaclass=DeclarativeMeta):" in code
         assert "else:" in code
+        assert "from dpm2.base import DPM" in code
 
     def test_none_emits_inline_base(self, simple_db: str) -> None:
         """``base_import=None`` produces a fully self-contained module."""
