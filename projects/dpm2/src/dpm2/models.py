@@ -30,7 +30,13 @@ from sqlalchemy.types import TypeDecorator
 
 
 class DPMDate(TypeDecorator[datetime.date]):
-    """Date type accepting ISO (YYYY-MM-DD) and Access DD/MM/YYYY strings."""
+    """Date type accepting ISO date, ISO datetime, and DD/MM/YYYY strings.
+
+    Reflection sometimes types a column as ``Date`` even though the raw
+    TEXT values are full datetime strings (``2023-10-15 00:00:00.000000``).
+    We try ``date`` / ``datetime`` ISO parsers in turn before falling back
+    to the Access DD/MM/YYYY format.
+    """
 
     impl = String
     cache_ok = True
@@ -54,6 +60,10 @@ class DPMDate(TypeDecorator[datetime.date]):
             return value
         try:
             return datetime.date.fromisoformat(value)
+        except ValueError:
+            pass
+        try:
+            return datetime.datetime.fromisoformat(value).date()
         except ValueError:
             return datetime.datetime.strptime(value, "%d/%m/%Y").date()  # noqa: DTZ007
 
