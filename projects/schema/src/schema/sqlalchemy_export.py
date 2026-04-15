@@ -282,18 +282,24 @@ def schema_to_sqlalchemy(
         parts.append(generate_imports(imports))
         parts.append(generate_base_class(base_class))
     else:
-        # Split the base import into type-checking and runtime branches:
-        # mypy sees ``DPM`` as SQLAlchemy's ``DeclarativeBase`` (so strict
-        # mode's ``disallow_subclassing_any`` is satisfied even when dpm2
-        # isn't installed in the environment running mypy); at runtime we
-        # import the real ``DPM`` — with its ``type_annotation_map`` — from
-        # ``dpm2.base``.
+        # Split the base import into type-checking and runtime branches.
+        # Under ``TYPE_CHECKING`` we declare a local stub using
+        # ``DeclarativeMeta`` (not ``DeclarativeBase``) so that subclasses
+        # can override ``__mapper_args__`` as a ``ClassVar`` without a
+        # mypy ``misc`` error. This keeps strict mypy green even when the
+        # environment type-checking the generated file does not have
+        # ``dpm2`` installed. At runtime we import the real ``DPM`` —
+        # carrying its ``type_annotation_map`` — from ``dpm2.base``.
         imports["typing"].add("TYPE_CHECKING")
         parts.append(generate_imports(imports))
         parts.append(
             "\nif TYPE_CHECKING:\n"
-            f"    from sqlalchemy.orm import DeclarativeBase as {base_class}"
-            "  # noqa: N814\n"
+            "    from sqlalchemy.orm import DeclarativeMeta\n"
+            "\n"
+            f"    class {base_class}(metaclass=DeclarativeMeta):\n"
+            f'        """Type-checking stub mirroring {base_import}.{base_class}."""\n'
+            "\n"
+            "        __abstract__ = True\n"
             "else:\n"
             f"    from {base_import} import {base_class}",
         )
