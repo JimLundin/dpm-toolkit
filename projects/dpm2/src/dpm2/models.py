@@ -1,6 +1,6 @@
 """SQLAlchemy models generated from DPM by the DPM Toolkit project."""
 
-# ruff: noqa: TC002, TC003
+# ruff: noqa: TC003
 from __future__ import annotations
 
 import datetime
@@ -18,103 +18,13 @@ from sqlalchemy import (
 from sqlalchemy import (
     Table as AlchemyTable,
 )
-from sqlalchemy.engine.interfaces import Dialect
 from sqlalchemy.orm import (
-    DeclarativeMeta,
     Mapped,
     mapped_column,
-    registry,
     relationship,
 )
-from sqlalchemy.types import TypeDecorator
 
-
-class DPMDate(TypeDecorator[datetime.date]):
-    """Date type accepting ISO date, ISO datetime, and DD/MM/YYYY strings.
-
-    Reflection sometimes types a column as ``Date`` even though the raw
-    TEXT values are full datetime strings (``2023-10-15 00:00:00.000000``).
-    We try ``date`` / ``datetime`` ISO parsers in turn before falling back
-    to the Access DD/MM/YYYY format.
-    """
-
-    impl = String
-    cache_ok = True
-
-    @property
-    def python_type(self) -> type[datetime.date]:
-        """Expose ``date`` for ``type_annotation_map`` resolution."""
-        return datetime.date
-
-    def process_result_value(
-        self,
-        value: datetime.date | str | None,
-        dialect: Dialect,  # noqa: ARG002
-    ) -> datetime.date | None:
-        """Parse a raw SQLite value into a ``date`` at read time."""
-        if value is None:
-            return None
-        if isinstance(value, datetime.datetime):
-            return value.date()
-        if isinstance(value, datetime.date):
-            return value
-        try:
-            return datetime.date.fromisoformat(value)
-        except ValueError:
-            pass
-        try:
-            return datetime.datetime.fromisoformat(value).date()
-        except ValueError:
-            return datetime.datetime.strptime(value, "%d/%m/%Y").date()  # noqa: DTZ007
-
-
-class DPMDateTime(TypeDecorator[datetime.datetime]):
-    """DateTime type accepting ISO and DD/MM/YYYY[ HH:MM:SS] strings."""
-
-    impl = String
-    cache_ok = True
-
-    @property
-    def python_type(self) -> type[datetime.datetime]:
-        """Expose ``datetime`` for ``type_annotation_map`` resolution."""
-        return datetime.datetime
-
-    def process_result_value(
-        self,
-        value: datetime.datetime | datetime.date | str | None,
-        dialect: Dialect,  # noqa: ARG002
-    ) -> datetime.datetime | None:
-        """Parse a raw SQLite value into a ``datetime`` at read time."""
-        if value is None:
-            return None
-        if isinstance(value, datetime.datetime):
-            return value
-        if isinstance(value, datetime.date):
-            return datetime.datetime.combine(value, datetime.datetime.min.time())
-        try:
-            return datetime.datetime.fromisoformat(value)
-        except ValueError:
-            pass
-        try:
-            return datetime.datetime.strptime(  # noqa: DTZ007
-                value,
-                "%d/%m/%Y %H:%M:%S",
-            )
-        except ValueError:
-            return datetime.datetime.strptime(value, "%d/%m/%Y")  # noqa: DTZ007
-
-
-_registry = registry(
-    type_annotation_map={datetime.date: DPMDate, datetime.datetime: DPMDateTime},
-)
-
-
-class DPM(metaclass=DeclarativeMeta):
-    """Base class for all DPM models."""
-
-    __abstract__ = True
-    registry = _registry
-    metadata = _registry.metadata
+from dpm2.base import DPM  # type: ignore[import-not-found, unused-ignore]
 
 
 class AuxCellMapping(DPM):

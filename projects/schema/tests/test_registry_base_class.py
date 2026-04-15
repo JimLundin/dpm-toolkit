@@ -71,9 +71,10 @@ def _import_generated_code(code: str, module_name: str) -> ModuleType:
     """Write generated code to a temp file and import it as a real module.
 
     This ensures ``from __future__ import annotations`` resolves correctly
-    and SQLAlchemy can find ``Mapped`` in the module's namespace. The
-    generated code is fully self-contained (stdlib + sqlalchemy only), so
-    no external package needs to be stubbed in.
+    and SQLAlchemy can find ``Mapped`` in the module's namespace. We pass
+    ``base_import=None`` when generating the code so the output is fully
+    self-contained (stdlib + sqlalchemy only); no external package needs
+    to be stubbed in.
     """
     with tempfile.NamedTemporaryFile(
         suffix=".py",
@@ -128,28 +129,6 @@ class TestGenerateBaseClass:
         code = generate_base_class("Base")
         assert "class Base(metaclass=DeclarativeMeta):" in code
 
-    def test_no_type_annotation_map_when_no_dates(self) -> None:
-        """Without DPM date types the registry() call stays empty."""
-        code = generate_base_class("DPM", dpm_types=set())
-        assert "registry()" in code
-        assert "type_annotation_map" not in code
-
-    def test_emits_type_annotation_map_for_dpm_date(self) -> None:
-        """DPMDate usage should register a date → DPMDate mapping."""
-        code = generate_base_class("DPM", dpm_types={"DPMDate"})
-        assert "type_annotation_map={datetime.date: DPMDate}" in code
-
-    def test_emits_type_annotation_map_for_dpm_datetime(self) -> None:
-        """DPMDateTime usage should register a datetime → DPMDateTime mapping."""
-        code = generate_base_class("DPM", dpm_types={"DPMDateTime"})
-        assert "datetime.datetime: DPMDateTime" in code
-
-    def test_emits_combined_type_annotation_map(self) -> None:
-        """Both date types can coexist in the same type_annotation_map."""
-        code = generate_base_class("DPM", dpm_types={"DPMDate", "DPMDateTime"})
-        assert "datetime.date: DPMDate" in code
-        assert "datetime.datetime: DPMDateTime" in code
-
 
 # ---------------------------------------------------------------------------
 # Unit tests – Model._generate_base_class (generation.py)
@@ -187,6 +166,55 @@ class TestModelGenerateBaseClass:
 
 
 # ---------------------------------------------------------------------------
+# Unit tests - schema_to_sqlalchemy ``base_import`` parameter
+# ---------------------------------------------------------------------------
+
+
+class TestSchemaToSqlalchemyBaseImport:
+    """The ``base_import`` parameter controls whether the base is inlined."""
+
+    def test_default_emits_base_import(self, simple_db: str) -> None:
+        """By default the generated file imports DPM from ``dpm2.base``."""
+        engine = create_engine(f"sqlite:///{simple_db}")
+        schema = sqlite_to_schema(engine)
+        code = schema_to_sqlalchemy(schema)
+
+        assert "from dpm2.base import DPM" in code
+        # No inline base class/registry
+        assert "_registry = registry()" not in code
+        assert "class DPM(metaclass=DeclarativeMeta)" not in code
+
+    def test_default_import_has_type_ignore(self, simple_db: str) -> None:
+        """The base import must carry a type-ignore for the schema CI mypy run."""
+        engine = create_engine(f"sqlite:///{simple_db}")
+        schema = sqlite_to_schema(engine)
+        code = schema_to_sqlalchemy(schema)
+
+        assert (
+            "from dpm2.base import DPM"
+            "  # type: ignore[import-not-found, unused-ignore]"
+        ) in code
+
+    def test_none_emits_inline_base(self, simple_db: str) -> None:
+        """``base_import=None`` produces a fully self-contained module."""
+        engine = create_engine(f"sqlite:///{simple_db}")
+        schema = sqlite_to_schema(engine)
+        code = schema_to_sqlalchemy(schema, base_import=None)
+
+        assert "from dpm2.base" not in code
+        assert "_registry = registry()" in code
+        assert "class DPM(metaclass=DeclarativeMeta)" in code
+
+    def test_custom_base_import(self, simple_db: str) -> None:
+        """A custom module path can be supplied as ``base_import``."""
+        engine = create_engine(f"sqlite:///{simple_db}")
+        schema = sqlite_to_schema(engine)
+        code = schema_to_sqlalchemy(schema, base_import="myapp.base")
+
+        assert "from myapp.base import DPM" in code
+
+
+# ---------------------------------------------------------------------------
 # Integration – generated code can be imported without InvalidRequestError
 # ---------------------------------------------------------------------------
 
@@ -202,17 +230,17 @@ class TestGeneratedCodeImportable:
         """Generated code from schema_to_sqlalchemy should import cleanly."""
         engine = create_engine(f"sqlite:///{simple_db}")
         schema = sqlite_to_schema(engine)
-        code = schema_to_sqlalchemy(schema)
+        code = schema_to_sqlalchemy(schema, base_import=None)
 
         module = _import_generated_code(code, "_test_registry_schema")
         assert hasattr(module, "DPM")
         assert hasattr(module, "Items")
 
     def test_full_schema_imports_registry(self, simple_db: str) -> None:
-        """Generated code should import both DeclarativeMeta and registry."""
+        """Inline-base output should import both DeclarativeMeta and registry."""
         engine = create_engine(f"sqlite:///{simple_db}")
         schema = sqlite_to_schema(engine)
-        code = schema_to_sqlalchemy(schema)
+        code = schema_to_sqlalchemy(schema, base_import=None)
 
         assert "from sqlalchemy.orm import" in code
         assert "DeclarativeMeta" in code
@@ -267,7 +295,7 @@ class TestDateTimeTypesImportable:
         """schema_to_sqlalchemy output should import without MappedAnnotationError."""
         engine = create_engine(f"sqlite:///{typed_db}")
         schema = sqlite_to_schema(engine)
-        code = schema_to_sqlalchemy(schema)
+        code = schema_to_sqlalchemy(schema, base_import=None)
 
         module = _import_generated_code(code, "_test_schema_dates")
         assert hasattr(module, "Events")
