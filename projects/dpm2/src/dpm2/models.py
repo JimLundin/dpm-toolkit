@@ -6,7 +6,7 @@ from __future__ import annotations
 import datetime
 import decimal
 import uuid
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from sqlalchemy import (
     Boolean,
@@ -24,7 +24,10 @@ from sqlalchemy.orm import (
     relationship,
 )
 
-from dpm2.base import DPM  # type: ignore[import-not-found, unused-ignore]
+if TYPE_CHECKING:
+    from sqlalchemy.orm import DeclarativeBase as DPM  # noqa: N814
+else:
+    from dpm2.base import DPM
 
 
 class AuxCellMapping(DPM):

@@ -173,8 +173,8 @@ class TestModelGenerateBaseClass:
 class TestSchemaToSqlalchemyBaseImport:
     """The ``base_import`` parameter controls whether the base is inlined."""
 
-    def test_default_emits_base_import(self, simple_db: str) -> None:
-        """By default the generated file imports DPM from ``dpm2.base``."""
+    def test_default_emits_runtime_base_import(self, simple_db: str) -> None:
+        """By default the runtime branch imports DPM from ``dpm2.base``."""
         engine = create_engine(f"sqlite:///{simple_db}")
         schema = sqlite_to_schema(engine)
         code = schema_to_sqlalchemy(schema)
@@ -184,16 +184,21 @@ class TestSchemaToSqlalchemyBaseImport:
         assert "_registry = registry()" not in code
         assert "class DPM(metaclass=DeclarativeMeta)" not in code
 
-    def test_default_import_has_type_ignore(self, simple_db: str) -> None:
-        """The base import must carry a type-ignore for the schema CI mypy run."""
+    def test_default_emits_type_checking_stub(self, simple_db: str) -> None:
+        """The ``if TYPE_CHECKING`` branch aliases DPM to DeclarativeBase.
+
+        This keeps strict mypy happy when the environment type-checking the
+        generated file does not have dpm2 installed: ``class X(DPM)`` resolves
+        to ``class X(DeclarativeBase)`` rather than ``class X(Any)``, which
+        would fail ``disallow_subclassing_any``.
+        """
         engine = create_engine(f"sqlite:///{simple_db}")
         schema = sqlite_to_schema(engine)
         code = schema_to_sqlalchemy(schema)
 
-        assert (
-            "from dpm2.base import DPM"
-            "  # type: ignore[import-not-found, unused-ignore]"
-        ) in code
+        assert "if TYPE_CHECKING:" in code
+        assert "from sqlalchemy.orm import DeclarativeBase as DPM" in code
+        assert "else:" in code
 
     def test_none_emits_inline_base(self, simple_db: str) -> None:
         """``base_import=None`` produces a fully self-contained module."""
@@ -204,6 +209,8 @@ class TestSchemaToSqlalchemyBaseImport:
         assert "from dpm2.base" not in code
         assert "_registry = registry()" in code
         assert "class DPM(metaclass=DeclarativeMeta)" in code
+        # No TYPE_CHECKING split when the base is inline
+        assert "if TYPE_CHECKING:" not in code
 
     def test_custom_base_import(self, simple_db: str) -> None:
         """A custom module path can be supplied as ``base_import``."""
