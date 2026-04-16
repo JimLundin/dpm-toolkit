@@ -184,8 +184,10 @@ def download(version_id: str, variant: SourceType = "archive") -> None:
     try:
         database_source = get_source(version, variant)
     except ValueError:
-        print_error("Failed to download from archive, downloading from source.")
-        database_source = get_source(version, "original")
+        print_error(
+            f"Version '{version_id}' has no '{variant}' source configured.",
+        )
+        sys.exit(1)
 
     with Progress(
         SpinnerColumn(),
