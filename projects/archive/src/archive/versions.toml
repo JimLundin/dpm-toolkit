@@ -131,6 +131,8 @@ type = "hotfix"
 semver = "4.2.0+hotfix.1"
 date = 2026-01-13
 original = { url = "https://www.eba.europa.eu/sites/default/files/2026-01/e668e399-7c0e-418a-bd3b-bfa573fa2b2a/DPM2%20Database_v%204_2_hotfix.zip", checksum = "sha256:66b0ce493f2239b6db4fe5069980280aaf0e48d47add15704f94fe472ae80699" }
+archive = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-4.2-hotfix/dpm-4.2-hotfix-archive.zip", checksum = "sha256:22f9bc19a5cc127b92da37947a0076e01c2f9c36ab99cc61168af50c34d9e28c" }
+converted = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-4.2-hotfix/dpm-4.2-hotfix-sqlite.zip", checksum = "sha256:7ccfd7b7d553626975848a9e48ef05320796f5d97acb92286e382eca25c1d858" }
 
 [[versions]]
 id = "4.2-errata-1"
