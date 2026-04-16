@@ -10,11 +10,16 @@ jobs:
     uses: ./.github/workflows/build-database.yml
     with:
       version_id: "release"
-      include_analyze: false
-      include_compare: false
+
+  build-dpm2:
+    needs: build-database
+    uses: ./.github/workflows/build-dpm2.yml
+    with:
+      sqlite_artifact_name: ${{ needs.build-database.outputs.database_artifact_name }}
+      schema_artifact_name: ${{ needs.build-database.outputs.schema_artifact_name }}
 
   update-models:
-    needs: build-database
+    needs: [build-database, build-dpm2]
     runs-on: ubuntu-latest
     permissions:
       contents: write

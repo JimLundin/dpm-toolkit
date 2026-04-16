@@ -33,13 +33,47 @@ jobs:
         run: |
           echo version_ids={\"includes\":$(uv run dpm-toolkit versions --fmt json | jq 'map(.id)')} >> $GITHUB_OUTPUT
 
-  build-versions:
+  build-database:
     needs: list-versions
     strategy:
       matrix: ${{ fromJson(needs.list-versions.outputs.version_ids) }}
       # Allow other versions to build even if one fails
       fail-fast: false
-
     uses: ./.github/workflows/build-database.yml
     with:
       version_id: ${{ matrix.includes }}
+
+  # Downstream matrixed jobs reconstruct artifact names from matrix.includes
+  # because GitHub Actions cannot pass per-matrix-iteration outputs between
+  # reusable-workflow jobs. The naming scheme here matches the outputs of
+  # build-database.yml (which chains download -> migrate -> schema).
+  build-dpm2:
+    needs: [list-versions, build-database]
+    strategy:
+      matrix: ${{ fromJson(needs.list-versions.outputs.version_ids) }}
+      fail-fast: false
+    uses: ./.github/workflows/build-dpm2.yml
+    with:
+      sqlite_artifact_name: ${{ matrix.includes }}-archive-sqlite
+      schema_artifact_name: ${{ matrix.includes }}-archive-sqlite-schema
+
+  analyze:
+    needs: [list-versions, build-database]
+    strategy:
+      matrix: ${{ fromJson(needs.list-versions.outputs.version_ids) }}
+      fail-fast: false
+    uses: ./.github/workflows/analyze-database.yml
+    with:
+      sqlite_artifact_name: ${{ matrix.includes }}-archive-sqlite
+      confidence_threshold: "0.8"
+
+  compare:
+    needs: [list-versions, build-database]
+    strategy:
+      matrix: ${{ fromJson(needs.list-versions.outputs.version_ids) }}
+      fail-fast: false
+    uses: ./.github/workflows/compare-previous.yml
+    with:
+      version_id: ${{ matrix.includes }}
+      current_database_artifact_name: ${{ matrix.includes }}-archive-sqlite
+      output_format: "html"
