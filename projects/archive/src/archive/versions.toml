@@ -143,3 +143,5 @@ semver = "4.2.1"
 date = 2026-02-27
 revision = 1
 original = { url = "https://www.eba.europa.eu/sites/default/files/2026-02/ad0d2577-a1eb-4826-a249-a1f7701c6796/DPM2%20Database_v_4_2_1.zip", checksum = "sha256:0d1c0e608c98f01dc338a98e8e5f700c0fa2a2437cbef724fb8fc52618b4b74d" }
+archive = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-4.2-errata-1/dpm-4.2-errata-1-archive.zip", checksum = "sha256:400f534ef8e98d8af290c0e19bc3fc57ae7ed1418e91a0a2a58d4a23842c7493" }
+converted = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-4.2-errata-1/dpm-4.2-errata-1-sqlite.zip", checksum = "sha256:8448571bb6463147cee03809b70086d4ebbffa36ca433be4858332750ef3619d" }
