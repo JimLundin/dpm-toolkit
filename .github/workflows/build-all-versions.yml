@@ -1,11 +1,17 @@
 name: Build All Database Versions
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [main, develop]
   pull_request:
     branches: [main]
   workflow_dispatch: # Allow manual trigger
+
+permissions:
+  contents: read
 
 jobs:
   list-versions:
