@@ -7,21 +7,6 @@ on:
         description: "The version ID to build."
         required: true
         type: string
-      include_analyze:
-        description: "Whether to run type refinement analysis."
-        required: false
-        type: boolean
-        default: true
-      include_compare:
-        description: "Whether to run comparison with previous version."
-        required: false
-        type: boolean
-        default: true
-      include_build_dpm2:
-        description: "Whether to build (and test) the dpm2 wheel."
-        required: false
-        type: boolean
-        default: true
     outputs:
       database_artifact_name:
         description: "The name of the uploaded artifact containing the SQLite database"
@@ -29,12 +14,6 @@ on:
       schema_artifact_name:
         description: "The name of the uploaded artifact containing the generated schema"
         value: ${{ jobs.schema.outputs.artifact_name }}
-      wheel_artifact_name:
-        description: "The name of the uploaded artifact containing the built dpm2 wheel"
-        value: ${{ jobs.build-dpm2.outputs.wheel_artifact_name }}
-      analysis_artifact_name:
-        description: "The name of the uploaded artifact containing the type analysis reports"
-        value: ${{ jobs.analyze.outputs.artifact_name }}
 
 jobs:
   download:
@@ -54,28 +33,3 @@ jobs:
     uses: ./.github/workflows/generate-schema.yml
     with:
       sqlite_artifact_name: ${{ needs.migrate.outputs.artifact_name }}
-
-  build-dpm2:
-    if: ${{ inputs.include_build_dpm2 }}
-    needs: [migrate, schema]
-    uses: ./.github/workflows/build-dpm2.yml
-    with:
-      sqlite_artifact_name: ${{ needs.migrate.outputs.artifact_name }}
-      schema_artifact_name: ${{ needs.schema.outputs.artifact_name }}
-
-  analyze:
-    if: ${{ inputs.include_analyze }}
-    needs: migrate
-    uses: ./.github/workflows/analyze-database.yml
-    with:
-      sqlite_artifact_name: ${{ needs.migrate.outputs.artifact_name }}
-      confidence_threshold: "0.8"
-
-  compare:
-    if: ${{ inputs.include_compare }}
-    needs: migrate
-    uses: ./.github/workflows/compare-previous.yml
-    with:
-      version_id: ${{ inputs.version_id }}
-      current_database_artifact_name: ${{ needs.migrate.outputs.artifact_name }}
-      output_format: "html"
