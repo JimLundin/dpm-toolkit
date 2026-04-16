@@ -17,6 +17,11 @@ on:
         required: false
         type: boolean
         default: true
+      include_build_dpm2:
+        description: "Whether to build (and test) the dpm2 wheel."
+        required: false
+        type: boolean
+        default: true
     outputs:
       database_artifact_name:
         description: "The name of the uploaded artifact containing the SQLite database"
@@ -51,6 +56,7 @@ jobs:
       sqlite_artifact_name: ${{ needs.migrate.outputs.artifact_name }}
 
   build-dpm2:
+    if: ${{ inputs.include_build_dpm2 }}
     needs: [migrate, schema]
     uses: ./.github/workflows/build-dpm2.yml
     with:
