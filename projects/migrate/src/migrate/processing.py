@@ -18,6 +18,7 @@ from sqlalchemy.schema import CheckConstraint
 from migrate.transformations import (
     Rows,
     add_foreign_keys_to_table,
+    heal_cross_table_foreign_keys,
     parse_rows,
 )
 
@@ -87,6 +88,8 @@ def schema_and_data(access_database: Engine) -> tuple[MetaData, TablesWithRows]:
 
             if rows_list:
                 tables_with_rows.append((table, rows_list))
+
+    heal_cross_table_foreign_keys(schema)
 
     return schema, tables_with_rows
 

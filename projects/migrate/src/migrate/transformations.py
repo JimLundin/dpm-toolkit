@@ -5,7 +5,7 @@ from collections.abc import Iterator
 from typing import Any
 
 from schema.type_registry import enum_candidate
-from sqlalchemy import Column, ForeignKey, Row, Table
+from sqlalchemy import Column, ForeignKey, MetaData, Row, Table
 
 type Row_ = dict[str, Any]
 type Rows = list[Row_]
@@ -85,3 +85,39 @@ def add_foreign_keys_to_table(table: Table) -> None:
     # GroupOperID uses a truncated name (OperID ≠ OperationID), so the
     # ends-with-PK heuristic above cannot detect it automatically.
     add_foreign_key_to_table(table, "GroupOperID", "Operation.OperationID")
+
+
+def heal_cross_table_foreign_keys(schema: MetaData) -> None:
+    """Link columns that share a name with another table's single-column PK.
+
+    Some source releases ship tables whose FK constraints were dropped or
+    never declared (e.g. 4.3-draft lost ``ChangeLogAttribute.ActionID`` →
+    ``ChangeLog.ActionID``). The DPM schema uses globally unique PK names
+    (``ItemID``, ``ContextID``, ``AttributeID``...), so whenever a PK name
+    identifies exactly one table we can safely link same-named columns to
+    it. PK names shared across tables (e.g. ``OperationVID`` appears on
+    both ``OperationVersion`` and ``OperationVersionData``) stay untouched.
+    """
+    pk_owners: dict[str, list[tuple[Table, Column[Any]]]] = defaultdict(list)
+    for table in schema.tables.values():
+        pk_cols = list(table.primary_key.columns)
+        if len(pk_cols) == 1:
+            pk_owners[pk_cols[0].name].append((table, pk_cols[0]))
+
+    unique_targets = {
+        pk_name: owners[0] for pk_name, owners in pk_owners.items() if len(owners) == 1
+    }
+
+    for table in schema.tables.values():
+        for column in table.columns:
+            if column.foreign_keys:
+                continue
+            target = unique_targets.get(column.name)
+            if target is None:
+                continue
+            target_table, target_column = target
+            if target_table is table:
+                continue
+            column.append_foreign_key(
+                ForeignKey(f"{target_table.name}.{target_column.name}"),
+            )
