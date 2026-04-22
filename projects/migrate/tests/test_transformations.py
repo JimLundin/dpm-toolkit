@@ -37,11 +37,11 @@ def test_heal_links_columns_to_unique_pk_targets() -> None:
     assert ctx_fk.target_fullname == "Context.ContextID"
 
 
-def test_heal_skips_ambiguous_primary_key_names() -> None:
-    """Shared PK names across tables leave referring columns untouched."""
+def test_heal_prefers_prefix_named_table_as_canonical_owner() -> None:
+    """When one candidate name prefixes the others, it wins the FK target."""
     metadata = MetaData()
-    _single_pk_table(metadata, "OperationVersion", "OperationVID")
-    _single_pk_table(metadata, "OperationVersionData", "OperationVID")
+    canonical = _single_pk_table(metadata, "OperationVersion", "OperationVID")
+    extension = _single_pk_table(metadata, "OperationVersionData", "OperationVID")
     referrer = Table(
         "Referrer",
         metadata,
@@ -51,7 +51,28 @@ def test_heal_skips_ambiguous_primary_key_names() -> None:
 
     heal_cross_table_foreign_keys(metadata)
 
-    assert not referrer.columns["OperationVID"].foreign_keys
+    assert not canonical.columns["OperationVID"].foreign_keys
+    extension_fk = next(iter(extension.columns["OperationVID"].foreign_keys))
+    referrer_fk = next(iter(referrer.columns["OperationVID"].foreign_keys))
+    assert extension_fk.target_fullname == "OperationVersion.OperationVID"
+    assert referrer_fk.target_fullname == "OperationVersion.OperationVID"
+
+
+def test_heal_skips_unrelated_shared_primary_key_names() -> None:
+    """Shared PK names on unrelated tables leave referring columns alone."""
+    metadata = MetaData()
+    _single_pk_table(metadata, "Foo", "SharedID")
+    _single_pk_table(metadata, "Bar", "SharedID")
+    referrer = Table(
+        "Referrer",
+        metadata,
+        Column("ID", Integer, primary_key=True),
+        Column("SharedID", Integer),
+    )
+
+    heal_cross_table_foreign_keys(metadata)
+
+    assert not referrer.columns["SharedID"].foreign_keys
 
 
 def test_heal_does_not_self_reference() -> None:
