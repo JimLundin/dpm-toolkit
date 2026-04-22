@@ -154,3 +154,5 @@ type = "draft"
 semver = "4.3.0-beta.1"
 date = 2026-04-16
 original = { url = "https://www.eba.europa.eu/sites/default/files/2026-04/a0cbe984-bb81-4546-bb27-a1cb87b8603a/DPM2%20Database_v4.3_draft.accdb_.zip", checksum = "sha256:edb25fb5273c4a4728028c33ec542fadbdb12bcc9b764ba22e067fdd022325ba" }
+archive = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-4.3-draft/dpm-4.3-draft-archive.zip", checksum = "sha256:672eebacfee9674e1891dc0efab8db5d6bdd964f31ae14c88c66ebf8852111e2" }
+converted = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-4.3-draft/dpm-4.3-draft-sqlite.zip", checksum = "sha256:07544a35b5c73f1122b928c13d1848931ea812894043068e3066d03a23d85a46" }
