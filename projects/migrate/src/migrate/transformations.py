@@ -153,6 +153,4 @@ def heal_cross_table_foreign_keys(schema: MetaData) -> None:
             target_table, target_column = target
             if target_table is table:
                 continue
-            column.append_foreign_key(
-                ForeignKey(f"{target_table.name}.{target_column.name}"),
-            )
+            column.append_foreign_key(ForeignKey(target_column))
