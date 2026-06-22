@@ -25,7 +25,7 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Download generated schema
         uses: actions/download-artifact@v8
