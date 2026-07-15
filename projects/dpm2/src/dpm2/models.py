@@ -6,12 +6,12 @@ from __future__ import annotations
 import datetime
 import decimal
 import uuid
-from typing import TYPE_CHECKING, ClassVar, Literal
+from typing import TYPE_CHECKING, Literal
 
 from sqlalchemy import (
     Boolean,
     Column,
-    Date,
+    Enum,
     ForeignKey,
     Integer,
     String,
@@ -30,21 +30,6 @@ if TYPE_CHECKING:
         __abstract__ = True
 else:
     from dpm2.base import DPM
-ATTT2Hierarchies = AlchemyTable(
-    "ATTT2Hierarchies",
-    DPM.metadata,
-    Column("DomainLabel", String(255), nullable=False),
-    Column("HierarchyCode", String(255), nullable=False),
-    Column("Name", String(255), nullable=False),
-    Column("Level", Integer, nullable=True),
-    Column("Description", String(255), nullable=True),
-    Column("Structure", String(255), nullable=True),
-    Column("FromReportingDate", Date, nullable=False),
-    Column("ToReportingDate", Date, nullable=True),
-    Column("DomainCode", String(255), nullable=False),
-    Column("MemberCode", String(255), nullable=False),
-    Column("taxonomycode", String(255), nullable=True),
-)
 
 
 class AuxCellMapping(DPM):
@@ -141,30 +126,30 @@ ModelViolations = AlchemyTable(
     Column("ViolationCode", String(255), nullable=False),
     Column("Violation", String(255), nullable=False),
     Column("isBlocking", Boolean, nullable=False),
-    Column("TableVID", Integer, nullable=False),
-    Column("OldTableVID", Integer, nullable=False),
-    Column("TableCode", String(255), nullable=False),
-    Column("HeaderID", Integer, nullable=False),
-    Column("HeaderCode", String(255), nullable=False),
-    Column("HeaderVID", Integer, nullable=False),
-    Column("OldHeaderVID", Integer, nullable=False),
-    Column("KeyHeader", Integer, nullable=False),
-    Column("HeaderDirection", String(255), nullable=False),
+    Column("TableVID", Integer, nullable=True),
+    Column("OldTableVID", Integer, nullable=True),
+    Column("TableCode", String(255), nullable=True),
+    Column("HeaderID", Integer, nullable=True),
+    Column("HeaderCode", String(255), nullable=True),
+    Column("HeaderVID", Integer, nullable=True),
+    Column("OldHeaderVID", Integer, nullable=True),
+    Column("KeyHeader", Boolean, nullable=False),
+    Column("HeaderDirection", Enum("X"), nullable=True),
     Column("HeaderPropertyID", Integer, nullable=False),
-    Column("HeaderPropertyCode", String(255), nullable=False),
-    Column("HeaderSubcategoryID", Integer, nullable=False),
-    Column("HeaderSubcategoryName", String(255), nullable=False),
-    Column("HeaderContextID", Integer, nullable=False),
-    Column("CategoryID", Integer, nullable=False),
-    Column("CategoryCode", String(255), nullable=False),
-    Column("ItemID", Integer, nullable=False),
-    Column("ItemCode", String(255), nullable=False),
-    Column("CellID", Integer, nullable=False),
-    Column("CellCode", String(255), nullable=False),
-    Column("Cell2ID", Integer, nullable=False),
-    Column("Cell2Code", String(255), nullable=False),
-    Column("VVEndReleaseID", Integer, nullable=False),
-    Column("NewAspect", String(255), nullable=False),
+    Column("HeaderPropertyCode", String(255), nullable=True),
+    Column("HeaderSubcategoryID", Integer, nullable=True),
+    Column("HeaderSubcategoryName", String(255), nullable=True),
+    Column("HeaderContextID", Integer, nullable=True),
+    Column("CategoryID", Integer, nullable=True),
+    Column("CategoryCode", String(255), nullable=True),
+    Column("ItemID", Integer, nullable=True),
+    Column("ItemCode", String(255), nullable=True),
+    Column("CellID", Integer, nullable=True),
+    Column("CellCode", String(255), nullable=True),
+    Column("Cell2ID", Integer, nullable=True),
+    Column("Cell2Code", String(255), nullable=True),
+    Column("VVEndReleaseID", Integer, nullable=True),
+    Column("NewAspect", String(255), nullable=True),
 )
 
 
@@ -203,6 +188,7 @@ class Organisation(DPM):
         ForeignKey(Concept.concept_guid),
     )
     org_id: Mapped[int] = mapped_column("OrgID", primary_key=True)
+    url: Mapped[str | None] = mapped_column("URL")
 
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
 
@@ -441,47 +427,6 @@ class OperatorArgument(DPM):
     operator: Mapped[Operator] = relationship(foreign_keys=operator_id)
 
 
-class PSCurrentItemCategory(DPM):
-    """Auto-generated model for the PSCurrentItemCategory table."""
-
-    __tablename__ = "PSCurrentItemCategory"
-
-    item_id: Mapped[int] = mapped_column("ItemID")
-    start_release_id: Mapped[int] = mapped_column("StartReleaseID")
-    category_id: Mapped[int] = mapped_column("CategoryID")
-    code: Mapped[str] = mapped_column("Code")
-    is_default_item: Mapped[bool] = mapped_column("IsDefaultItem")
-    signature: Mapped[str] = mapped_column("Signature")
-    end_release_id: Mapped[int | None] = mapped_column("EndReleaseID")
-    row_guid: Mapped[uuid.UUID | None] = mapped_column(
-        "RowGUID",
-        ForeignKey(Concept.concept_guid),
-    )
-
-    __mapper_args__: ClassVar = {"primary_key": (row_guid,)}
-
-    unique_concept: Mapped[Concept | None] = relationship(foreign_keys=row_guid)
-
-
-class PSCurrentPropertyCategory(DPM):
-    """Auto-generated model for the PSCurrentPropertyCategory table."""
-
-    __tablename__ = "PSCurrentPropertyCategory"
-
-    property_id: Mapped[int] = mapped_column("PropertyID")
-    start_release_id: Mapped[int] = mapped_column("StartReleaseID")
-    category_id: Mapped[int] = mapped_column("CategoryID")
-    end_release_id: Mapped[int | None] = mapped_column("EndReleaseID")
-    row_guid: Mapped[uuid.UUID | None] = mapped_column(
-        "RowGUID",
-        ForeignKey(Concept.concept_guid),
-    )
-
-    __mapper_args__: ClassVar = {"primary_key": (row_guid,)}
-
-    unique_concept: Mapped[Concept | None] = relationship(foreign_keys=row_guid)
-
-
 class Release(DPM):
     """Auto-generated model for the Release table."""
 
@@ -497,7 +442,7 @@ class Release(DPM):
         ForeignKey(Concept.concept_guid),
     )
     error_date: Mapped[datetime.date | None] = mapped_column("ErrorDate")
-    type: Mapped[Literal["module"]] = mapped_column("Type")
+    type: Mapped[Literal["deactivation", "module"]] = mapped_column("Type")
     error: Mapped[str | None] = mapped_column("Error")
     owner_id: Mapped[int] = mapped_column("OwnerID", ForeignKey(Organisation.org_id))
     release_id: Mapped[int] = mapped_column("ReleaseID", primary_key=True)
@@ -760,7 +705,7 @@ class OperationVersion(DPM):
     endorsement: Mapped[Literal["approved", "rejected"] | None] = mapped_column(
         "Endorsement",
     )
-    is_variant_approved: Mapped[bool | None] = mapped_column("IsVariantApproved")
+    is_variant_approved: Mapped[bool] = mapped_column("IsVariantApproved")
 
     operation: Mapped[Operation] = relationship(foreign_keys=operation_id)
     precondition_operation_version: Mapped[OperationVersion | None] = relationship(
@@ -1048,7 +993,7 @@ class ItemCategory(DPM):
         "EndReleaseID",
         ForeignKey(Release.release_id),
     )
-    row_guid: Mapped[uuid.UUID | None] = mapped_column(
+    row_guid: Mapped[uuid.UUID] = mapped_column(
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
@@ -1057,7 +1002,7 @@ class ItemCategory(DPM):
     start_release: Mapped[Release] = relationship(foreign_keys=start_release_id)
     category: Mapped[Category] = relationship(foreign_keys=category_id)
     end_release: Mapped[Release | None] = relationship(foreign_keys=end_release_id)
-    unique_concept: Mapped[Concept | None] = relationship(foreign_keys=row_guid)
+    unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
 
 
 class ModuleVersion(DPM):
@@ -1189,11 +1134,16 @@ class OperationScope(DPM):
         "OperationScopeID",
         primary_key=True,
     )
+    created_release_id: Mapped[int] = mapped_column(
+        "CreatedReleaseID",
+        ForeignKey(Release.release_id),
+    )
 
     operation_version: Mapped[OperationVersion] = relationship(
         foreign_keys=operation_vid,
     )
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
+    created_release: Mapped[Release] = relationship(foreign_keys=created_release_id)
 
 
 class OperationVersionData(DPM):
@@ -1398,7 +1348,7 @@ class TableGroupComposition(DPM):
         "EndReleaseID",
         ForeignKey(Release.release_id),
     )
-    row_guid: Mapped[uuid.UUID | None] = mapped_column(
+    row_guid: Mapped[uuid.UUID] = mapped_column(
         "RowGUID",
         ForeignKey(Concept.concept_guid),
     )
@@ -1407,7 +1357,7 @@ class TableGroupComposition(DPM):
     table: Mapped[Table] = relationship(foreign_keys=table_id)
     start_release: Mapped[Release] = relationship(foreign_keys=start_release_id)
     end_release: Mapped[Release | None] = relationship(foreign_keys=end_release_id)
-    unique_concept: Mapped[Concept | None] = relationship(foreign_keys=row_guid)
+    unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
 
 
 class TableVersion(DPM):
