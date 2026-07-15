@@ -12,6 +12,16 @@ on:
         required: false
         type: boolean
         default: false
+      publish_archive:
+        description: "Publish the archive.zip asset (re-zipped original .accdb)"
+        required: false
+        type: boolean
+        default: true
+      publish_converted:
+        description: "Publish the sqlite.zip and analysis.zip assets (turn off while iterating on the migrate pipeline)"
+        required: false
+        type: boolean
+        default: true
 
 env:
   VERSION_ID: ${{ inputs.version_id }}
@@ -24,12 +34,14 @@ jobs:
       database_type: "original"
 
   build-converted:
+    if: inputs.publish_converted
     needs: download-original
     uses: ./.github/workflows/migrate-database.yml
     with:
       source_artifact_name: ${{ needs.download-original.outputs.artifact_name }}
 
   analyze-converted:
+    if: inputs.publish_converted
     needs: build-converted
     uses: ./.github/workflows/analyze-database.yml
     with:
@@ -38,6 +50,11 @@ jobs:
 
   create-release:
     needs: [download-original, build-converted, analyze-converted]
+    if: |
+      always()
+      && needs.download-original.result == 'success'
+      && needs.build-converted.result != 'failure'
+      && needs.analyze-converted.result != 'failure'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -50,49 +67,64 @@ jobs:
           echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
 
       - name: Download original files for archive
+        if: inputs.publish_archive
         uses: actions/download-artifact@v8
         with:
           name: ${{ needs.download-original.outputs.artifact_name }}
           path: archive-files/
 
       - name: Download SQLite database for converted
+        if: inputs.publish_converted
         uses: actions/download-artifact@v8
         with:
           name: ${{ needs.build-converted.outputs.artifact_name }}
           path: converted-files/
 
       - name: Download analysis reports
+        if: inputs.publish_converted
         uses: actions/download-artifact@v8
         with:
           name: ${{ needs.analyze-converted.outputs.artifact_name }}
           path: analysis-files/
 
       - name: Create archive zip
+        if: inputs.publish_archive
         run: |
           cd archive-files
           zip -r "../dpm-${{ env.VERSION_ID }}-archive.zip" .
 
       - name: Create SQLite zip
+        if: inputs.publish_converted
         run: |
           cd converted-files
           zip "../dpm-${{ env.VERSION_ID }}-sqlite.zip" *.sqlite
 
       - name: Create analysis zip
+        if: inputs.publish_converted
         run: |
           cd analysis-files
           zip -r "../dpm-${{ env.VERSION_ID }}-analysis.zip" .
+
+      - name: Compose release notes
+        run: |
+          {
+            echo "Database files for version ${{ env.VERSION_ID }}"
+            echo
+            echo "**Available Downloads:**"
+            if [ "${{ inputs.publish_archive }}" = "true" ]; then
+              echo "- \`dpm-${{ env.VERSION_ID }}-archive.zip\` - Original Access database files"
+            fi
+            if [ "${{ inputs.publish_converted }}" = "true" ]; then
+              echo "- \`dpm-${{ env.VERSION_ID }}-sqlite.zip\` - Converted SQLite database"
+              echo "- \`dpm-${{ env.VERSION_ID }}-analysis.zip\` - Type refinement analysis reports (JSON + Markdown)"
+            fi
+          } > release-body.md
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           name: "DPM Database Files - ${{ env.VERSION_ID }}"
-          body: |
-            Database files for version ${{ env.VERSION_ID }}
-
-            **Available Downloads:**
-            - `dpm-${{ env.VERSION_ID }}-archive.zip` - Original Access database files
-            - `dpm-${{ env.VERSION_ID }}-sqlite.zip` - Converted SQLite database
-            - `dpm-${{ env.VERSION_ID }}-analysis.zip` - Type refinement analysis reports (JSON + Markdown)
+          body_path: release-body.md
           prerelease: ${{ inputs.prerelease }}
           files: dpm-${{ env.VERSION_ID }}-*.zip
