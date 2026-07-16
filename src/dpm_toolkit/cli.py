@@ -169,18 +169,8 @@ def versions(
 
 
 @app.command
-def download(
-    version_id: str,
-    variant: SourceType = "archive",
-    fallback: SourceType | None = None,
-) -> None:
-    """Download databases.
-
-    If ``variant`` is not configured for the version and ``fallback`` is
-    given, retry with that variant. This lets the build pipeline ask for
-    the archive but still work on a freshly-registered version that only
-    has ``original`` set (no re-published archive yet).
-    """
+def download(version_id: str, variant: SourceType = "archive") -> None:
+    """Download databases."""
     version = get_version(VERSIONS, version_id)
     if not version:
         # Try resolving as a group name (e.g., "release" -> latest release version)
@@ -191,28 +181,13 @@ def download(
             print_error(f"Invalid version '{version_id}'")
             sys.exit(1)
 
-    resolved_variant = variant
     try:
-        database_source = get_source(version, resolved_variant)
+        database_source = get_source(version, variant)
     except ValueError:
-        if fallback is None or fallback == variant:
-            print_error(
-                f"Version '{version_id}' has no '{variant}' source configured.",
-            )
-            sys.exit(1)
-        try:
-            database_source = get_source(version, fallback)
-        except ValueError:
-            print_error(
-                f"Version '{version_id}' has neither '{variant}' nor "
-                f"'{fallback}' source configured.",
-            )
-            sys.exit(1)
-        resolved_variant = fallback
-        print_info(
-            f"'{variant}' not configured for '{version_id}'; "
-            f"falling back to '{fallback}'.",
+        print_error(
+            f"Version '{version_id}' has no '{variant}' source configured.",
         )
+        sys.exit(1)
 
     with Progress(
         SpinnerColumn(),
@@ -220,7 +195,7 @@ def download(
         console=err_console,
     ) as progress:
         task = progress.add_task(
-            f"Downloading version {version_id} ({resolved_variant})",
+            f"Downloading version {version_id} ({variant})",
             total=None,
         )
         print_info(f"Source URL: {database_source.get('url', 'unknown')}")
@@ -228,7 +203,7 @@ def download(
         progress.update(task, description="Processing archive...")
 
     stdout.buffer.write(archive.getbuffer())
-    print_success(f"Downloaded version {version_id} ({resolved_variant})")
+    print_success(f"Downloaded version {version_id} ({variant})")
 
 
 @app.command
