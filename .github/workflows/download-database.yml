@@ -49,16 +49,28 @@ jobs:
 
       - name: Download database files
         if: steps.cache-dbs.outputs.cache-hit != 'true'
+        env:
+          VERSION_ID: ${{ inputs.version_id }}
+          VARIANT: ${{ inputs.database_type }}
+          FALLBACK: ${{ inputs.fallback }}
         run: |
-          FALLBACK_ARGS=()
-          if [ -n "${{ inputs.fallback }}" ]; then
-            FALLBACK_ARGS=(--fallback "${{ inputs.fallback }}")
+          set -eo pipefail
+          if uv run dpm-toolkit download "$VERSION_ID" \
+               --variant "$VARIANT" > /tmp/temp.zip 2> /tmp/dl.err; then
+            cat /tmp/dl.err >&2
+          else
+            cat /tmp/dl.err >&2
+            # Only retry when the CLI says the variant is not registered.
+            # Genuine download/network errors surface as-is.
+            if [ -z "$FALLBACK" ] || \
+               ! grep -q "has no '$VARIANT' source configured" /tmp/dl.err; then
+              exit 1
+            fi
+            echo "::notice::'$VARIANT' not configured for $VERSION_ID; falling back to '$FALLBACK'"
+            uv run dpm-toolkit download "$VERSION_ID" --variant "$FALLBACK" > /tmp/temp.zip
           fi
-          uv run dpm-toolkit download "${{ inputs.version_id }}" \
-            --variant "${{ inputs.database_type }}" \
-            "${FALLBACK_ARGS[@]}" > /tmp/temp.zip
           unzip /tmp/temp.zip -d download-temp/
-          rm /tmp/temp.zip
+          rm -f /tmp/temp.zip /tmp/dl.err
 
       - name: Upload database artifact
         uses: actions/upload-artifact@v7
