@@ -92,22 +92,22 @@ def _pick_canonical_owner(
 ) -> tuple[Table, Column[Any]] | None:
     """Choose one table as the canonical FK target for a PK name.
 
-    A single-owner list wins outright. When several tables share a
-    single-column PK (e.g. ``OperationVID`` appears on both
-    ``OperationVersion`` and ``OperationVersionData``), the shorter
-    table whose name prefixes the others is treated as the owner; the
-    longer names are auxiliary extensions that point at it. If no
-    single name prefixes every candidate, the PK stays ambiguous.
+    Every candidate whose name prefixes *every* candidate's name is a
+    valid owner: a single-owner list qualifies its lone entry (the
+    name trivially prefixes itself); a group like ``OperationVersion``
+    and ``OperationVersionData`` picks ``OperationVersion``. The
+    accumulator returns early when a second qualifying candidate
+    appears — that is the ambiguous case where no unique prefix wins.
     """
-    if len(owners) == 1:
-        return owners[0]
     names = [table.name for table, _ in owners]
-    prefixes = [
-        (table, column)
-        for table, column in owners
-        if all(other.startswith(table.name) for other in names)
-    ]
-    return prefixes[0] if len(prefixes) == 1 else None
+    winner: tuple[Table, Column[Any]] | None = None
+    for candidate in owners:
+        if not all(name.startswith(candidate[0].name) for name in names):
+            continue
+        if winner is not None:
+            return None
+        winner = candidate
+    return winner
 
 
 def _resolve_pk_targets(
@@ -116,8 +116,9 @@ def _resolve_pk_targets(
     """Map each usable single-column PK name to its canonical (table, col)."""
     pk_owners: dict[str, list[tuple[Table, Column[Any]]]] = defaultdict(list)
     for table in schema.tables.values():
-        if len(pk_cols := list(table.primary_key.columns)) == 1:
-            pk_owners[pk_cols[0].name].append((table, pk_cols[0]))
+        match list(table.primary_key.columns):
+            case [pk]:
+                pk_owners[pk.name].append((table, pk))
 
     return {
         pk_name: canonical
@@ -136,19 +137,18 @@ def heal_cross_table_foreign_keys(schema: MetaData) -> None:
     identifies exactly one table we can safely link same-named columns to
     it. When several tables share a PK name, ``_pick_canonical_owner``
     resolves the ambiguity for the prefix case (``OperationVID`` →
-    ``OperationVersion``, not ``OperationVersionData``). The
-    ``target_table is table`` guard below prevents the canonical table's
-    own PK column from being linked back to itself.
+    ``OperationVersion``, not ``OperationVersionData``). The comprehension
+    filter skips columns that already carry an FK and any self-reference
+    from the canonical table's own PK column.
     """
     targets = _resolve_pk_targets(schema)
-
-    for table in schema.tables.values():
-        for column in table.columns:
-            if column.foreign_keys:
-                continue
-            if (target := targets.get(column.name)) is None:
-                continue
-            target_table, target_column = target
-            if target_table is table:
-                continue
-            column.append_foreign_key(ForeignKey(target_column))
+    fresh_fks = [
+        (column, target[1])
+        for table in schema.tables.values()
+        for column in table.columns
+        if not column.foreign_keys
+        and (target := targets.get(column.name)) is not None
+        and target[0] is not table
+    ]
+    for column, target_column in fresh_fks:
+        column.append_foreign_key(ForeignKey(target_column))
