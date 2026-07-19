@@ -165,3 +165,13 @@ type = "release"
 semver = "4.3.0"
 date = 2026-07-09
 original = { url = "https://ebprstaewspublic01.blob.core.windows.net/public/tools-prod/documents/Big_Files/files/Reporting%20framework%204.3/DPM2%20Database_v%204_3.zip", checksum = "sha256:77e2ba9ccb2ff3e598dc840caf4cfbe02941097ada239d59340389f481c0c9d1" }
+
+[[versions]]
+id = "4.3-errata-1"
+previous = "4.3-release"
+version = "4.3"
+type = "errata"
+semver = "4.3.1"
+date = 2026-07-17
+revision = 1
+original = { url = "https://ebprstaewspublic01.blob.core.windows.net/public/tools-prod/documents/Big_Files/files/Reporting%20framework%204.3/DPM2%20Database_v%204_3.zip", checksum = "sha256:f2d802f1430879cf085d21e2279630d7a10e1207e2a100ab01188136cf0b2cac" }
