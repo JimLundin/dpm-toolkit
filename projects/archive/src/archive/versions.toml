@@ -165,6 +165,8 @@ type = "release"
 semver = "4.3.0"
 date = 2026-07-09
 original = { url = "https://ebprstaewspublic01.blob.core.windows.net/public/tools-prod/documents/Big_Files/files/Reporting%20framework%204.3/DPM2%20Database_v%204_3.zip", checksum = "sha256:77e2ba9ccb2ff3e598dc840caf4cfbe02941097ada239d59340389f481c0c9d1" }
+archive = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-4.3-release/dpm-4.3-release-archive.zip", checksum = "sha256:eed05e942156ff46cf4d3a7b4f5120bc27ecdd223256c2f587cd0701e62df1e1" }
+converted = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-4.3-release/dpm-4.3-release-sqlite.zip", checksum = "sha256:3cdd3e9ac794af37cfd4280f5f3e4087cf090a79ee4f8eac6d1bab89a7fb7876" }
 
 [[versions]]
 id = "4.3-errata-1"
