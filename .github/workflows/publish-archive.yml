@@ -9,11 +9,14 @@ name: Publish Archive
 #
 # Source selection:
 #   * Default: re-download the original from the URL registered in
-#     versions.toml for <version_id>.
-#   * source_run_id set: pull the already-downloaded archive artifact from a
-#     previous build run instead of downloading. Use this when the upstream
-#     file has been overwritten in place (the URL now serves a different
-#     version), so a fresh download would fetch the wrong bytes.
+#     versions.toml for <version_id> and publish the archive only.
+#   * source_run_id set: pull the already-downloaded '<version_id>-archive'
+#     artifact (and, if present, the '<version_id>-archive-sqlite' converted
+#     database) from a previous build run instead of downloading. Use this
+#     when the upstream file has been overwritten in place (the URL now serves
+#     a different version), so a fresh download would fetch the wrong bytes.
+#     The prebuilt SQLite is attached too, since it cannot be reproduced once
+#     the source URL no longer serves the original bytes.
 
 on:
   workflow_dispatch:
@@ -57,6 +60,18 @@ jobs:
           run-id: ${{ inputs.source_run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
+      # The converted SQLite is a prebuilt byproduct of the same run; attach it
+      # when present. Best-effort: a run without it still publishes the archive.
+      - name: Download converted SQLite from existing run
+        if: inputs.source_run_id != ''
+        continue-on-error: true
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.version_id }}-archive-sqlite
+          path: converted-files/
+          run-id: ${{ inputs.source_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
       # --- Source B: fresh download from the registered source URL ---------
       - name: Install UV
         if: inputs.source_run_id == ''
@@ -84,6 +99,12 @@ jobs:
           cd archive-files
           zip -r "../dpm-${VERSION_ID}-archive.zip" .
 
+      - name: Create SQLite zip
+        if: hashFiles('converted-files/**/*.sqlite') != ''
+        run: |
+          cd converted-files
+          zip "../dpm-${VERSION_ID}-sqlite.zip" *.sqlite
+
       - name: Create or update GitHub Release
         uses: softprops/action-gh-release@v3
         with:
@@ -94,5 +115,6 @@ jobs:
 
             **Available Downloads:**
             - `dpm-${{ env.VERSION_ID }}-archive.zip` - Original Access database files
+            - `dpm-${{ env.VERSION_ID }}-sqlite.zip` - Converted SQLite database (when available)
           prerelease: ${{ inputs.prerelease }}
-          files: dpm-${{ env.VERSION_ID }}-archive.zip
+          files: dpm-${{ env.VERSION_ID }}-*.zip
