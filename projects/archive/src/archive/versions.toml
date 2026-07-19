@@ -177,3 +177,5 @@ semver = "4.3.1"
 date = 2026-07-17
 revision = 1
 original = { url = "https://ebprstaewspublic01.blob.core.windows.net/public/tools-prod/documents/Big_Files/files/Reporting%20framework%204.3/DPM2%20Database_v%204_3.zip", checksum = "sha256:f2d802f1430879cf085d21e2279630d7a10e1207e2a100ab01188136cf0b2cac" }
+archive = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-4.3-errata-1/dpm-4.3-errata-1-archive.zip", checksum = "sha256:6d28ea2807aecb39823addf91eb9e42b4af5f2b53ebfeb15bedf3b70f25e3484" }
+converted = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-4.3-errata-1/dpm-4.3-errata-1-sqlite.zip", checksum = "sha256:f83fbdd2f387bc88b507f604b41cd1ce89707f55004ab59b01eb53d5fb1acea5" }
