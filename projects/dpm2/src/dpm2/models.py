@@ -43,24 +43,6 @@ class AuxCellMapping(DPM):
     old_table_vid: Mapped[int] = mapped_column("OldTableVID")
 
 
-class AuxCellStatus(DPM):
-    """Auto-generated model for the Aux_CellStatus table."""
-
-    __tablename__ = "Aux_CellStatus"
-
-    table_vid: Mapped[int] = mapped_column("TableVID", primary_key=True)
-    cell_id: Mapped[int] = mapped_column("CellID", primary_key=True)
-    status: Mapped[
-        Literal[
-            "New variable",
-            "New variable version",
-            "Not reportable",
-            "Previous variable version",
-        ]
-    ] = mapped_column("Status")
-    is_new_cell: Mapped[bool] = mapped_column("IsNewCell")
-
-
 class Concept(DPM):
     """Auto-generated model for the Concept table."""
 
@@ -118,39 +100,6 @@ class Language(DPM):
 
     name: Mapped[str] = mapped_column("Name")
     language_code: Mapped[int] = mapped_column("LanguageCode", primary_key=True)
-
-
-ModelViolations = AlchemyTable(
-    "ModelViolations",
-    DPM.metadata,
-    Column("ViolationCode", String(255), nullable=False),
-    Column("Violation", String(255), nullable=False),
-    Column("isBlocking", Boolean, nullable=False),
-    Column("TableVID", Integer, nullable=True),
-    Column("OldTableVID", Integer, nullable=True),
-    Column("TableCode", String(255), nullable=True),
-    Column("HeaderID", Integer, nullable=True),
-    Column("HeaderCode", String(255), nullable=True),
-    Column("HeaderVID", Integer, nullable=True),
-    Column("OldHeaderVID", Integer, nullable=True),
-    Column("KeyHeader", Boolean, nullable=False),
-    Column("HeaderDirection", Enum("X"), nullable=True),
-    Column("HeaderPropertyID", Integer, nullable=False),
-    Column("HeaderPropertyCode", String(255), nullable=True),
-    Column("HeaderSubcategoryID", Integer, nullable=True),
-    Column("HeaderSubcategoryName", String(255), nullable=True),
-    Column("HeaderContextID", Integer, nullable=True),
-    Column("CategoryID", Integer, nullable=True),
-    Column("CategoryCode", String(255), nullable=True),
-    Column("ItemID", Integer, nullable=True),
-    Column("ItemCode", String(255), nullable=True),
-    Column("CellID", Integer, nullable=True),
-    Column("CellCode", String(255), nullable=True),
-    Column("Cell2ID", Integer, nullable=True),
-    Column("Cell2Code", String(255), nullable=True),
-    Column("VVEndReleaseID", Integer, nullable=True),
-    Column("NewAspect", String(255), nullable=True),
-)
 
 
 class Operator(DPM):
@@ -215,33 +164,6 @@ class SubdivisionType(DPM):
     )
 
 
-VarGenerationDetail = AlchemyTable(
-    "VarGeneration_Detail",
-    DPM.metadata,
-    Column("noofcells", Integer, nullable=False),
-    Column("NewAspect", String(255), nullable=False),
-    Column("ModuleVID", Integer, nullable=False),
-    Column("ModuleCode", String(255), nullable=False),
-    Column("TableCode", String(255), nullable=False),
-    Column("TableVID", Integer, nullable=False),
-    Column("CellID", Integer, nullable=False),
-    Column("cellcode", String(255), nullable=False),
-    Column("outcomeID", String(255), nullable=False),
-    Column("outcomeVID", String(255), nullable=False),
-    Column("ReportMsg", String(255), nullable=False),
-    Column("isVoid", Boolean, nullable=False),
-    Column("tvstartReleaseID", Integer, nullable=False),
-    Column("mvStartReleaseID", Integer, nullable=False),
-    Column("vvOldEndReleaseID", Integer, nullable=True),
-    Column("OldAspect", String(255), nullable=False),
-    Column("IsNewCell", Boolean, nullable=False),
-    Column("isnewPropertyDataType", Boolean, nullable=False),
-    Column("isNewKey", Boolean, nullable=False),
-    Column("OldVariableID", Integer, nullable=True),
-    Column("NewVarID", Integer, nullable=False),
-    Column("OldVariableVID", Integer, nullable=True),
-    Column("NewVVID", Integer, nullable=False),
-)
 VarGenerationSummary = AlchemyTable(
     "VarGeneration_Summary",
     DPM.metadata,
@@ -1441,6 +1363,35 @@ class VariableCalculation(DPM):
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
 
 
+class AuxCellStatus(DPM):
+    """Auto-generated model for the Aux_CellStatus table."""
+
+    __tablename__ = "Aux_CellStatus"
+
+    table_vid: Mapped[int] = mapped_column(
+        "TableVID",
+        ForeignKey(TableVersion.table_vid),
+        primary_key=True,
+    )
+    cell_id: Mapped[int] = mapped_column(
+        "CellID",
+        ForeignKey(Cell.cell_id),
+        primary_key=True,
+    )
+    status: Mapped[
+        Literal[
+            "New variable",
+            "New variable version",
+            "Not reportable",
+            "Previous variable version",
+        ]
+    ] = mapped_column("Status")
+    is_new_cell: Mapped[bool] = mapped_column("IsNewCell")
+
+    table_version: Mapped[TableVersion] = relationship(foreign_keys=table_vid)
+    cell: Mapped[Cell] = relationship(foreign_keys=cell_id)
+
+
 class ModuleVersionComposition(DPM):
     """Auto-generated model for the ModuleVersionComposition table."""
 
@@ -1646,6 +1597,35 @@ class TableAssociation(DPM):
     )
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
     owner: Mapped[Organisation] = relationship(foreign_keys=owner_id)
+
+
+VarGenerationDetail = AlchemyTable(
+    "VarGeneration_Detail",
+    DPM.metadata,
+    Column("noofcells", Integer, nullable=False),
+    Column("NewAspect", String(255), nullable=False),
+    Column("ModuleVID", Integer, nullable=False),
+    Column("ModuleCode", String(255), nullable=False),
+    Column("TableCode", String(255), nullable=False),
+    Column("TableVID", Integer, nullable=False),
+    Column("CellID", Integer, nullable=False),
+    Column("cellcode", String(255), nullable=False),
+    Column("outcomeID", String(255), nullable=False),
+    Column("outcomeVID", String(255), nullable=False),
+    Column("ReportMsg", String(255), nullable=False),
+    Column("isVoid", Boolean, nullable=False),
+    Column("tvstartReleaseID", Integer, nullable=False),
+    Column("mvStartReleaseID", Integer, nullable=False),
+    Column("vvOldEndReleaseID", Integer, nullable=True),
+    Column("OldAspect", String(255), nullable=False),
+    Column("IsNewCell", Boolean, nullable=False),
+    Column("isnewPropertyDataType", Boolean, nullable=False),
+    Column("isNewKey", Boolean, nullable=False),
+    Column("OldVariableID", Integer, nullable=True),
+    Column("NewVarID", Integer, nullable=False),
+    Column("OldVariableVID", Integer, nullable=True),
+    Column("NewVVID", Integer, nullable=False),
+)
 
 
 class KeyHeaderMapping(DPM):
@@ -1940,6 +1920,39 @@ class TableVersionCell(DPM):
         foreign_keys=variable_vid,
     )
     unique_concept: Mapped[Concept] = relationship(foreign_keys=row_guid)
+
+
+ModelViolations = AlchemyTable(
+    "ModelViolations",
+    DPM.metadata,
+    Column("ViolationCode", String(255), nullable=False),
+    Column("Violation", String(255), nullable=False),
+    Column("isBlocking", Boolean, nullable=False),
+    Column("TableVID", Integer, nullable=True),
+    Column("OldTableVID", Integer, nullable=True),
+    Column("TableCode", String(255), nullable=True),
+    Column("HeaderID", Integer, nullable=True),
+    Column("HeaderCode", String(255), nullable=True),
+    Column("HeaderVID", Integer, nullable=True),
+    Column("OldHeaderVID", Integer, nullable=True),
+    Column("KeyHeader", Boolean, nullable=False),
+    Column("HeaderDirection", Enum("X"), nullable=True),
+    Column("HeaderPropertyID", Integer, nullable=False),
+    Column("HeaderPropertyCode", String(255), nullable=True),
+    Column("HeaderSubcategoryID", Integer, nullable=True),
+    Column("HeaderSubcategoryName", String(255), nullable=True),
+    Column("HeaderContextID", Integer, nullable=True),
+    Column("CategoryID", Integer, nullable=True),
+    Column("CategoryCode", String(255), nullable=True),
+    Column("ItemID", Integer, nullable=True),
+    Column("ItemCode", String(255), nullable=True),
+    Column("CellID", Integer, nullable=True),
+    Column("CellCode", String(255), nullable=True),
+    Column("Cell2ID", Integer, nullable=True),
+    Column("Cell2Code", String(255), nullable=True),
+    Column("VVEndReleaseID", Integer, nullable=True),
+    Column("NewAspect", String(255), nullable=True),
+)
 
 
 class TableVersionHeader(DPM):
