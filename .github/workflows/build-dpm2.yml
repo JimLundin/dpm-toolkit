@@ -51,8 +51,15 @@ jobs:
 
       - name: Assemble dpm2 package sources
         run: |
-          find database -name "*.sqlite" -exec cp {} projects/dpm2/src/dpm2/dpm.sqlite \;
+          # The database ships LZMA-compressed: uncompressed it is ~300MB and
+          # even deflated inside the wheel it exceeds PyPI's 100MB file limit.
+          # dpm2 decompresses it once into a user cache dir on first use.
+          rm -f projects/dpm2/src/dpm2/dpm.sqlite
+          find database -name "*.sqlite" \
+            -exec xz --compress --threads=0 --stdout {} \; \
+            > projects/dpm2/src/dpm2/dpm.sqlite.xz
           find schema -name "*.py" -exec cp {} projects/dpm2/src/dpm2/models.py \;
+          ls -la projects/dpm2/src/dpm2/dpm.sqlite.xz
 
       - name: Set package version
         if: inputs.version != ''
@@ -60,6 +67,31 @@ jobs:
 
       - name: Build dpm2 wheel
         run: uv build --package dpm2 --out-dir dist-dpm2
+
+      - name: Check wheel payload and size
+        run: |
+          WHEEL=$(echo dist-dpm2/*.whl)
+          python - "$WHEEL" <<'PY'
+          import os
+          import sys
+          import zipfile
+
+          LIMIT = 100 * 1000 * 1000  # PyPI per-file limit for the dpm2 project
+          wheel = sys.argv[1]
+          names = zipfile.ZipFile(wheel).namelist()
+
+          if "dpm2/dpm.sqlite.xz" not in names:
+              sys.exit(f"{wheel} is missing dpm2/dpm.sqlite.xz")
+          if "dpm2/dpm.sqlite" in names:
+              sys.exit(f"{wheel} still bundles an uncompressed dpm2/dpm.sqlite")
+          if "dpm2/models.py" not in names:
+              sys.exit(f"{wheel} is missing generated dpm2/models.py")
+
+          size = os.path.getsize(wheel)
+          print(f"{wheel}: {size / 1_000_000:.1f} MB")
+          if size >= LIMIT:
+              sys.exit(f"wheel is {size / 1_000_000:.1f} MB, over the {LIMIT / 1_000_000:.0f} MB PyPI limit")
+          PY
 
       - name: Test built dpm2 wheel
         shell: bash {0}

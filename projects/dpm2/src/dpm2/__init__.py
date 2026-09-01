@@ -19,7 +19,13 @@ from __future__ import annotations
 import importlib
 import types
 
-from .utils import disk_engine, get_db, in_memory_engine
+from .utils import (
+    cached_db_path,
+    disk_engine,
+    ensure_local_db,
+    get_db,
+    in_memory_engine,
+)
 
 models: types.ModuleType
 try:
@@ -29,7 +35,9 @@ except ImportError:
     models.__doc__ = "Stub: models are generated during the release process."
 
 __all__ = [
+    "cached_db_path",
     "disk_engine",
+    "ensure_local_db",
     "get_db",
     "in_memory_engine",
     "models",

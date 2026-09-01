@@ -54,6 +54,14 @@ The workflow is available at `.github/workflows/publish-dpm-toolkit.yml` and wil
 
 **Important**: The dpm2 package must be regenerated using the latest conversion artifacts before each publish.
 
+**Size limit**: PyPI caps files for the `dpm2` project at 100 MB. The converted
+database is ~300 MB and still exceeded that once deflated into the wheel
+(113 MB for DPM 4.3.1), so `build-dpm2.yml` ships it as `dpm.sqlite.xz`
+(~83 MB) and the package decompresses it once into a user cache directory on
+first use. The build fails loudly if the wheel is missing the compressed
+database or creeps back over the limit. It is worth requesting a limit
+increase from PyPI before the compressed database outgrows 100 MB too.
+
 #### Manual Publishing
 
 ```bash
