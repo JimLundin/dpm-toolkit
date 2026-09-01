@@ -77,6 +77,6 @@ separate workspace packages published on their own.
 
 - **Issues**: Report bugs or request features via GitHub Issues
 - **Discussions**: Ask questions in GitHub Discussions
-- **Documentation**: Check existing READMEs and CLAUDE.md for guidance
+- **Documentation**: Check existing READMEs for guidance
 
 We appreciate your contributions to making EBA DPM data more accessible!
