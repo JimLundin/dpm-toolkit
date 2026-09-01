@@ -50,10 +50,14 @@ def test_tables_with_added_columns() -> None:
         new_conn.commit()
         new_conn.close()
 
-        comparison = next(iter(compare_databases(old_db, new_db)))
+        # Both changesets are lazy, so materialize them while the databases
+        # are still attached.
+        with compare_databases(old_db, new_db) as comparisons:
+            comparison = next(iter(comparisons))
+            schema_changes = list(comparison.body.columns.changes)
+            row_changes = list(comparison.body.rows.changes)
 
         # Check schema changes - should detect added columns
-        schema_changes = list(comparison.body.columns.changes)
         added_columns = [c for c in schema_changes if c.new and not c.old]
 
         assert len(added_columns) == 2, (
@@ -63,7 +67,6 @@ def test_tables_with_added_columns() -> None:
         assert added_column_names == {"age", "city"}
 
         # Check row changes, existing rows detected as modified by structural changes
-        row_changes = list(comparison.body.rows.changes)
         added_rows = [c for c in row_changes if c.new and not c.old]
         modified_rows = [c for c in row_changes if c.old and c.new]
 
@@ -120,10 +123,14 @@ def test_tables_with_removed_columns() -> None:
         new_conn.commit()
         new_conn.close()
 
-        comparison = next(iter(compare_databases(old_db, new_db)))
+        # Both changesets are lazy, so materialize them while the databases
+        # are still attached.
+        with compare_databases(old_db, new_db) as comparisons:
+            comparison = next(iter(comparisons))
+            schema_changes = list(comparison.body.columns.changes)
+            row_changes = list(comparison.body.rows.changes)
 
         # Check schema changes - should detect removed columns
-        schema_changes = list(comparison.body.columns.changes)
         removed_columns = [c for c in schema_changes if c.old and not c.new]
 
         assert len(removed_columns) == 2, (
@@ -133,7 +140,6 @@ def test_tables_with_removed_columns() -> None:
         assert removed_column_names == {"phone", "address"}
 
         # Check row changes - both rows modified due to structural changes
-        row_changes = list(comparison.body.rows.changes)
         modified_rows = [c for c in row_changes if c.old and c.new]
 
         assert len(modified_rows) == 2, (
@@ -193,10 +199,14 @@ def test_tables_with_column_type_changes() -> None:
         new_conn.commit()
         new_conn.close()
 
-        comparison = next(iter(compare_databases(old_db, new_db)))
+        # Both changesets are lazy, so materialize them while the databases
+        # are still attached.
+        with compare_databases(old_db, new_db) as comparisons:
+            comparison = next(iter(comparisons))
+            schema_changes = list(comparison.body.columns.changes)
+            row_changes = list(comparison.body.rows.changes)
 
         # Check schema changes - should detect type change
-        schema_changes = list(comparison.body.columns.changes)
         modified_columns = [c for c in schema_changes if c.old and c.new]
 
         price_change = None
@@ -210,7 +220,6 @@ def test_tables_with_column_type_changes() -> None:
         assert price_change.new["type"] == "REAL"
 
         # Check row changes - should detect the price change for Widget
-        row_changes = list(comparison.body.rows.changes)
         modified_rows = [c for c in row_changes if c.old and c.new]
 
         # Widget should be detected as modified due to price change
@@ -265,10 +274,14 @@ def test_completely_different_columns() -> None:
         new_conn.commit()
         new_conn.close()
 
-        comparison = next(iter(compare_databases(old_db, new_db)))
+        # Both changesets are lazy, so materialize them while the databases
+        # are still attached.
+        with compare_databases(old_db, new_db) as comparisons:
+            comparison = next(iter(comparisons))
+            schema_changes = list(comparison.body.columns.changes)
+            row_changes = list(comparison.body.rows.changes)
 
         # Check schema changes
-        schema_changes = list(comparison.body.columns.changes)
         added_columns = [c for c in schema_changes if c.new and not c.old]
         removed_columns = [c for c in schema_changes if c.old and not c.new]
 
@@ -276,8 +289,6 @@ def test_completely_different_columns() -> None:
         assert len(removed_columns) == 2  # old_col1, old_col2
 
         # Check row changes - only id is common, so comparison should work by PK
-        row_changes = list(comparison.body.rows.changes)
-
         # Should detect:
         # - Row 1: exists in both (matched by id PK) but no common non-PK columns
         # - Row 2: removed (exists in old, not in new)
@@ -356,10 +367,14 @@ def test_rowguid_with_different_columns() -> None:
         new_conn.commit()
         new_conn.close()
 
-        comparison = next(iter(compare_databases(old_db, new_db)))
+        # Both changesets are lazy, so materialize them while the databases
+        # are still attached.
+        with compare_databases(old_db, new_db) as comparisons:
+            comparison = next(iter(comparisons))
+            schema_changes = list(comparison.body.columns.changes)
+            row_changes = list(comparison.body.rows.changes)
 
         # Check schema changes
-        schema_changes = list(comparison.body.columns.changes)
         added_columns = [c for c in schema_changes if c.new and not c.old]
         removed_columns = [c for c in schema_changes if c.old and not c.new]
 
@@ -367,7 +382,6 @@ def test_rowguid_with_different_columns() -> None:
         assert len(removed_columns) == 2  # id, old_data
 
         # Check row changes - should match by RowGUID despite different PKs
-        row_changes = list(comparison.body.rows.changes)
         modified_rows = [c for c in row_changes if c.old and c.new]
 
         # Should detect two modifications due to structural changes
@@ -432,10 +446,12 @@ def test_no_common_columns_except_pk() -> None:
         new_conn.commit()
         new_conn.close()
 
-        comparison = next(iter(compare_databases(old_db, new_db)))
+        # The changeset is lazy, so materialize it while the databases are
+        # still attached.
+        with compare_databases(old_db, new_db) as comparisons:
+            row_changes = list(next(iter(comparisons)).body.rows.changes)
 
         # Check row changes
-        row_changes = list(comparison.body.rows.changes)
         added_rows = [c for c in row_changes if c.new and not c.old]
         removed_rows = [c for c in row_changes if c.old and not c.new]
         modified_rows = [c for c in row_changes if c.old and c.new]

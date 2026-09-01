@@ -2,6 +2,7 @@
 
 import json
 from collections.abc import Iterable, Iterator
+from contextlib import contextmanager
 from itertools import chain
 from pathlib import Path
 from sqlite3 import Row
@@ -215,41 +216,55 @@ def old_changes(table: Table) -> ChangeSet:
     )
 
 
-def compare_databases(old_location: Path, new_location: Path) -> Iterator[Comparison]:
-    """Compare two SQLite databases and return differences."""
-    difference = DatabaseDifference(old_location, new_location)
-    return chain(
-        # Common tables - use separate comparison functions
-        (
-            Comparison(
-                name=old_table.name,
-                body=TableChange(
-                    columns=compare_schemas(old_table.schema, new_table.schema),
-                    rows=compare_contents(old_table, new_table),
-                ),
-            )
-            for old_table, new_table in difference.common_tables
-        ),
-        # Added tables - get Table objects directly
-        (
-            Comparison(
-                name=table.name,
-                body=TableChange(
-                    columns=new_changes(table.schema),
-                    rows=new_changes(table),
-                ),
-            )
-            for table in difference.added_tables
-        ),
-        # Removed tables - get Table objects directly
-        (
-            Comparison(
-                name=table.name,
-                body=TableChange(
-                    columns=old_changes(table.schema),
-                    rows=old_changes(table),
-                ),
-            )
-            for table in difference.removed_tables
-        ),
-    )
+@contextmanager
+def compare_databases(
+    old_location: Path,
+    new_location: Path,
+) -> Iterator[Iterator[Comparison]]:
+    """Compare two SQLite databases and yield their differences.
+
+    Both databases stay attached for the lifetime of the context, and the
+    comparisons are produced lazily, so they must be consumed inside the
+    ``with`` block::
+
+        with compare_databases(old, new) as comparisons:
+            report = comparisons_to_json(comparisons)
+
+    Leaving the context closes the connection and releases both files.
+    """
+    with DatabaseDifference(old_location, new_location) as difference:
+        yield chain(
+            # Common tables - use separate comparison functions
+            (
+                Comparison(
+                    name=old_table.name,
+                    body=TableChange(
+                        columns=compare_schemas(old_table.schema, new_table.schema),
+                        rows=compare_contents(old_table, new_table),
+                    ),
+                )
+                for old_table, new_table in difference.common_tables
+            ),
+            # Added tables - get Table objects directly
+            (
+                Comparison(
+                    name=table.name,
+                    body=TableChange(
+                        columns=new_changes(table.schema),
+                        rows=new_changes(table),
+                    ),
+                )
+                for table in difference.added_tables
+            ),
+            # Removed tables - get Table objects directly
+            (
+                Comparison(
+                    name=table.name,
+                    body=TableChange(
+                        columns=old_changes(table.schema),
+                        rows=old_changes(table),
+                    ),
+                )
+                for table in difference.removed_tables
+            ),
+        )

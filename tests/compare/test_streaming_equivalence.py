@@ -45,8 +45,8 @@ def test_basic_modifications() -> None:
         new_conn.commit()
         new_conn.close()
 
-        changes = next(iter(compare_databases(old_db, new_db))).body.rows.changes
-        changes = list(changes)
+        with compare_databases(old_db, new_db) as comparisons:
+            changes = list(next(iter(comparisons)).body.rows.changes)
 
     modified = [c for c in changes if c.old and c.new]
     added = [c for c in changes if c.new and not c.old]
@@ -95,8 +95,8 @@ def test_additions_and_removals() -> None:
         new_conn.commit()
         new_conn.close()
 
-        changes = next(iter(compare_databases(old_db, new_db))).body.rows.changes
-        changes = list(changes)
+        with compare_databases(old_db, new_db) as comparisons:
+            changes = list(next(iter(comparisons)).body.rows.changes)
 
     modified = [c for c in changes if c.old and c.new]
     added = [c for c in changes if c.new and not c.old]
@@ -147,8 +147,8 @@ def test_rowguid_with_valid_guids() -> None:
         new_conn.commit()
         new_conn.close()
 
-        changes = next(iter(compare_databases(old_db, new_db))).body.rows.changes
-        changes = list(changes)
+        with compare_databases(old_db, new_db) as comparisons:
+            changes = list(next(iter(comparisons)).body.rows.changes)
 
     modified = [c for c in changes if c.old and c.new]
     added = [c for c in changes if c.new and not c.old]
@@ -216,8 +216,8 @@ def test_rowguid_with_null_values() -> None:
         new_conn.commit()
         new_conn.close()
 
-        changes = next(iter(compare_databases(old_db, new_db))).body.rows.changes
-        changes = list(changes)
+        with compare_databases(old_db, new_db) as comparisons:
+            changes = list(next(iter(comparisons)).body.rows.changes)
 
     modified = [c for c in changes if c.old and c.new]
     added = [c for c in changes if c.new and not c.old]
@@ -269,8 +269,8 @@ def test_no_common_primary_keys() -> None:
         new_conn.commit()
         new_conn.close()
 
-        changes = next(iter(compare_databases(old_db, new_db))).body.rows.changes
-        changes = list(changes)
+        with compare_databases(old_db, new_db) as comparisons:
+            changes = list(next(iter(comparisons)).body.rows.changes)
 
     # When tables have different PK structures, rows are detected as modified
     # due to structural differences, even if common column data is identical
@@ -331,8 +331,8 @@ def test_composite_primary_keys() -> None:
         new_conn.commit()
         new_conn.close()
 
-        changes = next(iter(compare_databases(old_db, new_db))).body.rows.changes
-        changes = list(changes)
+        with compare_databases(old_db, new_db) as comparisons:
+            changes = list(next(iter(comparisons)).body.rows.changes)
 
     modified = [c for c in changes if c.old and c.new]
     added = [c for c in changes if c.new and not c.old]
@@ -367,8 +367,8 @@ def test_empty_tables() -> None:
         new_conn.commit()
         new_conn.close()
 
-        changes = next(iter(compare_databases(old_db, new_db))).body.rows.changes
-        changes = list(changes)
+        with compare_databases(old_db, new_db) as comparisons:
+            changes = list(next(iter(comparisons)).body.rows.changes)
 
     assert len(changes) == 0
 
@@ -407,8 +407,8 @@ def test_large_dataset_memory_efficiency() -> None:
         new_conn.commit()
         new_conn.close()
 
-        changes = next(iter(compare_databases(old_db, new_db))).body.rows.changes
-        changes = list(changes)
+        with compare_databases(old_db, new_db) as comparisons:
+            changes = list(next(iter(comparisons)).body.rows.changes)
 
     modified = [c for c in changes if c.old and c.new]
     added = [c for c in changes if c.new and not c.old]

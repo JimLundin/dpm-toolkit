@@ -13,12 +13,13 @@ from sqlalchemy import (
     MetaData,
     String,
     Table,
-    create_engine,
     inspect,
 )
 
 from dpm_toolkit.schema.main import sqlite_to_schema
 from dpm_toolkit.schema.sqlalchemy_export import schema_to_sqlalchemy
+
+from .helpers import sqlite_engine
 
 
 @pytest.fixture(name="migrate_output_db")
@@ -28,7 +29,7 @@ def migrate_output_database() -> str:
         db_path = tmp.name
 
     # Create database using SQLAlchemy exactly like migrate module does
-    engine = create_engine(f"sqlite:///{db_path}")
+    engine = sqlite_engine(db_path)
     metadata = MetaData()
 
     # This mimics the output of migrate module after enum processing
@@ -123,7 +124,7 @@ def migrate_output_database() -> str:
 
 def test_migrate_output_has_check_constraints(migrate_output_db: str) -> None:
     """Verify that our mock migrate output actually creates CHECK constraints."""
-    engine = create_engine(f"sqlite:///{migrate_output_db}")
+    engine = sqlite_engine(migrate_output_db)
     inspector = inspect(engine)
 
     # Check TestData table constraints
@@ -155,7 +156,7 @@ def test_migrate_output_has_check_constraints(migrate_output_db: str) -> None:
 
 def test_schema_generation_from_migrate_output(migrate_output_db: str) -> None:
     """Test that schema module correctly generates Literal types from migrate output."""
-    engine = create_engine(f"sqlite:///{migrate_output_db}")
+    engine = sqlite_engine(migrate_output_db)
     schema = sqlite_to_schema(engine)
     schema_code = schema_to_sqlalchemy(schema)
 
@@ -229,7 +230,7 @@ def test_enum_detection_with_various_patterns(migrate_output_db: str) -> None:
     # - Multi-character patterns (insert, update, delete)
     # - Directional values (up, down, left, right)
 
-    engine = create_engine(f"sqlite:///{migrate_output_db}")
+    engine = sqlite_engine(migrate_output_db)
     schema = sqlite_to_schema(engine)
     schema_code = schema_to_sqlalchemy(schema)
 

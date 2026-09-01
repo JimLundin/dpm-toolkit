@@ -48,15 +48,19 @@ The compare submodule consists of several focused components:
 ```python
 from dpm_toolkit.compare import compare_databases, render_report, comparisons_to_json
 
-# Compare databases and get iterator of differences
-comparisons = compare_databases(source_conn, target_conn)
+# Both databases stay attached for the lifetime of the context, and the
+# differences are produced lazily, so they must be consumed inside the block.
+with compare_databases(old_location, new_location) as comparisons:
+    # Generate HTML report
+    html_stream = render_report(comparisons)
 
-# Generate HTML report
-html_stream = render_report(comparisons)
-
-# Convert to JSON
-json_output = comparisons_to_json(comparisons)
+    # Convert to JSON
+    json_output = comparisons_to_json(comparisons)
 ```
+
+Leaving the context closes the connection and releases both database files.
+On Windows an open connection keeps the files locked, so consuming the
+comparisons outside the block will fail.
 
 ### Database Inspector
 

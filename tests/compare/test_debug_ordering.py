@@ -34,7 +34,8 @@ def test_ordering_impact() -> None:
         new_conn.commit()
         new_conn.close()
 
-        changes = list(next(iter(compare_databases(old_db, new_db))).body.rows.changes)
+        with compare_databases(old_db, new_db) as comparisons:
+            changes = list(next(iter(comparisons)).body.rows.changes)
         modified = [c for c in changes if c.old and c.new]
         print(
             f"Single row test: Modified={len(modified)}, Total changes={len(changes)}",
@@ -74,9 +75,8 @@ def test_ordering_impact() -> None:
         new_conn.commit()
         new_conn.close()
 
-        changes = list(
-            next(iter(compare_databases(old_db2, new_db2))).body.rows.changes,
-        )
+        with compare_databases(old_db2, new_db2) as comparisons:
+            changes = list(next(iter(comparisons)).body.rows.changes)
         modified = [c for c in changes if c.old and c.new]
         added = [c for c in changes if c.new and not c.old]
         removed = [c for c in changes if c.old and not c.new]

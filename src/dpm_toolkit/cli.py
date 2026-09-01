@@ -320,20 +320,23 @@ def compare(old_location: Path, new_location: Path, fmt: Format = "table") -> No
         console=err_console,
     ) as progress:
         progress.add_task("Comparing databases...", total=None)
-        comparisons = compare_databases(old_location, new_location)
+        comparison_context = compare_databases(old_location, new_location)
 
-    # Output to stdout in requested format (keep stdout clean for data)
-    if fmt == "html":
-        html_stream = comparisons_to_html(comparisons)
-        for chunk in html_stream:
-            stdout.write(chunk)
+    # Comparisons are produced lazily, so they have to be written out while the
+    # databases are still attached.
+    with comparison_context as comparisons:
+        # Output to stdout in requested format (keep stdout clean for data)
+        if fmt == "html":
+            html_stream = comparisons_to_html(comparisons)
+            for chunk in html_stream:
+                stdout.write(chunk)
 
-    if fmt == "json":
-        stdout.write(dumps(comparisons, default=serializer))
+        if fmt == "json":
+            stdout.write(dumps(comparisons, default=serializer))
 
-    if fmt == "table":
-        comparison_summary = comparisons_to_summary(comparisons)
-        format_comparison_table(comparison_summary)
+        if fmt == "table":
+            comparison_summary = comparisons_to_summary(comparisons)
+            format_comparison_table(comparison_summary)
 
 
 @app.command

@@ -6,11 +6,13 @@ from pathlib import Path
 from sqlite3 import connect
 
 import pytest
-from sqlalchemy import Enum, MetaData, create_engine, event
+from sqlalchemy import Enum, MetaData, event
 from sqlalchemy.exc import DatabaseError
 
 from dpm_toolkit.schema.main import detect_types, sqlite_to_schema
 from dpm_toolkit.schema.sqlalchemy_export import schema_to_sqlalchemy
+
+from .helpers import sqlite_engine
 
 
 @pytest.fixture(name="temp_db_with_enums")
@@ -70,7 +72,7 @@ def db_with_enums() -> Generator[str]:
 
 def test_enum_columns_detected_in_reflection(temp_db_with_enums: str) -> None:
     """Test that enum columns are properly detected during reflection."""
-    engine = create_engine(f"sqlite:///{temp_db_with_enums}")
+    engine = sqlite_engine(temp_db_with_enums)
     metadata = MetaData()
 
     event.listen(metadata, "column_reflect", detect_types)
@@ -106,7 +108,7 @@ def test_enum_columns_detected_in_reflection(temp_db_with_enums: str) -> None:
 
 def test_enum_values_correctly_extracted(temp_db_with_enums: str) -> None:
     """Test that the correct enum values are extracted."""
-    engine = create_engine(f"sqlite:///{temp_db_with_enums}")
+    engine = sqlite_engine(temp_db_with_enums)
     metadata = MetaData()
 
     event.listen(metadata, "column_reflect", detect_types)
@@ -145,7 +147,7 @@ def test_enum_values_correctly_extracted(temp_db_with_enums: str) -> None:
 
 def test_full_schema_generation_with_enums(temp_db_with_enums: str) -> None:
     """Test complete schema generation including enum detection."""
-    engine = create_engine(f"sqlite:///{temp_db_with_enums}")
+    engine = sqlite_engine(temp_db_with_enums)
     schema = sqlite_to_schema(engine)
     schema_code = schema_to_sqlalchemy(schema)
 
@@ -194,7 +196,7 @@ def test_edge_case_constraints() -> None:
     conn.close()
 
     try:
-        engine = create_engine(f"sqlite:///{db_path}")
+        engine = sqlite_engine(db_path)
         schema = sqlite_to_schema(engine)
         schema_code = schema_to_sqlalchemy(schema)
 
@@ -221,7 +223,7 @@ def test_malformed_database_handling() -> None:
         f.write("not a database")
 
     try:
-        engine = create_engine(f"sqlite:///{db_path}")
+        engine = sqlite_engine(db_path)
         schema = sqlite_to_schema(engine)
         # Should not raise an exception due to error handling
         schema_code = schema_to_sqlalchemy(schema)

@@ -33,8 +33,8 @@ def test_simple_rowguid_different_pk() -> None:
         new_conn.commit()
         new_conn.close()
 
-        changes = next(iter(compare_databases(old_db, new_db))).body.rows.changes
-        changes = list(changes)
+        with compare_databases(old_db, new_db) as comparisons:
+            changes = list(next(iter(comparisons)).body.rows.changes)
 
     print("Changes found:")
     for i, change in enumerate(changes):

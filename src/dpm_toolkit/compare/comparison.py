@@ -3,6 +3,8 @@
 from collections.abc import Iterator
 from pathlib import Path
 from sqlite3 import connect
+from types import TracebackType
+from typing import Self
 
 from .inspection import Database, Table
 from .query import attach
@@ -22,6 +24,27 @@ class DatabaseDifference:
             attach(f"file:{database_location}?mode=ro", database_name),
         )
         return Database(self._connection, database_name)
+
+    def close(self) -> None:
+        """Close the connection, releasing both attached database files.
+
+        Windows keeps a lock on an open file, so leaving this connection open
+        blocks callers from moving or deleting the databases afterwards.
+        """
+        self._connection.close()
+
+    def __enter__(self) -> Self:
+        """Enter the comparison context."""
+        return self
+
+    def __exit__(
+        self,
+        _exc_type: type[BaseException] | None,
+        _exc_value: BaseException | None,
+        _traceback: TracebackType | None,
+    ) -> None:
+        """Close the connection on leaving the context."""
+        self.close()
 
     @property
     def added_tables(self) -> Iterator[Table]:

@@ -82,8 +82,8 @@ def test_dora_module_case() -> None:
         new_conn.commit()
         new_conn.close()
 
-        changes = next(iter(compare_databases(old_db, new_db))).body.rows.changes
-        changes = list(changes)
+        with compare_databases(old_db, new_db) as comparisons:
+            changes = list(next(iter(comparisons)).body.rows.changes)
 
         print("Changes found:")
         for i, change in enumerate(changes):
@@ -159,8 +159,8 @@ def test_dora_module_case_with_actual_change() -> None:
         new_conn.commit()
         new_conn.close()
 
-        changes = next(iter(compare_databases(old_db, new_db))).body.rows.changes
-        changes = list(changes)
+        with compare_databases(old_db, new_db) as comparisons:
+            changes = list(next(iter(comparisons)).body.rows.changes)
 
         # Categorize changes
         modified = [c for c in changes if c.old and c.new]

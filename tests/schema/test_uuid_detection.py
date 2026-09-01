@@ -13,12 +13,13 @@ from sqlalchemy import (
     String,
     Table,
     Uuid,
-    create_engine,
     event,
 )
 
 from dpm_toolkit.schema.main import detect_types, sqlite_to_schema
 from dpm_toolkit.schema.sqlalchemy_export import schema_to_sqlalchemy
+
+from .helpers import sqlite_engine
 
 
 @pytest.fixture(name="guid_db")
@@ -27,7 +28,7 @@ def database_with_guids() -> Generator[str]:
     with tempfile.NamedTemporaryFile(suffix=".sqlite", delete=False) as tmp:
         db_path = tmp.name
 
-    engine = create_engine(f"sqlite:///{db_path}")
+    engine = sqlite_engine(db_path)
     metadata = MetaData()
 
     Table(
@@ -62,7 +63,7 @@ class TestUuidDetectionDuringReflection:
     """Verify that GUID columns are detected as Uuid type during reflection."""
 
     def test_concept_guid_detected_as_uuid(self, guid_db: str) -> None:
-        engine = create_engine(f"sqlite:///{guid_db}")
+        engine = sqlite_engine(guid_db)
         metadata = MetaData()
         event.listen(metadata, "column_reflect", detect_types)
         metadata.reflect(bind=engine)
@@ -71,7 +72,7 @@ class TestUuidDetectionDuringReflection:
         assert isinstance(concept.columns["ConceptGUID"].type, Uuid)
 
     def test_row_guid_detected_as_uuid(self, guid_db: str) -> None:
-        engine = create_engine(f"sqlite:///{guid_db}")
+        engine = sqlite_engine(guid_db)
         metadata = MetaData()
         event.listen(metadata, "column_reflect", detect_types)
         metadata.reflect(bind=engine)
@@ -80,7 +81,7 @@ class TestUuidDetectionDuringReflection:
         assert isinstance(org.columns["RowGUID"].type, Uuid)
 
     def test_non_guid_columns_unchanged(self, guid_db: str) -> None:
-        engine = create_engine(f"sqlite:///{guid_db}")
+        engine = sqlite_engine(guid_db)
         metadata = MetaData()
         event.listen(metadata, "column_reflect", detect_types)
         metadata.reflect(bind=engine)
@@ -94,7 +95,7 @@ class TestUuidCodeGeneration:
     """Verify that generated code uses uuid.UUID for GUID columns."""
 
     def test_schema_to_sqlalchemy_uses_uuid(self, guid_db: str) -> None:
-        engine = create_engine(f"sqlite:///{guid_db}")
+        engine = sqlite_engine(guid_db)
         schema = sqlite_to_schema(engine)
         code = schema_to_sqlalchemy(schema)
 
@@ -102,14 +103,14 @@ class TestUuidCodeGeneration:
         assert "concept_guid: Mapped[uuid.UUID]" in code
 
     def test_row_guid_fk_uses_uuid(self, guid_db: str) -> None:
-        engine = create_engine(f"sqlite:///{guid_db}")
+        engine = sqlite_engine(guid_db)
         schema = sqlite_to_schema(engine)
         code = schema_to_sqlalchemy(schema)
 
         assert "row_guid: Mapped[uuid.UUID | None]" in code
 
     def test_non_guid_columns_remain_str(self, guid_db: str) -> None:
-        engine = create_engine(f"sqlite:///{guid_db}")
+        engine = sqlite_engine(guid_db)
         schema = sqlite_to_schema(engine)
         code = schema_to_sqlalchemy(schema)
 

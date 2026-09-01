@@ -24,7 +24,6 @@ from sqlalchemy import (
     Numeric,
     String,
     Table,
-    create_engine,
 )
 
 from dpm_toolkit.schema.generation import Model
@@ -33,6 +32,8 @@ from dpm_toolkit.schema.sqlalchemy_export import (
     generate_base_class,
     schema_to_sqlalchemy,
 )
+
+from .helpers import sqlite_engine
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -49,7 +50,7 @@ def simple_database() -> str:
     with tempfile.NamedTemporaryFile(suffix=".sqlite", delete=False) as tmp:
         db_path = tmp.name
 
-    engine = create_engine(f"sqlite:///{db_path}")
+    engine = sqlite_engine(db_path)
     metadata = MetaData()
     Table(
         "Items",
@@ -175,7 +176,7 @@ class TestSchemaToSqlalchemyBaseImport:
 
     def test_default_emits_runtime_base_import(self, simple_db: str) -> None:
         """By default the runtime branch imports DPM from ``dpm2.base``."""
-        engine = create_engine(f"sqlite:///{simple_db}")
+        engine = sqlite_engine(simple_db)
         schema = sqlite_to_schema(engine)
         code = schema_to_sqlalchemy(schema)
 
@@ -192,7 +193,7 @@ class TestSchemaToSqlalchemyBaseImport:
         type-checking the generated file does not have dpm2 installed:
         ``class X(DPM)`` resolves to a real class rather than to ``Any``.
         """
-        engine = create_engine(f"sqlite:///{simple_db}")
+        engine = sqlite_engine(simple_db)
         schema = sqlite_to_schema(engine)
         code = schema_to_sqlalchemy(schema)
 
@@ -204,7 +205,7 @@ class TestSchemaToSqlalchemyBaseImport:
 
     def test_none_emits_inline_base(self, simple_db: str) -> None:
         """``base_import=None`` produces a fully self-contained module."""
-        engine = create_engine(f"sqlite:///{simple_db}")
+        engine = sqlite_engine(simple_db)
         schema = sqlite_to_schema(engine)
         code = schema_to_sqlalchemy(schema, base_import=None)
 
@@ -216,7 +217,7 @@ class TestSchemaToSqlalchemyBaseImport:
 
     def test_custom_base_import(self, simple_db: str) -> None:
         """A custom module path can be supplied as ``base_import``."""
-        engine = create_engine(f"sqlite:///{simple_db}")
+        engine = sqlite_engine(simple_db)
         schema = sqlite_to_schema(engine)
         code = schema_to_sqlalchemy(schema, base_import="myapp.base")
 
@@ -237,7 +238,7 @@ class TestGeneratedCodeImportable:
 
     def test_schema_to_sqlalchemy_importable(self, simple_db: str) -> None:
         """Generated code from schema_to_sqlalchemy should import cleanly."""
-        engine = create_engine(f"sqlite:///{simple_db}")
+        engine = sqlite_engine(simple_db)
         schema = sqlite_to_schema(engine)
         code = schema_to_sqlalchemy(schema, base_import=None)
 
@@ -247,7 +248,7 @@ class TestGeneratedCodeImportable:
 
     def test_full_schema_imports_registry(self, simple_db: str) -> None:
         """Inline-base output should import both DeclarativeMeta and registry."""
-        engine = create_engine(f"sqlite:///{simple_db}")
+        engine = sqlite_engine(simple_db)
         schema = sqlite_to_schema(engine)
         code = schema_to_sqlalchemy(schema, base_import=None)
 
@@ -267,7 +268,7 @@ def typed_database() -> Generator[str]:
     with tempfile.NamedTemporaryFile(suffix=".sqlite", delete=False) as tmp:
         db_path = tmp.name
 
-    engine = create_engine(f"sqlite:///{db_path}")
+    engine = sqlite_engine(db_path)
     metadata = MetaData()
     Table(
         "Events",
@@ -292,7 +293,7 @@ class TestDateTimeTypesImportable:
 
     def test_generation_model_importable(self, typed_db: str) -> None:
         """Model.render() output should import without MappedAnnotationError."""
-        engine = create_engine(f"sqlite:///{typed_db}")
+        engine = sqlite_engine(typed_db)
         metadata = MetaData()
         metadata.reflect(bind=engine)
         code = Model(metadata).render()
@@ -302,7 +303,7 @@ class TestDateTimeTypesImportable:
 
     def test_schema_to_sqlalchemy_importable(self, typed_db: str) -> None:
         """schema_to_sqlalchemy output should import without MappedAnnotationError."""
-        engine = create_engine(f"sqlite:///{typed_db}")
+        engine = sqlite_engine(typed_db)
         schema = sqlite_to_schema(engine)
         code = schema_to_sqlalchemy(schema, base_import=None)
 
