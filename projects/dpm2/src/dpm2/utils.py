@@ -5,7 +5,8 @@ from importlib.resources.abc import Traversable
 from pathlib import Path
 from sqlite3 import connect
 
-from sqlalchemy import Connection, Engine, create_engine, text
+from sqlalchemy import Engine, create_engine
+from sqlalchemy.engine.interfaces import DBAPIConnection
 from sqlalchemy.event import listen
 from sqlalchemy.pool import ConnectionPoolEntry
 
@@ -16,9 +17,14 @@ def get_source_db_resource() -> Traversable:
     return package_files / "dpm.sqlite"
 
 
-def set_readonly(connection: Connection, _record: ConnectionPoolEntry) -> None:
-    """Set the connection to readonly."""
-    connection.execute(text("PRAGMA readonly = true"))
+def set_readonly(connection: DBAPIConnection, _record: ConnectionPoolEntry) -> None:
+    """Set the connection to readonly.
+
+    The ``connect`` event hands over the raw DBAPI connection, so the
+    statement goes through ``sqlite3`` as plain SQL rather than through
+    SQLAlchemy's ``text()``.
+    """
+    connection.cursor().execute("PRAGMA query_only = true")
 
 
 def disk_engine(db_path: Path) -> Engine:
