@@ -35,14 +35,22 @@ pyright src/
 
 ## Project Structure
 
-DPM Toolkit is a UV workspace with these components:
+DPM Toolkit contains focused internal modules and separate data packages:
 
-- **`src/dpm_toolkit/`** - Main CLI package
-- **`projects/archive/`** - Version management and downloads  
-- **`projects/migrate/`** - Database conversion (Windows only)
-- **`projects/scrape/`** - Web scraping for new versions
-- **`projects/schema/`** - Python model generation
-- **`projects/dpm2/`** - Generated models package
+- **`src/dpm_toolkit/`** - CLI and internal feature modules
+- **`src/dpm_toolkit/archive/`** - Version management and downloads
+- **`src/dpm_toolkit/migrate/`** - Database conversion (Windows only)
+- **`src/dpm_toolkit/scrape/`** - Web scraping for new versions
+- **`src/dpm_toolkit/schema/`** - Python model generation
+- **`src/dpm_toolkit/compare/`** - Database comparison reports
+- **`src/dpm_toolkit/analysis/`** - Type refinement analysis
+- **`tests/<module>/`** - Tests for the matching internal module
+- **`projects/dpm2/`** - Generated models package (separate distribution)
+- **`projects/dpmlite/`** - Lightweight data package (separate distribution)
+
+The internal modules are bundled into the single `dpm-toolkit` distribution and
+gated behind optional extras. `projects/dpm2` and `projects/dpmlite` are
+separate workspace packages published on their own.
 
 ## Making Changes
 

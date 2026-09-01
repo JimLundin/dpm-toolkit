@@ -7,17 +7,21 @@ readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">= 3.12"
 
-dependencies = ["archive", "cyclopts>=3.1.0"]
+dependencies = ["cyclopts>=3.1.0", "requests>=2.32.3", "rich>=13.0.0"]
 
 [project.scripts]
 dpm-toolkit = "dpm_toolkit.cli:main"
 
 [project.optional-dependencies]
-scrape = ["scrape"]
-migrate = ["migrate"]
-schema = ["schema"]
-compare = ["compare"]
-analysis = ["analysis"]
+scrape = ["beautifulsoup4>=4.13.4"]
+migrate = [
+    "jinja2>=3.1.0",
+    "sqlalchemy>=2.0.37",
+    "sqlalchemy-access>=2.0.3; sys_platform == 'win32'",
+]
+schema = ["jinja2>=3.1.0", "sqlalchemy>=2.0.37"]
+compare = ["jinja2>=3.1.0"]
+analysis = ["jinja2>=3.0", "sqlalchemy>=2.0"]
 
 [tool.ruff]
 unsafe-fixes = true
@@ -61,12 +65,18 @@ strict = true
 
 [tool.pyright]
 typeCheckingMode = "strict"
+venvPath = "."
+venv = ".venv"
 
 [tool.pyrefly]
 
 [build-system]
 requires = ["uv_build"]
 build-backend = "uv_build"
+
+[tool.uv.build-backend]
+# Internal module docs are for contributors, not for the installed package.
+wheel-exclude = ["**/README.md"]
 
 [dependency-groups]
 dev = [
@@ -81,18 +91,12 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["projects/*/tests", "tests"]
+testpaths = ["tests"]
 addopts = ["--strict-markers", "--verbose", "--import-mode=importlib"]
 
 [tool.uv.workspace]
-members = ["projects/*"]
+members = ["projects/dpm2", "projects/dpmlite"]
 
 [tool.uv.sources]
-archive = { workspace = true }
-migrate = { workspace = true }
-scrape = { workspace = true }
-schema = { workspace = true }
-compare = { workspace = true }
-analysis = { workspace = true }
 dpm2 = { workspace = true }
 dpmlite = { workspace = true }

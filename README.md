@@ -248,15 +248,17 @@ The conversion process enhances the original Access database structure:
 
 ## Architecture Overview
 
-DPM Toolkit is built as a modular workspace with specialized components:
+DPM Toolkit is built from focused internal modules behind a single CLI package:
 
 ### Project Components
 
-- **[`dpm-toolkit`](src/dpm-toolkit/)**: Central CLI that coordinates all functionality
-- **[`archive`](projects/archive/)**: Version management, downloads, and release tracking
-- **[`migrate`](projects/migrate/)**: Access-to-SQLite conversion engine (Windows only)
-- **[`scrape`](projects/scrape/)**: Automated discovery of new EBA releases
-- **[`schema`](projects/schema/)**: Python model generation from SQLite databases
+- **[`dpm-toolkit`](src/dpm_toolkit/)**: CLI and bundled internal modules
+- **[`archive`](src/dpm_toolkit/archive/)**: Version management, downloads, and release tracking
+- **[`migrate`](src/dpm_toolkit/migrate/)**: Access-to-SQLite conversion engine (Windows only)
+- **[`scrape`](src/dpm_toolkit/scrape/)**: Automated discovery of new EBA releases
+- **[`schema`](src/dpm_toolkit/schema/)**: Python model generation from SQLite databases
+- **[`compare`](src/dpm_toolkit/compare/)**: Difference reports between two database versions
+- **[`analysis`](src/dpm_toolkit/analysis/)**: Type refinement analysis of database contents
 - **[`dpm2`](projects/dpm2/)**: Generated Python models package
 
 ### Automated Pipeline
@@ -323,31 +325,38 @@ uv pip install -e .
 
 ### Project Structure
 
-DPM Toolkit uses a UV workspace with multiple subprojects:
+DPM Toolkit publishes its CLI and internal modules as one package, while data
+packages remain separate workspace projects:
 
 ```
 dpm-toolkit/
-├── src/dpm-toolkit/           # Main CLI package
-├── projects/              # Workspace subprojects
-│   ├── archive/          # Version management & downloads
-│   ├── migrate/          # Access-to-SQLite conversion
-│   ├── scrape/           # Web scraping for new versions
-│   ├── schema/           # Python model generation
-│   └── dpm2/             # Generated Python models package
-├── .github/workflows/    # CI/CD automation
-└── pyproject.toml        # Workspace configuration
+├── src/dpm_toolkit/       # CLI and internal feature modules
+│   ├── archive/           # Version management & downloads
+│   ├── migrate/           # Access-to-SQLite conversion
+│   ├── scrape/            # Web scraping for new versions
+│   ├── schema/            # Python model generation
+│   ├── compare/           # Database comparison reports
+│   └── analysis/          # Type refinement analysis
+├── tests/                 # Tests, one directory per module
+├── projects/
+│   ├── dpm2/              # Generated Python models package
+│   └── dpmlite/           # Experimental lightweight data package
+├── .github/workflows/     # CI/CD automation
+└── pyproject.toml         # Workspace configuration
 ```
 
-### Working with Subprojects
+Each internal module has its own `README.md` next to its code, and its tests
+live in the matching `tests/<module>/` directory.
 
-Each subproject is independently installable:
+### Working with Optional Modules
+
+Install only the dependencies needed for the feature being developed:
 
 ```bash
-# Install specific subprojects
-uv pip install -e projects/archive
-uv pip install -e projects/migrate  # Windows only
-uv pip install -e projects/scrape
-uv pip install -e projects/schema
+uv sync
+uv sync --extra migrate  # Windows only
+uv sync --extra scrape
+uv sync --extra schema
 ```
 
 ### Code Quality
