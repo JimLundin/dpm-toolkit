@@ -1,0 +1,318 @@
+"""Generate clean SQLAlchemy code from schema definitions."""
+
+import keyword
+from collections import defaultdict
+from re import sub
+
+from .type_conversion import (
+    data_type_to_sql,
+    sql_to_python,
+    sql_to_string,
+)
+from .types import (
+    ColumnSchema,
+    DatabaseSchema,
+    ForeignKeySchema,
+    TableSchema,
+)
+
+type Imports = dict[str, set[str]]
+
+
+def pascal_case(name: str) -> str:
+    """Convert name to PascalCase."""
+    return "".join(word[0].upper() + word[1:] for word in name.split("_"))
+
+
+def snake_case(name: str) -> str:
+    """Convert name to snake_case."""
+    return sub("([a-z0-9])([A-Z])|([A-Z])([A-Z][a-z])", r"\1\3_\2\4", name).lower()
+
+
+def clean_name(name: str) -> str:
+    """Clean domain-specific suffixes from names."""
+    return name.removesuffix("GUID").replace("VID", "Version").removesuffix("ID")
+
+
+def has_row_guid(table: TableSchema) -> bool:
+    """Check if table has RowGUID column."""
+    return any(col["name"] == "RowGUID" for col in table["columns"])
+
+
+def relationship_name(source: ColumnSchema, target: ColumnSchema) -> str:
+    """Generate relationship name using DPM domain-specific naming rules."""
+    src_col = source["name"]
+    src_table = source["table_name"]
+    tgt_col = target["name"]
+    tgt_table = target["table_name"]
+
+    # Start with the domain-specific relation name
+    rel_name = clean_name(src_col)
+
+    # Apply domain-specific naming rules
+    if src_col == "RowGUID":
+        rel_name = "UniqueConcept"
+    elif rel_name == src_table:
+        # PK to PK relationships use the target table name
+        rel_name = tgt_table
+    elif rel_name == src_col:
+        # Avoid name collision between relationship and column
+        rel_name = tgt_table if tgt_table in rel_name else f"{rel_name}{tgt_table}"
+    elif src_table == tgt_table and src_col == tgt_col:
+        # Self-referential relationships
+        rel_name = "Self"
+
+    # Convert to snake_case and handle Python keywords
+    rel_name = snake_case(rel_name)
+    if rel_name in keyword.kwlist:
+        rel_name = f"{rel_name}_"
+
+    return rel_name
+
+
+def render_foreign_key(
+    target: ColumnSchema,
+    *,
+    quoted: bool = False,
+) -> str:
+    """Render ForeignKey reference from target column."""
+    if quoted:
+        # String refs use __tablename__ and the actual DB column name
+        ref = f'"{target["table_name"]}.{target["name"]}"'
+    else:
+        # Direct Python refs use the class name and mapped attribute name
+        ref = f"{pascal_case(target['table_name'])}.{snake_case(target['name'])}"
+
+    return f"ForeignKey({ref})"
+
+
+def generate_column_definition(column: ColumnSchema, imports: Imports) -> str:
+    """Generate mapped_column definition for a column."""
+    # Build Python type annotation
+    sql_type = data_type_to_sql(column["type"])
+    type_info = sql_to_python(sql_type)
+
+    if type_info.module:
+        if type_info.name:
+            imports[type_info.module].add(type_info.name)
+        else:
+            imports.setdefault(type_info.module, set())
+
+    python_type = (
+        f"{type_info.expression} | None" if column["nullable"] else type_info.expression
+    )
+
+    # Build column arguments
+    args = [f'"{column["name"]}"']
+
+    # Add foreign key if present
+    for fk_column in column["foreign_keys"]:
+        is_self_ref = fk_column["table_name"] == column["table_name"]
+        needs_quoting = column["table_name"] == "Concept" or is_self_ref
+        imports["sqlalchemy"].add("ForeignKey")
+        fk = render_foreign_key(fk_column, quoted=needs_quoting)
+        args.append(fk)
+
+    # Add primary key if needed
+    if column["primary_key"]:
+        args.append("primary_key=True")
+
+    # Generate the definition
+    imports["sqlalchemy.orm"].update(("Mapped", "mapped_column"))
+
+    column_name = snake_case(column["name"])
+    args_str = ", ".join(args)
+
+    return f"\t{column_name}: Mapped[{python_type}] = mapped_column({args_str})"
+
+
+def generate_relationship_definition(fk: ForeignKeySchema, imports: Imports) -> str:
+    """Generate relationship definition from foreign key schema."""
+    source = fk["source"]
+    target = fk["target"]
+
+    # Generate relationship name
+    rel_name = relationship_name(source, target)
+
+    # Build type annotation
+    target_class = pascal_case(target["table_name"])
+    type_def = f"{target_class} | None" if source["nullable"] else target_class
+
+    # Generate the relationship
+    imports["sqlalchemy.orm"].update(("Mapped", "relationship"))
+    col_name = snake_case(source["name"])
+
+    return f"\t{rel_name}: Mapped[{type_def}] = relationship(foreign_keys={col_name})"
+
+
+def generate_class_definition(
+    table: TableSchema,
+    base_class: str,
+    imports: Imports,
+) -> str:
+    """Generate complete SQLAlchemy class definition for a table."""
+    class_name = pascal_case(table["name"])
+
+    lines = [
+        f"class {class_name}({base_class}):",
+        f'\t"""Auto-generated model for the {table["name"]} table."""',
+        f'\t__tablename__ = "{table["name"]}"',
+        "",
+    ]
+
+    # Add comment for Concept table
+    if table["name"] == "Concept":
+        lines.append("\t# We quote the references to avoid circular dependencies")
+
+    # Generate columns
+    lines.extend(
+        generate_column_definition(column, imports) for column in table["columns"]
+    )
+    # Add mapper args for RowGUID tables without primary keys
+    if not table["primary_keys"] and has_row_guid(table):
+        lines.extend(
+            (
+                "",
+                "\t__mapper_args__: ClassVar = {",
+                '\t    "primary_key": (row_guid,)',
+                "\t}",
+            ),
+        )
+        imports["typing"].add("ClassVar")
+
+    # Generate relationships
+    lines.append("")
+    lines.extend(
+        generate_relationship_definition(fk, imports) for fk in table["foreign_keys"]
+    )
+    return "\n".join(lines)
+
+
+def generate_table_definition(
+    table: TableSchema,
+    base_class: str,
+    imports: Imports,
+) -> str:
+    """Generate SQLAlchemy Table definition for tables without primary keys."""
+    table_name = pascal_case(table["name"])
+
+    args = [
+        f'"{table["name"]}"',
+        f"{base_class}.metadata",
+    ]
+
+    # Add columns
+    for column in table["columns"]:
+        sql_type = data_type_to_sql(column["type"])
+        imports["sqlalchemy"].add("Column")
+        imports["sqlalchemy"].add(sql_type.__class__.__name__)
+        type_str = sql_to_string(sql_type)
+
+        args.append(
+            f'Column("{column["name"]}", {type_str}, nullable={column["nullable"]})',
+        )
+
+    imports["sqlalchemy"].add("Table as AlchemyTable")
+    args_str = ",\n\t".join(args)
+
+    return f"{table_name} = AlchemyTable(\n\t{args_str}\n)"
+
+
+def generate_imports(imports: Imports) -> str:
+    """Generate import statements from collected imports."""
+    lines = [
+        f"from {module} import {', '.join(sorted(names))}"
+        if names
+        else f"import {module}"
+        for module, names in imports.items()
+    ]
+    return "\n".join(lines)
+
+
+def generate_base_class(base_name: str) -> str:
+    """Generate an inline base class definition.
+
+    Used when the generator is invoked without ``base_import`` so the
+    output is fully self-contained (no dependency on ``dpm2.base``).
+
+    We use ``DeclarativeMeta`` instead of ``DeclarativeBase`` so subclasses
+    can override ``__mapper_args__`` as a ``ClassVar`` without a mypy
+    ``misc`` error. ``DeclarativeMeta`` requires an explicit registry and
+    metadata on the base.
+    """
+    return f"""_registry = registry()
+
+class {base_name}(metaclass=DeclarativeMeta):
+    \"\"\"Base class for all DPM models.\"\"\"
+    __abstract__ = True
+    registry = _registry
+    metadata = _registry.metadata"""
+
+
+def schema_to_sqlalchemy(
+    schema: DatabaseSchema,
+    base_import: str | None = "dpm2.base",
+) -> str:
+    """Generate SQLAlchemy models from schema.
+
+    When ``base_import`` is set (the default), the generated file imports
+    the ``DPM`` base class from that module (e.g. ``dpm2.base``), keeping
+    the declarative base — and its ``type_annotation_map`` — out of the
+    generated file. This avoids any coupling from the ``schema`` project
+    back into ``dpm2``.
+
+    When ``base_import`` is ``None``, an inline ``DPM`` base class is
+    emitted so the output is fully self-contained (used by ``schema``'s
+    own tests, which exec the generated code in isolation).
+    """
+    imports: Imports = defaultdict(set)
+    imports["__future__"].add("annotations")
+
+    base_class = "DPM"
+
+    # Generate models first so they can populate imports.
+    models = [
+        (
+            generate_class_definition(table, base_class, imports)
+            if table["primary_keys"] or has_row_guid(table)
+            else generate_table_definition(table, base_class, imports)
+        )
+        for table in schema["tables"]
+    ]
+
+    # Assemble final file
+    parts = [
+        '"""SQLAlchemy models generated from DPM by the DPM Toolkit project."""',
+        "# ruff: noqa: TC001, TC002, TC003",
+    ]
+
+    if base_import is None:
+        imports["sqlalchemy.orm"].update(("DeclarativeMeta", "registry"))
+        parts.append(generate_imports(imports))
+        parts.append(generate_base_class(base_class))
+    else:
+        # Split the base import into type-checking and runtime branches.
+        # Under ``TYPE_CHECKING`` we declare a local stub using
+        # ``DeclarativeMeta`` (not ``DeclarativeBase``) so that subclasses
+        # can override ``__mapper_args__`` as a ``ClassVar`` without a
+        # mypy ``misc`` error. This keeps strict mypy green even when the
+        # environment type-checking the generated file does not have
+        # ``dpm2`` installed. At runtime we import the real ``DPM`` —
+        # carrying its ``type_annotation_map`` — from ``dpm2.base``.
+        imports["typing"].add("TYPE_CHECKING")
+        parts.append(generate_imports(imports))
+        parts.append(
+            "\nif TYPE_CHECKING:\n"
+            "    from sqlalchemy.orm import DeclarativeMeta\n"
+            "\n"
+            f"    class {base_class}(metaclass=DeclarativeMeta):\n"
+            f'        """Type-checking stub mirroring {base_import}.{base_class}."""\n'
+            "\n"
+            "        __abstract__ = True\n"
+            "else:\n"
+            f"    from {base_import} import {base_class}",
+        )
+
+    parts.extend(models)
+
+    return "\n".join(parts)

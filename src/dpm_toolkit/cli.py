@@ -8,7 +8,12 @@ from pathlib import Path
 from sys import stdout
 from typing import Any, Literal
 
-from archive import (
+from cyclopts import App
+from rich.console import Console
+from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.table import Table
+
+from dpm_toolkit.archive import (
     Group,
     SourceType,
     Version,
@@ -19,10 +24,6 @@ from archive import (
     get_versions_by_type,
     latest_version,
 )
-from cyclopts import App
-from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn
-from rich.table import Table
 
 app = App(help="DPM Toolkit CLI tool")
 
@@ -210,7 +211,9 @@ def download(version_id: str, variant: SourceType = "archive") -> None:
 def migrate(access_location: Path, sqlite_location: Path) -> None:
     """Migrate Access database to SQLite."""
     try:
-        from migrate import access, access_to_sqlite
+        from sqlalchemy.exc import NoSuchModuleError
+
+        from dpm_toolkit.migrate import access, access_to_sqlite
     except ImportError:
         print_error("Migration requires [migrate] extra dependencies")
         sys.exit(1)
@@ -223,7 +226,13 @@ def migrate(access_location: Path, sqlite_location: Path) -> None:
     validate_database_extension(sqlite_location, SQLITE_EXTENSIONS)
     print_info(f"SQLite: {sqlite_location}")
 
-    access_database = access(access_location)
+    try:
+        access_database = access(access_location)
+    except NoSuchModuleError:
+        # sqlalchemy-access is only installed on Windows, where the Microsoft
+        # Access ODBC driver it needs is available.
+        print_error("Migration requires Windows and the Access ODBC driver")
+        sys.exit(1)
 
     with Progress(
         SpinnerColumn(),
@@ -245,7 +254,7 @@ def schema(
 ) -> None:
     """Generate database schema in multiple formats."""
     try:
-        from schema import (
+        from dpm_toolkit.schema import (
             read_only_sqlite,
             schema_to_html,
             schema_to_sqlalchemy,
@@ -286,7 +295,7 @@ def schema(
 def compare(old_location: Path, new_location: Path, fmt: Format = "table") -> None:
     """Compare two SQLite databases."""
     try:
-        from compare import (
+        from dpm_toolkit.compare import (
             compare_databases,
             comparisons_to_html,
             comparisons_to_summary,
@@ -311,20 +320,23 @@ def compare(old_location: Path, new_location: Path, fmt: Format = "table") -> No
         console=err_console,
     ) as progress:
         progress.add_task("Comparing databases...", total=None)
-        comparisons = compare_databases(old_location, new_location)
+        comparison_context = compare_databases(old_location, new_location)
 
-    # Output to stdout in requested format (keep stdout clean for data)
-    if fmt == "html":
-        html_stream = comparisons_to_html(comparisons)
-        for chunk in html_stream:
-            stdout.write(chunk)
+    # Comparisons are produced lazily, so they have to be written out while the
+    # databases are still attached.
+    with comparison_context as comparisons:
+        # Output to stdout in requested format (keep stdout clean for data)
+        if fmt == "html":
+            html_stream = comparisons_to_html(comparisons)
+            for chunk in html_stream:
+                stdout.write(chunk)
 
-    if fmt == "json":
-        stdout.write(dumps(comparisons, default=serializer))
+        if fmt == "json":
+            stdout.write(dumps(comparisons, default=serializer))
 
-    if fmt == "table":
-        comparison_summary = comparisons_to_summary(comparisons)
-        format_comparison_table(comparison_summary)
+        if fmt == "table":
+            comparison_summary = comparisons_to_summary(comparisons)
+            format_comparison_table(comparison_summary)
 
 
 @app.command
@@ -337,7 +349,7 @@ def analyze(
 ) -> None:
     """Analyze database for type refinement opportunities."""
     try:
-        from analysis import (
+        from dpm_toolkit.analysis import (
             analyze_database,
             create_engine_for_database,
             generate_report,

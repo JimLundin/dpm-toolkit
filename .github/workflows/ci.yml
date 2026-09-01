@@ -29,34 +29,50 @@ jobs:
         project:
           - name: Main CLI
             path: .
+            source: src/dpm_toolkit
+            tests: tests
             extras: --all-extras
             os: windows-latest
           - name: Archive Module
-            path: projects/archive
+            path: .
+            source: src/dpm_toolkit/archive
+            tests: tests/archive
             extras: ""
             os: ubuntu-latest
           - name: Compare Module
-            path: projects/compare
+            path: .
+            source: src/dpm_toolkit/compare
+            tests: tests/compare
             extras: --extra compare
             os: ubuntu-latest
           - name: Schema Module
-            path: projects/schema
+            path: .
+            source: src/dpm_toolkit/schema
+            tests: tests/schema
             extras: --extra schema
             os: ubuntu-latest
           - name: Scrape Module
-            path: projects/scrape
+            path: .
+            source: src/dpm_toolkit/scrape
+            tests: tests/scrape
             extras: --extra scrape
             os: ubuntu-latest
           - name: DPM2 Module
             path: projects/dpm2
+            source: src
+            tests: tests
             extras: ""
             os: ubuntu-latest
           - name: Analysis Module
-            path: projects/analysis
+            path: .
+            source: src/dpm_toolkit/analysis
+            tests: tests/analysis
             extras: --extra analysis
             os: ubuntu-latest
           - name: Migrate Module
-            path: projects/migrate
+            path: .
+            source: src/dpm_toolkit/migrate
+            tests: tests/migrate
             extras: --extra migrate
             os: windows-latest
 
@@ -115,14 +131,14 @@ jobs:
         working-directory: ${{ matrix.project.path }}
         run: |
           echo "::group::Ruff Check - ${{ matrix.project.name }}"
-          uv run ruff check --output-format=github src/
+          uv run ruff check --output-format=github ${{ matrix.project.source }}/
           echo "::endgroup::"
 
       - name: Run Ruff formatter check on ${{ matrix.project.name }}
         working-directory: ${{ matrix.project.path }}
         run: |
           echo "::group::Ruff Format Check - ${{ matrix.project.name }}"
-          uv run ruff format --check --diff src/
+          uv run ruff format --check --diff ${{ matrix.project.source }}/
           echo "::endgroup::"
 
       # Testing
@@ -130,7 +146,7 @@ jobs:
         working-directory: ${{ matrix.project.path }}
         run: |
           echo "::group::Testing - ${{ matrix.project.name }}"
-          uv run pytest tests/ -v --tb=short
+          uv run pytest ${{ matrix.project.tests }}/ -v --tb=short
           echo "::endgroup::"
 
       # Type checking - each as separate step
@@ -138,14 +154,14 @@ jobs:
         working-directory: ${{ matrix.project.path }}
         run: |
           echo "::group::MyPy - ${{ matrix.project.name }}"
-          uv run mypy src/
+          uv run mypy ${{ matrix.project.source }}/
           echo "::endgroup::"
 
       - name: Run Pyright on ${{ matrix.project.name }}
         working-directory: ${{ matrix.project.path }}
         run: |
           echo "::group::Pyright - ${{ matrix.project.name }}"
-          uv run pyright src/
+          uv run pyright ${{ matrix.project.source }}/
           echo "::endgroup::"
 
       - name: Run Ty on ${{ matrix.project.name }}
@@ -153,7 +169,7 @@ jobs:
         working-directory: ${{ matrix.project.path }}
         run: |
           echo "::group::Ty (beta) - ${{ matrix.project.name }}"
-          uv run ty check src/
+          uv run ty check ${{ matrix.project.source }}/
           echo "::endgroup::"
 
       - name: Run Pyrefly on ${{ matrix.project.name }}
@@ -161,5 +177,5 @@ jobs:
         working-directory: ${{ matrix.project.path }}
         run: |
           echo "::group::Pyrefly (beta) - ${{ matrix.project.name }}"
-          uv run pyrefly check src/
+          uv run pyrefly check ${{ matrix.project.source }}/
           echo "::endgroup::"

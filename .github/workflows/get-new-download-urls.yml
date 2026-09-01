@@ -47,7 +47,7 @@ jobs:
       - name: Run scraper and check for new URLs
         id: scrape
         run: |
-          if uv run python -m scrape > scrape_result.txt 2>&1; then
+          if uv run python -m dpm_toolkit.scrape > scrape_result.txt 2>&1; then
             echo "HAS_NEW=true" >> "$GITHUB_ENV"
           else
             echo "HAS_NEW=false" >> "$GITHUB_ENV"

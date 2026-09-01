@@ -40,5 +40,22 @@ jobs:
       - name: Build package
         run: uv build
 
+      - name: Test built wheel
+        run: |
+          uv venv /tmp/dpm-toolkit-wheel-test
+          PYTHON=/tmp/dpm-toolkit-wheel-test/bin/python
+          WHEEL=$(echo dist/*.whl)
+
+          # Base install must give a working CLI without any extras.
+          uv pip install --python "$PYTHON" "$WHEEL"
+          /tmp/dpm-toolkit-wheel-test/bin/dpm-toolkit versions release --latest
+
+          # Every internal module must be bundled in the wheel rather than
+          # resolved from PyPI, and must import once its extras are installed.
+          uv pip install --python "$PYTHON" "${WHEEL}[analysis,compare,migrate,schema,scrape]"
+          for module in analysis archive compare migrate schema scrape; do
+            "$PYTHON" -c "import dpm_toolkit.$module"
+          done
+
       - name: Publish to PyPI
         run: uv publish
