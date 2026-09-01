@@ -119,6 +119,8 @@ def _resolve_pk_targets(
         match list(table.primary_key.columns):
             case [pk]:
                 pk_owners[pk.name].append((table, pk))
+            case _:
+                pass
 
     return {
         pk_name: canonical
