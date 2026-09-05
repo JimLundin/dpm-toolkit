@@ -4,7 +4,11 @@ import re
 
 # Reusable regex components for better readability
 IDENTIFIER = r"[\"'`]?(\w+)[\"'`]?"  # Captures identifier inside optional quotes
-VALUE = r"'([^']+)'"  # Captures content inside single quotes
+# Captures content inside single quotes.  Must allow the empty string: DPM
+# enum columns do contain '' (e.g. ModelViolations.HeaderDirection in 4.4),
+# and requiring one character makes the scan slide past the empty literal and
+# capture the ", " separators as if they were values.
+VALUE = r"'([^']*)'"
 WHITESPACE = r"\s*"
 OPEN_PAREN = r"\("
 CLOSE_PAREN = r"\)"

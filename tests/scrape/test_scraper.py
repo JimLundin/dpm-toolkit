@@ -30,6 +30,12 @@ class TestParseVersion:
     def test_two_digit_minor(self) -> None:
         assert _parse_version("35") == "3.5"
 
+    def test_already_dotted(self) -> None:
+        assert _parse_version("4.4") == "4.4"
+
+    def test_already_dotted_two_digit_minor(self) -> None:
+        assert _parse_version("2.10") == "2.10"
+
 
 # ---------------------------------------------------------------------------
 # _is_dpm2_database
@@ -127,6 +133,12 @@ class TestIsDpm2Database:
                 "https://www.eba.europa.eu/sites/default/files/dpm2_table_layout.zip",
                 "",
             ),
+            # DPM 2.0 / DPM_XL technical documentation (excluded)
+            (
+                "https://www.eba.europa.eu/sites/default/files/2026-07/6e7e0d79/"
+                "dpm_2.0_and_dpm_xl_technical_documentation.zip",
+                "DPM 2.0 and DPM_XL",
+            ),
         ],
     )
     def test_rejects_non_dpm2(self, href: str, text: str) -> None:
@@ -139,6 +151,8 @@ class TestIsDpm2Database:
 
 FRAMEWORKS_HTML = """\
 <html><body>
+<a href="/risk-and-data-analysis/reporting/reporting-frameworks/\
+reporting-framework-4.4">Framework 4.4</a>
 <a href="/risk-and-data-analysis/reporting/reporting-frameworks/\
 reporting-framework-43">Framework 4.3</a>
 <a href="/risk-and-data-analysis/reporting-frameworks/\
@@ -198,6 +212,7 @@ class TestGetFrameworkUrls:
 
         result = get_framework_urls()
 
+        assert "4.4" in result
         assert "4.3" in result
         assert "4.2" in result
         assert "4.1" in result
@@ -225,7 +240,7 @@ class TestGetFrameworkUrls:
         result = get_framework_urls()
 
         # Only framework links should be present
-        assert len(result) == 6
+        assert len(result) == 7
 
     def test_accepts_explicit_session(self) -> None:
         session = MagicMock()
@@ -233,7 +248,7 @@ class TestGetFrameworkUrls:
 
         result = get_framework_urls(session)
 
-        assert len(result) == 6
+        assert len(result) == 7
 
 
 # ---------------------------------------------------------------------------
@@ -293,6 +308,7 @@ class TestGetActiveReportingFrameworks:
             _mock_response(FRAMEWORK_PAGE_HTML),  # 4.1
             _mock_response(FRAMEWORK_PAGE_HTML),  # 4.2
             _mock_response(FRAMEWORK_PAGE_HTML),  # 4.3
+            _mock_response(FRAMEWORK_PAGE_HTML),  # 4.4
         ]
         mock_create.return_value = session
 
@@ -311,6 +327,7 @@ class TestGetActiveReportingFrameworks:
             _mock_response(FRAMEWORK_PAGE_HTML),  # 4.1 — has DPM
             _mock_response(EMPTY_PAGE_HTML),  # 4.2 — no DPM
             _mock_response(EMPTY_PAGE_HTML),  # 4.3 — no DPM
+            _mock_response(FRAMEWORK_PAGE_HTML),  # 4.4 — has DPM
         ]
         mock_create.return_value = session
 
@@ -337,6 +354,7 @@ class TestGetActiveReportingFrameworks:
             _mock_response(FRAMEWORK_PAGE_HTML),  # 4.1
             _mock_response(FRAMEWORK_PAGE_HTML),  # 4.2
             _mock_response(FRAMEWORK_PAGE_HTML),  # 4.3
+            _mock_response(FRAMEWORK_PAGE_HTML),  # 4.4
         ]
         mock_create.return_value = session
 

@@ -17,8 +17,11 @@ logger = logging.getLogger(__name__)
 
 BASE_URL: Final[str] = "https://www.eba.europa.eu"
 FRAMEWORKS_URL: Final[str] = f"{BASE_URL}/risk-and-data-analysis/reporting-frameworks"
+# Framework slugs come in two spellings: compact (``reporting-framework-43``)
+# and already dotted (``reporting-framework-4.4``).  Both must be matched or a
+# newly published framework is silently skipped.
 FRAMEWORK_PATTERN: Final[re.Pattern[str]] = re.compile(
-    r"reporting-framework-(\d+)$",
+    r"reporting-framework-(\d+(?:\.\d+)?)$",
 )
 
 # Two patterns to detect DPM 2.0 database references (case-insensitive):
@@ -34,6 +37,7 @@ EXCLUDE_PATTERNS: Final[tuple[re.Pattern[str], ...]] = (
     re.compile(r"conversion", re.IGNORECASE),
     re.compile(r"table.layout", re.IGNORECASE),
     re.compile(r"categorization", re.IGNORECASE),
+    re.compile(r"technical.documentation", re.IGNORECASE),
 )
 
 USER_AGENT: Final[str] = (
@@ -64,7 +68,12 @@ def _fetch_page(session: Session, url: str) -> BeautifulSoup:
 
 
 def _parse_version(digits: str) -> str:
-    """Convert a digit string into a dotted version (``"42"`` → ``"4.2"``)."""
+    """Convert a version fragment into a dotted version (``"42"`` → ``"4.2"``).
+
+    Fragments that are already dotted (``"4.4"``) are returned unchanged.
+    """
+    if "." in digits:
+        return digits
     if len(digits) < 2:  # noqa: PLR2004
         return digits
     return f"{digits[0]}.{digits[1:]}"
