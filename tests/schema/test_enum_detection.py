@@ -126,6 +126,34 @@ def test_numeric_strings_in_enum() -> None:
     assert result == ["1", "2", "3"]
 
 
+def test_empty_string_member() -> None:
+    """Test enum containing the empty string.
+
+    Regression: DPM 4.4 ships
+    ``CHECK ("HeaderDirection" IN ('', 'X', 'Y'))`` on ModelViolations.  A
+    value pattern requiring at least one character cannot match ``''``, so the
+    scan slid past it and captured the ", " separators, yielding
+    ``Enum(", ", ", ")`` and a LookupError on every real value.
+    """
+    constraint = "\"HeaderDirection\" IN ('', 'X', 'Y')"
+    result = detect_enum_for_column(constraint, "HeaderDirection")
+    assert result == ["", "X", "Y"]
+
+
+def test_empty_string_only_member() -> None:
+    """Test enum whose sole member is the empty string."""
+    constraint = "status IN ('')"
+    result = detect_enum_for_column(constraint, "status")
+    assert result == [""]
+
+
+def test_empty_string_trailing_member() -> None:
+    """Test empty string in last position."""
+    constraint = "flag IN ('Y', '')"
+    result = detect_enum_for_column(constraint, "flag")
+    assert result == ["Y", ""]
+
+
 def test_mixed_case_column_names() -> None:
     """Test column name matching with different cases."""
     constraint = "Status IN ('active', 'inactive')"
