@@ -23,6 +23,14 @@ reader assembles one from three:
 Row data comes from ``mdb-export``, which emits text, so values are coerced
 back to Python types using the overlaid column types.
 
+One fidelity loss is irreducible: mdbtools reports Access's zero-length strings
+as NULL, so in a *nullable* text column ``''`` and NULL cannot be told apart.
+Where Access declares the column NOT NULL the ambiguity resolves — the value
+cannot have been NULL — and :func:`_coerce` restores the empty string. Where it
+does not, the empty string is read as NULL: about 2,950 cells across six
+``Description`` columns in DPM 4.4. Both spellings mean "no description", but
+the distinction is not recoverable from mdbtools output.
+
 mdbtools 1.0.0 or newer is required. 0.7.x cannot open ``.accdb`` files at all
 and lacks ``--null``, without which NULL and the empty string are
 indistinguishable in the exported CSV.
@@ -33,6 +41,7 @@ from __future__ import annotations
 import csv
 import re
 from datetime import datetime
+from io import StringIO
 from logging import getLogger
 from pathlib import Path
 from shutil import which
@@ -48,6 +57,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     MetaData,
+    Numeric,
     String,
     Text,
     create_engine,
@@ -104,7 +114,16 @@ release. A poisoned value in any column *outside* this set is the real risk,
 because repairing it would invent a wrong date, so that fails the conversion.
 """
 
-_ACCESS_TYPES: Final[Mapping[str, Callable[[int | None], TypeEngine[Any]]]] = {
+_SCALE: Final = 1
+"""Index of the scale value in an Access `Numeric (precision, scale)` size."""
+
+_GUID_DIGITS: Final = 32
+"""Hex digits in a replication ID, before canonical hyphens are inserted."""
+
+_SYSTEM_TABLE_PREFIXES: Final = ("MSys", "~")
+"""Prefixes of Access-internal tables that are not part of the data model."""
+
+_ACCESS_TYPES: Final[Mapping[str, Callable[[tuple[int, ...]], TypeEngine[Any]]]] = {
     "Boolean": lambda _: Boolean(),
     "Byte": lambda _: Integer(),
     "Integer": lambda _: Integer(),
@@ -112,21 +131,30 @@ _ACCESS_TYPES: Final[Mapping[str, Callable[[int | None], TypeEngine[Any]]]] = {
     "Single": lambda _: Float(),
     "Double": lambda _: Float(),
     "DateTime": lambda _: DateTime(),
-    "Text": lambda length: String(length),
+    "Text": lambda spec: String(spec[0] if spec else None),
+    # Access reports Numeric as `Numeric (precision, scale)`.
+    "Numeric": lambda spec: Numeric(
+        precision=spec[0] if spec else None,
+        scale=spec[1] if len(spec) > _SCALE else None,
+    ),
     # mdbtools reports Access's declared size for memo columns too, but the
-    # pyodbc path discards it and maps them to unbounded text, so the length is
+    # pyodbc path discards it and maps them to unbounded text, so the size is
     # dropped here to match. Honouring it diverges on 15 columns.
     "Memo/Hyperlink": lambda _: Text(),
-    "Replication ID": lambda _: CHAR(32),
+    # Stored in the canonical 8-4-4-4-12 form, so 36 characters.
+    "Replication ID": lambda _: CHAR(36),
 }
 
 _TABLE_LINE = re.compile(r"^CREATE TABLE \[(?P<table>[^\]]+)\]")
+# The size specifier holds one value for `Text (255)` and two for
+# `Numeric (19, 0)`, so it is captured whole and split.
 _COLUMN_LINE = re.compile(
     r"^\s+\[(?P<column>[^\]]+)\]\s+"
     r"(?P<type>[A-Za-z /]+?)"
-    r"(?: \((?P<length>\d+)\))?"
+    r"(?: \((?P<spec>[\d, ]*)\))?"
     r"(?: NOT NULL)?,?\s*$",
 )
+_COLUMN_START = re.compile(r"^\s+\[")
 _NON_HEX = re.compile(r"[^0-9a-f]")
 
 
@@ -168,18 +196,20 @@ def _run(name: str, *args: str) -> str:
         MdbtoolsError: If the tool exits non-zero.
 
     """
+    # Captured as bytes and decoded here rather than with `text=True`, which
+    # enables universal newlines and would rewrite the CRLF line endings inside
+    # Access memo fields to LF before the CSV reader ever sees them.
     result = run(  # noqa: S603
         [_binary(name), *args],
         capture_output=True,
         check=False,
-        text=True,
-        errors="replace",
     )
     if result.returncode != 0:
-        msg = f"{name} failed ({result.returncode}): {result.stderr.strip()}"
+        stderr = result.stderr.decode("utf-8", errors="replace").strip()
+        msg = f"{name} failed ({result.returncode}): {stderr}"
         raise MdbtoolsError(msg)
 
-    return result.stdout
+    return result.stdout.decode("utf-8", errors="replace")
 
 
 def version() -> tuple[int, ...]:
@@ -260,7 +290,16 @@ def _native_types(
             table = header["table"]
             continue
 
-        if not table or not (column := _COLUMN_LINE.match(line)):
+        if not table:
+            continue
+
+        column = _COLUMN_LINE.match(line)
+        if column is None:
+            # A column line that does not parse would otherwise be skipped
+            # silently, leaving the sqlite backend's flattened type in place.
+            if _COLUMN_START.match(line):
+                msg = f"could not parse column definition in {table}: {line!r}"
+                raise MdbtoolsError(msg)
             continue
 
         access_type = column["type"].strip()
@@ -271,8 +310,10 @@ def _native_types(
             )
             raise MdbtoolsError(msg)
 
-        length = int(column["length"]) if column["length"] else None
-        types[table, column["column"]] = _ACCESS_TYPES[access_type](length)
+        spec = tuple(
+            int(part) for part in (column["spec"] or "").split(",") if part.strip()
+        )
+        types[table, column["column"]] = _ACCESS_TYPES[access_type](spec)
 
     return types
 
@@ -305,6 +346,13 @@ def _structure(access_location: Path, workspace: Path) -> MetaData:
     schema = MetaData()
     schema.reflect(bind=engine)
     engine.dispose()
+
+    # Access ships internal tables that are not part of the data model: MSys*
+    # catalogues, and ~TMPCLP* clipboard scratch tables left behind by whoever
+    # built the file. DPM 4.3 carries two of the latter.
+    for name in list(schema.tables):
+        if name.startswith(_SYSTEM_TABLE_PREFIXES):
+            schema.remove(schema.tables[name])
 
     return schema
 
@@ -351,7 +399,7 @@ def _apply_declared_foreign_keys(
     )
 
     added = 0
-    for row in csv.DictReader(exported.splitlines()):
+    for row in csv.DictReader(StringIO(exported, newline="")):
         source = schema.tables.get(row["szObject"])
         target = schema.tables.get(row["szReferencedObject"])
         if source is None or target is None:
@@ -370,21 +418,30 @@ def _apply_declared_foreign_keys(
 
 
 def _repair_guid(value: str) -> str | None:
-    """Normalise an mdbtools GUID to bare lowercase hex.
+    """Normalise an mdbtools GUID to the canonical 8-4-4-4-12 form.
 
-    mdbtools renders replication IDs as ``8-4-4-16`` — the fourth hyphen is
+    mdbtools renders replication IDs as ``{8-4-4-16}`` — the fourth hyphen is
     missing, because no CLI tool calls ``mdb_set_repid_fmt``. All 32 hex digits
-    are present and correctly ordered, so stripping non-hex characters yields
-    the same representation the pyodbc path produces.
+    are present and correctly ordered, so the braces and hyphens are stripped
+    and the canonical grouping reapplied.
+
+    Uppercase and hyphenated is what the pyodbc path produces, so published
+    databases already hold GUIDs in that form and this keeps them byte-equal.
 
     Args:
         value: Raw exported value.
 
     Returns:
-        32 lowercase hex characters, or None if the value held none.
+        The GUID as ``XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX``, or None if the
+        value did not hold 32 hex digits.
 
     """
-    return _NON_HEX.sub("", value.lower()) or None
+    digits = _NON_HEX.sub("", value.lower())
+    if len(digits) != _GUID_DIGITS:
+        return None
+
+    groups = (digits[:8], digits[8:12], digits[12:16], digits[16:20], digits[20:])
+    return "-".join(groups).upper()
 
 
 def _coerce(  # noqa: PLR0911
@@ -395,7 +452,8 @@ def _coerce(  # noqa: PLR0911
     """Convert one exported text value to a Python value.
 
     Args:
-        column: Column the value belongs to, carrying its native type.
+        column: Column the value belongs to, carrying its native type and
+            Access's declared nullability.
         value: Raw exported text.
         poisoned: Accumulator of ``(table, column)`` for repaired dates.
 
@@ -403,10 +461,16 @@ def _coerce(  # noqa: PLR0911
         The coerced value.
 
     """
-    if value == NULL:
-        return None
-
     column_type = column.type
+
+    if value == NULL:
+        # mdbtools exports Access's zero-length strings as the null sentinel,
+        # losing the distinction. Access declaring the column NOT NULL settles
+        # it: the value cannot have been NULL, so it was the empty string.
+        # ItemCategory.Signature in DPM 4.3 has 8 such rows.
+        if isinstance(column_type, String) and not column.nullable:
+            return ""
+        return None
 
     if isinstance(column_type, Boolean):
         return value not in ("0", "FALSE", "False")
@@ -492,7 +556,7 @@ def _rows(
             for name, value in row.items()
             if name in table.columns
         }
-        for row in csv.DictReader(exported.splitlines())
+        for row in csv.DictReader(StringIO(exported, newline=""))
     ]
 
 

@@ -1168,3 +1168,107 @@ $M/mdb-export -0 '\N' -T '%Y-%m-%d %H:%M:%S' "$DB" Release   # do NOT add -b hex
 
 Full (a) prototype: `/tmp/mdbtools-research/build_from_mdbtools.py`.
 Generated models: `real_mdb.py` (mdbtools 3.5) and `real_gt.py` (ground truth 3.2).
+
+---
+
+## Live validation against DPM 4.3.1 and 4.4-draft (2026-09-10)
+
+The report above was written against `DPM 2.0_withOperations_3.5.accdb` with
+`3.2-sample-original.sqlite` as reference — different releases, and the
+reference a *sample*. That gap is now closed. Both variants of two current
+releases were fetched with `dpm-toolkit download` (`--variant original` for the
+`.accdb`, `--variant converted` for the pyodbc-derived SQLite), giving a
+same-release baseline on both sides.
+
+**4.4-draft is the authoritative comparison.** Its `converted` artifact was
+published 2026-09-05, after `add_self_referential_foreign_keys` landed
+(2026-09-01), so it reflects current pipeline behaviour. The 4.3.1 artifact
+predates that commit, which is why its FK count is 206 where mdbtools produces
+217 — a stale artifact, not a reader difference.
+
+### Structure: exact
+
+| | 4.4-draft reference | mdbtools |
+|---|---|---|
+| tables | 70 | 70 |
+| columns | 477 | 477 |
+| NOT NULL differences | — | 0 |
+| primary key differences | — | 0 |
+| foreign keys | 217 | 217 (0 missing, 0 extra) |
+| row-count differences | — | 0 |
+| rows | 5,807,457 | 5,807,457 |
+
+The only declared-type difference is 51 replication-ID columns: the reference
+declares them `INTEGER`, which is wrong for a hex string; mdbtools yields
+`CHAR(36)`.
+
+### Data: 62 of 70 tables byte-identical
+
+All 5,807,457 rows were compared on full column content, order-insensitively.
+Every differing cell is accounted for:
+
+| Cause | Cells | Reducible? |
+|---|---|---|
+| Zero-length string read as NULL | 2,962 | **No** — see below |
+| `VariableGeneration.StartDate`/`EndDate` off by one second | 344 | No — mdbtools rounds, pyodbc truncates; the fraction is gone before output |
+| `Item.Name` non-BMP characters replaced by `?` | 1 | No — see below |
+
+That is 3,307 cells of roughly 40 million.
+
+**Zero-length strings.** mdbtools reports Access's zero-length strings as NULL.
+Where Access declares the column NOT NULL the ambiguity resolves and the empty
+string is restored (`ItemCategory.Signature`, 8 rows in 4.3.1 — this is why the
+NOT NULL differences are 0). Where the column is nullable it cannot be
+resolved, because the reference holds *both* spellings in the same column:
+
+```
+table.column                             empty    null    total
+Item.Description                          1865   12439    15815
+OperationVersion.Description              1033    2283    19206
+TableVersion.Description                    27     237     2687
+SubCategory.Description                     10     989     1206
+TableAssociation.Description                15      25       42
+Category.Description                         4      58      155
+ModelViolations.HeaderCode/Direction         8       —       44
+```
+
+Both spellings mean "no description", but `WHERE Description IS NULL` returns
+1,865 more `Item` rows after conversion. **This is a semantic change to a
+published artifact and needs an explicit decision.**
+
+**Non-BMP characters.** `Item.Name` 1012406831 is `𝑚 𝐶𝑉𝐴 multiplier factor`
+using mathematical-italic characters outside the BMP. Jet/ACE stores text as
+UCS-2, and mdbtools substitutes `?` per surrogate half, giving
+`?? ?????? multiplier factor`. Not a locale problem — reproduced identically
+under `LC_ALL=C.UTF-8` and `en_US.UTF-8`. This is silent corruption and is not
+reliably detectable, since `?` is a legitimate character.
+
+### Bugs this found in the implementation
+
+Four, none of which the 3.5 file exposed:
+
+1. **`Numeric` was unmapped.** 4.3/4.4 contain `Numeric (19, 0)` columns
+   (`ChangeLog.Timestamp`, `OperationNode.AbsoluteTolerance`/
+   `RelativeTolerance`). Worse, the two-value size specifier did not match the
+   column regex at all, so the line was *skipped silently* rather than caught
+   by the unmapped-type guard. Both fixed; a column line that fails to parse
+   now raises.
+2. **Access internal tables leaked through.** `~TMPCLP531411` and
+   `~TMPCLP571251` — clipboard scratch tables — became real tables. Now
+   filtered along with `MSys*`.
+3. **GUIDs were written in the wrong format.** The 3.2 sample stores bare
+   lowercase hex, so the original reader normalised to that. Current artifacts
+   store canonical uppercase hyphenated (`083F7C98-D0CF-4D87-A2E1-9DC464712242`).
+   Fixed, which took 4.4 from 4/13 to 58/70 tables identical.
+4. **Newlines inside memo fields were lost.** Two compounding causes:
+   `subprocess.run(text=True)` applies universal-newline translation, rewriting
+   CRLF to LF before parsing; and `splitlines()` splits *inside* quoted CSV
+   fields, concatenating multi-line values. Fixed by decoding bytes manually
+   and reading through `StringIO(..., newline="")`.
+
+### Cost
+
+4.3.1 and 4.4-draft are ~681 MB Access files. Conversion took 4–13 minutes
+(varying with machine load) at a peak RSS of ~3.3 GB. Rows are materialised
+eagerly, as the pyodbc path also does, so this is not a regression — but it is
+worth knowing before running it on a constrained runner.
