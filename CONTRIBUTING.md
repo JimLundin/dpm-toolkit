@@ -39,7 +39,7 @@ DPM Toolkit contains focused internal modules and separate data packages:
 
 - **`src/dpm_toolkit/`** - CLI and internal feature modules
 - **`src/dpm_toolkit/archive/`** - Version management and downloads
-- **`src/dpm_toolkit/migrate/`** - Database conversion (Windows only)
+- **`src/dpm_toolkit/migrate/`** - Database conversion (needs mdbtools, or Windows + Access ODBC)
 - **`src/dpm_toolkit/scrape/`** - Web scraping for new versions
 - **`src/dpm_toolkit/schema/`** - Python model generation
 - **`src/dpm_toolkit/compare/`** - Database comparison reports
@@ -62,9 +62,9 @@ separate workspace packages published on their own.
 
 ## Platform Considerations
 
-- **Migration features require Windows** due to Microsoft Access ODBC drivers
-- **Most functionality works cross-platform** (macOS, Linux, Windows)
-- **CI/CD pipelines handle Windows-specific operations**
+- **Migration needs mdbtools >= 1.0.0** (`apt-get install mdbtools`, `brew install mdbtools`),
+  and falls back to the Microsoft Access ODBC driver on Windows when mdbtools is absent
+- **All functionality works cross-platform** (macOS, Linux, Windows)
 
 ## Submitting Changes
 
