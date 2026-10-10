@@ -40,7 +40,7 @@ pip install dpm-toolkit
 
 # With optional extras for specific functionality
 pip install dpm-toolkit[scrape]    # Web scraping capabilities
-pip install dpm-toolkit[migrate]   # Database migration (Windows only)
+pip install dpm-toolkit[migrate]   # Database migration (needs mdbtools)
 pip install dpm-toolkit[schema]    # Python model generation
 ```
 
@@ -94,23 +94,26 @@ dpm-toolkit download --version release --type converted
 # https://github.com/JimLundin/dpm-toolkit/releases/latest/download/dpm-sqlite.zip
 ```
 
-### Windows Only - Self Conversion
+### Self Conversion
 
-⚠️ **Windows Requirement**: Database conversion requires Microsoft Access ODBC driver and is only supported on Windows due to `sqlalchemy-access` and `pyodbc` dependencies.
+Conversion runs on Linux, macOS and Windows. It reads Access through
+[mdbtools](https://github.com/mdbtools/mdbtools), falling back to the Microsoft
+Access ODBC driver when mdbtools is unavailable.
 
 ```bash
-# Install with conversion support (Windows only)
+# Install mdbtools (1.0.0 or newer)
+sudo apt-get install mdbtools   # Debian / Ubuntu
+brew install mdbtools           # macOS
+
+# Install with conversion support
 pip install dpm-toolkit[migrate]
 
 # Convert your own Access databases
-dpm-toolkit migrate --source /path/to/access/database.accdb --target /path/to/output.sqlite
+dpm-toolkit migrate /path/to/access/database.accdb /path/to/output.sqlite
 ```
 
-### Non-Windows Users
-
-- **Recommended**: Use pre-built artifacts from releases or CLI download
-- **Alternative**: Set up Windows VM if self-conversion is absolutely required
-- **Not Supported**: Direct conversion on macOS/Linux
+mdbtools 0.7.x cannot open `.accdb` files and is rejected. On Windows without
+mdbtools, the ODBC driver path is used instead.
 
 ## CLI Reference
 
@@ -127,7 +130,7 @@ dpm-toolkit download [--version VERSION] [--type TYPE] [--target DIRECTORY]
 # Find new versions (maintenance)
 dpm-toolkit update [--json|--yaml|--table]
 
-# Convert Access to SQLite (Windows only)
+# Convert Access to SQLite
 dpm-toolkit migrate --source SOURCE --target TARGET [--overwrite]
 
 # Generate Python models from SQLite
@@ -158,7 +161,7 @@ dpm-toolkit download --version "3.2" --target ./dpm-data
 # List all versions in JSON format
 dpm-toolkit list --json
 
-# Convert local Access database (Windows only)
+# Convert local Access database
 dpm-toolkit migrate --source ./database.accdb --target ./output.sqlite
 
 # Generate Python models from SQLite database
@@ -254,7 +257,7 @@ DPM Toolkit is built from focused internal modules behind a single CLI package:
 
 - **[`dpm-toolkit`](src/dpm_toolkit/)**: CLI and bundled internal modules
 - **[`archive`](src/dpm_toolkit/archive/)**: Version management, downloads, and release tracking
-- **[`migrate`](src/dpm_toolkit/migrate/)**: Access-to-SQLite conversion engine (Windows only)
+- **[`migrate`](src/dpm_toolkit/migrate/)**: Access-to-SQLite conversion engine
 - **[`scrape`](src/dpm_toolkit/scrape/)**: Automated discovery of new EBA releases
 - **[`schema`](src/dpm_toolkit/schema/)**: Python model generation from SQLite databases
 - **[`compare`](src/dpm_toolkit/compare/)**: Difference reports between two database versions
@@ -291,9 +294,9 @@ Manual trigger:
 
 ### Platform Limitations
 
-- **Conversion**: Only supported on Windows due to Microsoft Access ODBC driver requirements
-- **SQLAlchemy-Access**: Depends on `pyodbc` and Win32 APIs
-- **Recommended**: Use pre-built artifacts for non-Windows platforms
+- **Conversion**: Needs mdbtools >= 1.0.0, or Windows with the Microsoft Access ODBC driver
+- **SQLAlchemy-Access**: The ODBC fallback depends on `pyodbc` and Win32 APIs
+- **Recommended**: Use pre-built artifacts unless you need to convert a database yourself
 
 ### Database Compatibility
 
@@ -354,7 +357,7 @@ Install only the dependencies needed for the feature being developed:
 
 ```bash
 uv sync
-uv sync --extra migrate  # Windows only
+uv sync --extra migrate  # needs mdbtools, or Windows + Access ODBC
 uv sync --extra scrape
 uv sync --extra schema
 ```
@@ -384,8 +387,8 @@ uv run pytest
 
 - **Python**: 3.12+
 - **Package Manager**: UV (recommended) or pip
-- **Platform**: Windows required for conversion functionality
-- **Dependencies**: Microsoft Access ODBC driver (for conversion)
+- **Platform**: Any; conversion needs mdbtools >= 1.0.0, or Windows + the Access ODBC driver
+- **Dependencies**: mdbtools (for conversion), or Microsoft Access ODBC driver
 
 ### Contributing
 
