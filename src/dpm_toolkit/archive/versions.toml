@@ -190,3 +190,12 @@ date = 2026-07-24
 original = { url = "https://ebprstaewspublic01.blob.core.windows.net/public/tools-prod/documents/Big_Files/files/Reporting%20framework%204.4/DPM2%20Database_v%204_4_draft.zip", checksum = "sha256:f20c97206ef71d7dd4dd86250880ef53ea7bb7fbe382ad02ed3508e4ccb3c460" }
 archive = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-4.4-draft/dpm-4.4-draft-archive.zip", checksum = "sha256:926189370ac2b548c8f92d09975ae31d98bce4ac62179a3d51b4fffead932718" }
 converted = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-4.4-draft/dpm-4.4-draft-sqlite.zip", checksum = "sha256:04422d08d7027d22ba3bb28d94a96c79cba1e11b348cf8b771c53ec40997ad02" }
+
+[[versions]]
+id = "4.4-release"
+previous = "4.4-draft"
+version = "4.4"
+type = "release"
+semver = "4.4.0"
+date = 2026-10-12
+original = { url = "https://ebprstaewspublic01.blob.core.windows.net/public/tools-prod/assets/Reporting%20Framework/DPM2%20Database_v%204_4.zip", checksum = "sha256:477dc96f4ff1324b537a526268f084b35b4e980d8cb47e464084475a9213b5b9" }
