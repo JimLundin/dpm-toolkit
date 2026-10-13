@@ -199,3 +199,5 @@ type = "release"
 semver = "4.4.0"
 date = 2026-10-12
 original = { url = "https://ebprstaewspublic01.blob.core.windows.net/public/tools-prod/assets/Reporting%20Framework/DPM2%20Database_v%204_4.zip", checksum = "sha256:477dc96f4ff1324b537a526268f084b35b4e980d8cb47e464084475a9213b5b9" }
+archive = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-4.4-release/dpm-4.4-release-archive.zip", checksum = "sha256:9c367ddb378a71529e0c4c61a08e2214c92d5a93c47a83fc6b1a79749ab9c8bc" }
+converted = { url = "https://github.com/JimLundin/dpm-toolkit/releases/download/db-4.4-release/dpm-4.4-release-sqlite.zip", checksum = "sha256:7c8a0834902de426fb449070dd7223abaf7e76299db23325db1ce5c6621045da" }
