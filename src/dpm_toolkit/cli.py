@@ -3,6 +3,7 @@
 import sys
 from collections.abc import Iterable
 from datetime import date
+from functools import partial
 from json import dumps
 from pathlib import Path
 from sys import stdout
@@ -213,7 +214,12 @@ def migrate(access_location: Path, sqlite_location: Path) -> None:
     try:
         from sqlalchemy.exc import NoSuchModuleError
 
-        from dpm_toolkit.migrate import access, access_to_sqlite
+        from dpm_toolkit.migrate import (
+            access,
+            access_file_to_sqlite,
+            access_to_sqlite,
+            mdbtools_available,
+        )
     except ImportError:
         print_error("Migration requires [migrate] extra dependencies")
         sys.exit(1)
@@ -226,13 +232,24 @@ def migrate(access_location: Path, sqlite_location: Path) -> None:
     validate_database_extension(sqlite_location, SQLITE_EXTENSIONS)
     print_info(f"SQLite: {sqlite_location}")
 
-    try:
-        access_database = access(access_location)
-    except NoSuchModuleError:
-        # sqlalchemy-access is only installed on Windows, where the Microsoft
-        # Access ODBC driver it needs is available.
-        print_error("Migration requires Windows and the Access ODBC driver")
-        sys.exit(1)
+    # mdbtools is preferred: it runs on every platform, where the Access ODBC
+    # driver the pyodbc path needs is Windows-only.
+    if mdbtools_available():
+        print_info("Reader: mdbtools")
+        read_database = partial(access_file_to_sqlite, access_location)
+    else:
+        print_info("Reader: Access ODBC driver (mdbtools >= 1.0.0 not found)")
+        try:
+            access_database = access(access_location)
+        except NoSuchModuleError:
+            # sqlalchemy-access is only installed on Windows, where the
+            # Microsoft Access ODBC driver it needs is available.
+            print_error(
+                "Migration requires either mdbtools >= 1.0.0 "
+                "or Windows with the Access ODBC driver",
+            )
+            sys.exit(1)
+        read_database = partial(access_to_sqlite, access_database)
 
     with Progress(
         SpinnerColumn(),
@@ -240,8 +257,7 @@ def migrate(access_location: Path, sqlite_location: Path) -> None:
         console=err_console,
     ) as progress:
         progress.add_task("Migrating database...", total=None)
-        sqlite_database = access_to_sqlite(access_database)
-        with sqlite_database as connection:
+        with read_database() as connection:
             connection.execute(f"VACUUM INTO '{sqlite_location}'")
 
     print_success("Migration completed successfully")

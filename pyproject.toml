@@ -14,6 +14,9 @@ dpm-toolkit = "dpm_toolkit.cli:main"
 
 [project.optional-dependencies]
 scrape = ["beautifulsoup4>=4.13.4"]
+# Conversion prefers GNU mdbtools (>= 1.0.0), a system package rather than a
+# Python one, so it cannot be declared here. sqlalchemy-access is the Windows
+# fallback for when mdbtools is not installed.
 migrate = [
     "jinja2>=3.1.0",
     "sqlalchemy>=2.0.37",

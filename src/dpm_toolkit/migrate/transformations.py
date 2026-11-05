@@ -1,10 +1,10 @@
 """Schema transformation utilities for database conversion."""
 
 from collections import defaultdict
-from collections.abc import Iterator
+from collections.abc import Iterable
 from typing import Any
 
-from sqlalchemy import Column, ForeignKey, MetaData, Row, Table
+from sqlalchemy import Column, ForeignKey, MetaData, Table
 
 from dpm_toolkit.schema.type_registry import enum_candidate
 
@@ -16,20 +16,22 @@ type EnumByColumn = dict[Column[Any], set[str]]
 
 def parse_rows(
     table: Table,
-    rows: Iterator[Row[Any]],
+    rows: Iterable[Row_],
 ) -> tuple[Rows, EnumByColumn, Columns]:
     """Analyze rows for enum values and nullable columns.
 
     Values are passed through without casting — type recovery is handled
     downstream by the schema module using column naming conventions.
+
+    Rows are plain dictionaries so that both readers can share this: the
+    pyodbc path adapts SQLAlchemy ``Row`` objects, and the mdbtools path
+    builds dictionaries directly from exported CSV.
     """
     parsed_rows: Rows = []
     enum_by_column: EnumByColumn = defaultdict(set)
     nullable_columns: Columns = set()
 
-    for row in rows:
-        row_dict = row._asdict()  # pyright: ignore[reportPrivateUsage]
-
+    for row_dict in rows:
         for column_name, value in row_dict.items():
             table_column = table.columns[column_name]
 
